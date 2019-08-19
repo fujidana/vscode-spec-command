@@ -14,6 +14,12 @@
 	],
 	"main": "./out/extension.js",
 	"contributes": {
+		"languages": [{
+			"id": "spec",
+			"aliases": ["spec", "Spec", "SPEC"],
+			"extensions": [".mac"],
+			"configuration": "./language-configuration.json"
+		}],
 		"commands": [
 			{
 				"command": "extension.helloWorld",
