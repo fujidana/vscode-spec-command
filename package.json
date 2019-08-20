@@ -7,6 +7,7 @@
 		"vscode": "^1.37.0"
 	},
 	"categories": [
+		"Snippets",
 		"Other"
 	],
 	"activationEvents": [
@@ -20,6 +21,12 @@
 			"extensions": [".mac"],
 			"configuration": "./language-configuration.json"
 		}],
+		"snippets": [
+			{
+				"language": "spec",
+				"path": "./snippets/spec.snippets.json"
+			}
+		],
 		"commands": [
 			{
 				"command": "extension.helloWorld",
