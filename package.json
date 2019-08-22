@@ -7,20 +7,35 @@
 		"vscode": "^1.37.0"
 	},
 	"categories": [
-		"Snippets",
-		"Other"
+		"Programming Languages",
+		"Snippets"
 	],
 	"activationEvents": [
 		"onCommand:extension.helloWorld"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
-		"languages": [{
-			"id": "spec",
-			"aliases": ["spec", "Spec", "SPEC"],
-			"extensions": [".mac"],
-			"configuration": "./language-configuration.json"
-		}],
+		"languages": [
+			{
+				"id": "spec",
+				"aliases": [
+					"spec",
+					"Spec",
+					"SPEC"
+				],
+				"extensions": [
+					".mac"
+				],
+				"configuration": "./language-configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "spec",
+				"scopeName": "source.spec",
+				"path": "./syntaxes/spec.tmLanguage.json"
+			}
+		],
 		"snippets": [
 			{
 				"language": "spec",
@@ -39,7 +54,8 @@
 		"compile": "tsc -p ./",
 		"watch": "tsc -watch -p ./",
 		"pretest": "npm run compile",
-		"test": "node ./out/test/runTest.js"
+		"test": "node ./out/test/runTest.js",
+		"build:syntaxes": "js-yaml syntaxes/spec.tmLanguage.yaml > syntaxes/spec.tmLanguage.json"
 	},
 	"devDependencies": {
 		"@types/glob": "^7.1.1",
@@ -47,9 +63,10 @@
 		"@types/node": "^10.12.21",
 		"@types/vscode": "^1.37.0",
 		"glob": "^7.1.4",
+		"js-yaml": "^3.13.1",
 		"mocha": "^6.1.4",
-		"typescript": "^3.3.1",
 		"tslint": "^5.12.1",
+		"typescript": "^3.3.1",
 		"vscode-test": "^1.0.2"
 	}
 }
