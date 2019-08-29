@@ -46,7 +46,16 @@
         "body": [
             "cdef(\"${1|begin_mac,end_mac,config_mac,prompt_mac,cleanup_once,cleanup_always|}\", ${2:string}, ${3:key})"
         ],
-        "description": "built-in macro definition, which is invoked at the specified times only if defined."
+        "description": "built-in macro definition, which is invoked at the specified times only if defined"
+    },
+    "data-array": {
+        "prefix": [
+            "array"
+        ],
+        "body": [
+            "${1|local,global,shared|} ${2|float,double,string,byte,short,long,long64,ubyte,ushort,ulong,ulong64|} array ${3:array_name}[${4:cols}]"
+        ],
+        "description": "data array declaraion"
     },
     "if": {
         "prefix": [
