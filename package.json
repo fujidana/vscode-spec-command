@@ -11,7 +11,7 @@
 		"Snippets"
 	],
 	"activationEvents": [
-		"onCommand:extension.helloWorld"
+		"onLanguage:spec"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
@@ -40,12 +40,6 @@
 			{
 				"language": "spec",
 				"path": "./snippets/spec.snippets.json"
-			}
-		],
-		"commands": [
-			{
-				"command": "extension.helloWorld",
-				"title": "Hello World"
 			}
 		]
 	},
