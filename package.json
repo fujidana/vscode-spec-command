@@ -64,5 +64,14 @@
 		"tslint": "^5.12.1",
 		"typescript": "^3.3.1",
 		"vscode-test": "^1.0.2"
-	}
+	},
+	"license": "SEE LICENSE IN LICENSE",
+	"bugs": {
+	  "url": "https://github.com/fujidana/vscode-spec/issues"
+	},
+	"repository": {
+	  "type": "git",
+	  "url": "https://github.com/fujidana/vscode-spec.git"
+	},
+	"homepage": "https://github.com/fujidana/vscode-spec/blob/master/README.md"
 }
