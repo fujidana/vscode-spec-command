@@ -3,7 +3,7 @@
 	"name": "spec",
 	"displayName": "spec Language Support",
 	"description": "VS Code extension which supports 'spec' macro file",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"engines": {
 		"vscode": "^1.37.0"
 	},
@@ -67,11 +67,11 @@
 	},
 	"license": "SEE LICENSE IN LICENSE",
 	"bugs": {
-	  "url": "https://github.com/fujidana/vscode-spec/issues"
+		"url": "https://github.com/fujidana/vscode-spec/issues"
 	},
 	"repository": {
-	  "type": "git",
-	  "url": "https://github.com/fujidana/vscode-spec.git"
+		"type": "git",
+		"url": "https://github.com/fujidana/vscode-spec.git"
 	},
 	"homepage": "https://github.com/fujidana/vscode-spec/blob/master/README.md"
 }
