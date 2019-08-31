@@ -4,3 +4,4 @@ node_modules
 *.vsix
 .DS_Store
 syntaxes/spec.tmLanguage.json
+syntaxes/spec.apiReference.json
