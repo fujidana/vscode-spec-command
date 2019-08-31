@@ -41,7 +41,7 @@
 		"snippets": [
 			{
 				"language": "spec",
-				"path": "./snippets/spec.snippets.json"
+				"path": "./syntaxes/spec.snippets.json"
 			}
 		]
 	},
