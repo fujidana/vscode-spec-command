@@ -113,7 +113,7 @@ variables:
         By default, certain hardware errors cause **spec** to reset to command level.
         By setting `HDW_ERR` to −1 before a call to user-level hardware access functions, there is no reset, the function returns and `HDW_ERR` contains an error code.
         
-        Functions which set `HDW_ERR` include `counter_par()`, `motor_par()` , `mca_par()` , `ca_get()`, `ca_put()`, `ca_fna()`, `gpib_get()`, `gpib_put()`, `gpib_poll()`, `gpib_cntl()`, `gpib_par()`, `port_get()`, `port_getw()`, `port_put()`, `port_putw()`, `ser_get()`, `ser_put()`, `ser_par()`, `sock_get()`, `sock_put()`, `sock_par()`, `fbus_get()`, `fbus_put()`, `vxi11_get()` and `vxi11_put()`.
+        Functions which set `HDW_ERR` include `counter_par()`, `motor_par()`, `mca_par()`, `ca_get()`, `ca_put()`, `ca_fna()`, `gpib_get()`, `gpib_put()`, `gpib_poll()`, `gpib_cntl()`, `gpib_par()`, `port_get()`, `port_getw()`, `port_put()`, `port_putw()`, `ser_get()`, `ser_put()`, `ser_par()`, `sock_get()`, `sock_put()`, `sock_par()`, `fbus_get()`, `fbus_put()`, `vxi11_get()` and `vxi11_put()`.
         
         When there is an error in these functions, they usually return −1, or sometimes zero.
         However, such values can also be valid return values.
@@ -258,7 +258,7 @@ functions:
         Returns the integer exit status of the command.
         Uses */bin/sh* to execute the one-line command `command`.
         Returns the integer exit status of the command.
-    - signature: unix(command, str[, len ])
+    - signature: unix(command, str[, len])
       description: |
         As above, but the argument `str` is the name of a variable in which to place the string output from the command in the first argument.
         The maximum length of the string is 4096 bytes (including a null byte).
@@ -302,7 +302,7 @@ functions:
         Environment variables are exported to **spec** by the invoking shell program.
   file_info:
     usages:
-    - signature: file_info(filename [, cmd])
+    - signature: file_info(filename[, cmd])
       description: |
         Returns information on the file or device named `filename`.
         With a single `filename` argument, `file_info()` returns **true** if the file or device exists.
@@ -621,7 +621,7 @@ functions:
     - signature: yesno(val)
       description: |
         Reads a line of input from the keyboard.
-        The function returns 1 if the user answers with a string beginning with `Y` , `y` or `1`.
+        The function returns 1 if the user answers with a string beginning with `Y`, `y` or `1`.
         The value of `val` is returned if the user simply enters return.
         Otherwise the function returns zero.
     - signature: yesno(prompt, val)
@@ -662,7 +662,7 @@ functions:
   
   printf:
     usages:
-    - signature: printf(format[, a ... ])
+    - signature: printf(format[, a ...])
       description: |
         Does formatted printing on the turned-on output devices.
         `format` contains the format specifications for any following arguments.
@@ -670,12 +670,12 @@ functions:
         Returns **true**.
   eprintf:
     usages:
-    - signature: eprintf(format[, a ... ])
+    - signature: eprintf(format[, a ...])
       description: |
         As above, except that if an error-log file is open, the generated string will also be written to that file prefixed by the `#E` characters.
   fprintf:
     usages:
-    - signature: fprintf(file_name, format[, a ... ])
+    - signature: fprintf(file_name, format[, a ...])
       description: |
         Does formatted printing on `file_name`.
         All other devices (except *log* files) are turned off while the string is printed.
@@ -953,13 +953,13 @@ functions:
         Returns the length of the string `string`.
   sprintf:
     usages:
-    - signature: sprintf(format[, a, b, ... ])
+    - signature: sprintf(format[, a, b, ...])
       description: |
         Returns a string containing the formatted print.
         See *sprintf()* in a C-language reference manual.
   sscanf:
     usages:
-    - signature: sscanf(string, format, a[, b, ... ])
+    - signature: sscanf(string, format, a[, b, ...])
       description: |
         Scans the literal string or string variable *string* for data, where *format* contains a format specification in the same style as the C language *scanf()* function.
         Each subsequent argument is a variable name or array element that will be assigned the values scanned for.
@@ -1051,81 +1051,43 @@ functions:
       description: |
         Performs operations on the array based on the values for `cmd`:
         
-        - `"fill"` — 
-        - `"contract"`
-        - `"min"` or `"gmin"`
-        - `"max"` or `"gmax"`
-        - `"i_at_min"` or `"i_at_gmin"`
-        - `"i_at_max"` or `"i_at_gmax"`
-        - `"row_at_min"` or `"rmin"`
-        - `"row_at_max"` or `"rmax"`
-        - `"col_at_min"` or `"cmin"`
-        - `"col_at_max"` or `"cmax"`
-        - `"i_<=_value"`
-        - `"i_>=_value"`
-        - `"fwhm"`
-        - `"cfwhm"`
-        - `"uhmx"`
-        - `"lhmx"`
-        - `"com"`
-        - `"x_at_min"`
-        - `"x_at_max"`
-        - `"sum"` or `"gsum"`
-        - `"sumsq"`
-        - `"transpose"`
-        - `"updated?"`
-        - `"rows"`
-        - `"cols"`
-        - `"row_wise"`
-        - `"col_wise"`
-        - `"sort"`
-        - `"swap"`
-        - `"frame_size"`
-        - `"latest_frame"`
-        - `"tag"`
-        - `"untag"`
-        - `"info"`
-        - `"meta"`
-
-        ( **description of list items not shown** )
-
-        # - `"fill"` — Fills the array `arr` with values. For a two-dimensional array, `array_op("fill", arr, u, v)` produces for each element `arr[i][j] = u × i + v × j` With subarrays, `i` and `j` refer to the subarray index. Also, `i` and `j` always increase, even for reversed subarrays, so `array_op("fill", arr[-1:0][-1:0], 1, 1)` fills arr in reverse order.
-        # - `"contract"` — For `args` `u` and `v`, returns a new array with dimensions contracted by a factor of `u` in rows and `v` in columns. Elements of the new array are formed by averaging every `u` elements of each row with every `v` elements of each column. If there are leftover rows or columns, they are averaged also.
-        # - `"min"` or `"gmin"` — Returns the minimum value contained in the array.
-        # - `"max"` or `"gmax"` — Returns the maximum value contained in the array.
-        # - `"i_at_min"` or `"i_at_gmin"` — Returns the *index* number of the minimum value of the array. For a two-dimensional array dimensioned as `D[N][M]`, the *index* number of element `D[i][j]` is `(i × M) + j`. If `arr` is a subarray, the index is with respect to the full array, although the minimum is the minimum value in the specified subarray.
-        # - `"i_at_max"` or `"i_at_gmax"` — Returns the *index* number of the maximum value of the array. See `"i_at_min"` for subarray considerations.
-        # - `"row_at_min"` or `"rmin"` — Returns the row number containing the minimum value of the array. If `arr` is a subarray, the row is with respect to the full array, although the minimum is the minimum value in the specified subarray.
-        # - `"row_at_max"` or `"rmax"` — Returns the row number containing the maximum value of the array. If `arr` is a subarray, the row is with respect to the full array, although the maximum is the maximum value in the specified subarray.
-        # - `"col_at_min"` or `"cmin"` — Returns the column number containing the minimum value of the array. If `arr` is a subarray, the column is with respect to the full array, although the minimum is the minimum value in the specified subarray.
-        # - `"col_at_max"` or `"cmax"` — Returns the column number containing the maximum value of the array. If `arr` is a subarray, the column is with respect to the full array, although the maximum is the maximum value in the specified subarray.
-        # - `"i_<=_value"` — Returns the *index* number of the nearest element of the array with a value at or less than `u`. For a two-dimensional array dimensioned as `D[N][M]`, the index number of element `D[i][j]` is `(i × M) + j`. Unlike `"i_at_min"`, `"i_at_max"`, etc., if `arr` is a subarray, the index is with respect to the subarray.
-        # - `"i_>=_value"` — Returns the *index* number of the nearest element of the array with a value at or greater than `u` , starting from the last element. For a two-dimensional array dimensioned as `D[N][M]`, the index number of element `D[i][j]` is `(i × M) + j`. Unlike `"i_at_min"`, `"i_at_max"`, etc., if `arr` is a subarray, the index is with respect to the subarray.
-        # - `"fwhm"` — Requires two array arguments, each representing a single row or single column. Returns the full-width in the first array at half the maximum value of the second array.
-        # - `"cfwhm"` — Requires two array arguments, each representing a single row or single column. Returns the center of the full-width in the first array at half the maximum value of the second array.
-        # - `"uhmx"` — Requires two array arguments, each representing a single row or single column. Returns the value in the first array corresponding to half the maximum value in the second array and at a higher index.
-        # - `"lhmx"` — Requires two array arguments, each representing a single row or single column. Returns the value in the first array corresponding to half the maximum value in the second array and at a lower index.
-        # - `"com"` — Requires two array arguments, each representing a single row or sin- gle column. Returns the center of mass in the first array with respect to the second array. The value is the sum of the products of each element of the first array and the corresponding element of the second array, di- vided by the number of points.
-        # - `"x_at_min"` — Requires two array arguments, each representing a single row or single column. Returns the element in the first array that corre- sponds to the minimum value in the second array.
-        # - `"x_at_max"` — Requires two array arguments, each representing a single row or single column. Returns the element in the first array that corre- sponds to the maximum value in the second array.
-        # - `"sum"` or `"gsum"` — Returns the sum of the elements of the array. If there is a third argument greater than zero, the array is considered as a sequence of frames, with the third argument the number of rows in each frame. The return value is a new array with that number of rows and the same number of columns as the original array. Each element of the returned array is the sum of the corresponding elements of each frame. For example, if the original array is dimensioned as `data[N][M]`, the return value for
-        # `arr = array_op("sum", data, R)`
-        # is a new array of dimension `arr[N/R][M]`, where each element `arr[i][j]` is the sum of `k` from `0` to `R - 1` of `data[i + k × N / R][j]`.
-        # - `"sumsq"` — Returns the sum of the squares of the elements of the array. If there is a third argument and it is greater than zero, the interpretation is the same as above for `"sum"`, except the elements in the returned array are sums of squares of the elements in the original array.
-        # - `"transpose"` — Returns a new array of the same type with the rows and col# umns switched.
-        # - `"updated?"` — Returns nonzero if the data in the array has been accessed for writing since the last check, otherwise returns zero.
-        # - `"rows"` — Returns the number of rows in the array.
-        # - `"cols"` — Returns the number of columns in the array.
-        # - `"row_wise"` — With a nonzero third argument, forces the `array_dump()`, `array_fit()`, `array_pipe()`, `array_plot()` and `array_read()` functions to treat the array as row-wise, meaning each row corresponds to a data point. With only two arguments, returns nonzero if the array is already set to row-wise mode.
-        # - `"col_wise"` — As above, but sets or indicates the column-wise sense of the array.
-        # - `"sort"` — Returns an ascending sort of the array.
-        # - `"swap"` — Swaps the bytes of the named array. The command can change big-endian short- or long-integer data to little-endian and vice versa. For most built-in data collection, **spec** automatically swaps bytes as appropriate, but this function is available for other cases that may come up.
-        # - `"frame_size"` — The number of rows in a frame. The frame size is part of the shared array header and may be useful to auxiliary programs, although the value is maintained for non-shared arrays. Note, setting the frame size to zero will clear the `"frames"` tag. Setting the frame size to a non-zero value will set the `"frames"` tag.
-        # - `"latest_frame"` — The most recently updated frame. The latest frame is part of the shared array header and may be useful to auxiliary programs, although the value is maintained for non-shared arrays.
-        # - `"tag"`  — Shared arrays can be tagged with a type that will be available to other processes accessing the array. Usage is `array_op("tag", arr, arg)` where `arr` is the array and arg is `"mca"`, `"image"`, `"frames"`, `"scan"` or `"info"`.
-        # - `"untag"` — Removes tag information.
-        # - `"info"` — Returns or sets the *info* field of a shared array segment. The field can be contain up to 512 bytes of arbitrary text. When setting the field, if the string argument is longer than 512 bytes, the first 512 bytes will be copied. The function returns the number of bytes copied, −1 if `arr` is not a shared array or 0 if `arr` is a shared array that doesn’t support the *info* field. The *info* field is included in `SHM_VERSION` version 6 headers, added in **spec** release 6.00.08.
-        # - `"meta"` — Returns or sets the meta area of a shared array segment. With **spec**, the field can contain up to 8,192 bytes of arbitrary text. When setting the field, if the string argument is longer than 8,192 bytes, the first 8,192 bytes will be copied. The function returns the number of bytes copied, −1 if `arr` is not a shared array or 0 if `arr` is a shared array that doesn’t support the *meta* field. The *meta* field is included in `SHM_VERSION` version 6 headers, added in **spec** release 6.00.08.
+        - `"fill"` — Fills the array `arr` with values. For a two-dimensional array, `array_op("fill", arr, u, v)` produces for each element `arr[i][j] = u × i + v × j` With subarrays, `i` and `j` refer to the subarray index. Also, `i` and `j` always increase, even for reversed subarrays, so `array_op("fill", arr[-1:0][-1:0], 1, 1)` fills arr in reverse order.
+        - `"contract"` — For `args` `u` and `v`, returns a new array with dimensions contracted by a factor of `u` in rows and `v` in columns. Elements of the new array are formed by averaging every `u` elements of each row with every `v` elements of each column. If there are leftover rows or columns, they are averaged also.
+        - `"min"` or `"gmin"` — Returns the minimum value contained in the array.
+        - `"max"` or `"gmax"` — Returns the maximum value contained in the array.
+        - `"i_at_min"` or `"i_at_gmin"` — Returns the *index* number of the minimum value of the array. For a two-dimensional array dimensioned as `D[N][M]`, the *index* number of element `D[i][j]` is `(i × M) + j`. If `arr` is a subarray, the index is with respect to the full array, although the minimum is the minimum value in the specified subarray.
+        - `"i_at_max"` or `"i_at_gmax"` — Returns the *index* number of the maximum value of the array. See `"i_at_min"` for subarray considerations.
+        - `"row_at_min"` or `"rmin"` — Returns the row number containing the minimum value of the array. If `arr` is a subarray, the row is with respect to the full array, although the minimum is the minimum value in the specified subarray.
+        - `"row_at_max"` or `"rmax"` — Returns the row number containing the maximum value of the array. If `arr` is a subarray, the row is with respect to the full array, although the maximum is the maximum value in the specified subarray.
+        - `"col_at_min"` or `"cmin"` — Returns the column number containing the minimum value of the array. If `arr` is a subarray, the column is with respect to the full array, although the minimum is the minimum value in the specified subarray.
+        - `"col_at_max"` or `"cmax"` — Returns the column number containing the maximum value of the array. If `arr` is a subarray, the column is with respect to the full array, although the maximum is the maximum value in the specified subarray.
+        - `"i_<=_value"` — Returns the *index* number of the nearest element of the array with a value at or less than `u`. For a two-dimensional array dimensioned as `D[N][M]`, the index number of element `D[i][j]` is `(i × M) + j`. Unlike `"i_at_min"`, `"i_at_max"`, etc., if `arr` is a subarray, the index is with respect to the subarray.
+        - `"i_>=_value"` — Returns the *index* number of the nearest element of the array with a value at or greater than `u`, starting from the last element. For a two-dimensional array dimensioned as `D[N][M]`, the index number of element `D[i][j]` is `(i × M) + j`. Unlike `"i_at_min"`, `"i_at_max"`, etc., if `arr` is a subarray, the index is with respect to the subarray.
+        - `"fwhm"` — Requires two array arguments, each representing a single row or single column. Returns the full-width in the first array at half the maximum value of the second array.
+        - `"cfwhm"` — Requires two array arguments, each representing a single row or single column. Returns the center of the full-width in the first array at half the maximum value of the second array.
+        - `"uhmx"` — Requires two array arguments, each representing a single row or single column. Returns the value in the first array corresponding to half the maximum value in the second array and at a higher index.
+        - `"lhmx"` — Requires two array arguments, each representing a single row or single column. Returns the value in the first array corresponding to half the maximum value in the second array and at a lower index.
+        - `"com"` — Requires two array arguments, each representing a single row or sin- gle column. Returns the center of mass in the first array with respect to the second array. The value is the sum of the products of each element of the first array and the corresponding element of the second array, di- vided by the number of points.
+        - `"x_at_min"` — Requires two array arguments, each representing a single row or single column. Returns the element in the first array that corre- sponds to the minimum value in the second array.
+        - `"x_at_max"` — Requires two array arguments, each representing a single row or single column. Returns the element in the first array that corre- sponds to the maximum value in the second array.
+        - `"sum"` or `"gsum"` — Returns the sum of the elements of the array. If there is a third argument greater than zero, the array is considered as a sequence of frames, with the third argument the number of rows in each frame. The return value is a new array with that number of rows and the same number of columns as the original array. Each element of the returned array is the sum of the corresponding elements of each frame. For example, if the original array is dimensioned as `data[N][M]`, the return value for
+          `arr = array_op("sum", data, R)`
+          is a new array of dimension `arr[N/R][M]`, where each element `arr[i][j]` is the sum of `k` from `0` to `R - 1` of `data[i + k × N / R][j]`.
+        - `"sumsq"` — Returns the sum of the squares of the elements of the array. If there is a third argument and it is greater than zero, the interpretation is the same as above for `"sum"`, except the elements in the returned array are sums of squares of the elements in the original array.
+        - `"transpose"` — Returns a new array of the same type with the rows and col# umns switched.
+        - `"updated?"` — Returns nonzero if the data in the array has been accessed for writing since the last check, otherwise returns zero.
+        - `"rows"` — Returns the number of rows in the array.
+        - `"cols"` — Returns the number of columns in the array.
+        - `"row_wise"` — With a nonzero third argument, forces the `array_dump()`, `array_fit()`, `array_pipe()`, `array_plot()` and `array_read()` functions to treat the array as row-wise, meaning each row corresponds to a data point. With only two arguments, returns nonzero if the array is already set to row-wise mode.
+        - `"col_wise"` — As above, but sets or indicates the column-wise sense of the array.
+        - `"sort"` — Returns an ascending sort of the array.
+        - `"swap"` — Swaps the bytes of the named array. The command can change big-endian short- or long-integer data to little-endian and vice versa. For most built-in data collection, **spec** automatically swaps bytes as appropriate, but this function is available for other cases that may come up.
+        - `"frame_size"` — The number of rows in a frame. The frame size is part of the shared array header and may be useful to auxiliary programs, although the value is maintained for non-shared arrays. Note, setting the frame size to zero will clear the `"frames"` tag. Setting the frame size to a non-zero value will set the `"frames"` tag.
+        - `"latest_frame"` — The most recently updated frame. The latest frame is part of the shared array header and may be useful to auxiliary programs, although the value is maintained for non-shared arrays.
+        - `"tag"`  — Shared arrays can be tagged with a type that will be available to other processes accessing the array. Usage is `array_op("tag", arr, arg)` where `arr` is the array and arg is `"mca"`, `"image"`, `"frames"`, `"scan"` or `"info"`.
+        - `"untag"` — Removes tag information.
+        - `"info"` — Returns or sets the *info* field of a shared array segment. The field can be contain up to 512 bytes of arbitrary text. When setting the field, if the string argument is longer than 512 bytes, the first 512 bytes will be copied. The function returns the number of bytes copied, −1 if `arr` is not a shared array or 0 if `arr` is a shared array that doesn’t support the *info* field. The *info* field is included in `SHM_VERSION` version 6 headers, added in **spec** release 6.00.08.
+        - `"meta"` — Returns or sets the meta area of a shared array segment. With **spec**, the field can contain up to 8,192 bytes of arbitrary text. When setting the field, if the string argument is longer than 8,192 bytes, the first 8,192 bytes will be copied. The function returns the number of bytes copied, −1 if `arr` is not a shared array or 0 if `arr` is a shared array that doesn’t support the *meta* field. The *meta* field is included in `SHM_VERSION` version 6 headers, added in **spec** release 6.00.08.
   array_dump:
     usages:
     - signature: array_dump([file, ]arr[, arr2...][, options...])
@@ -1144,7 +1106,7 @@ functions:
         Also, initial characters can be included in the format string, for example, `"0x%08x"` is valid.
 
         The option `"%D=c"`, specifies an alternate delimiter character `c` to replace the default space character delimiter that is placed between each element in a row of output.
-        For example, one might use a comma, a colon or the tab character with `"%D=,"` , `"%D=:"` or `"%D=\t"` , respectively.
+        For example, one might use a comma, a colon or the tab character with `"%D=,"`, `"%D=:"` or `"%D=\t"`, respectively.
         Use `"%D="` for no delimiter.
 
         Also, by default, the output is one data row per line.
@@ -1278,44 +1240,43 @@ functions:
         - `"perpetual"` — Keep graphics mode on continuously (appropriate if using X windows, for example).
 
         Other `plot_cntl()` options are:
-        
-        - `"colors=bgnd:win:text:axis:symb:..."`
-        - `"colors[numb]"`
-        - `"filternumb"`
-        - `"title=string"`
-        - `"geometry=widthxheight+xoff+yoff"`
-        - `"open"`
-        - `"close"`
-        - `"kill"`
-        - `"erase"`
-        - `"addpoint"`
-        - `"addline"`
-        - `"mca"`
-        - `"lp"`
-        
-        ( **description of list items not shown** )
 
-        # "colors=bgnd:win:text:axis:symb:..." — Assigns colors for drawing the vari- ous graphics-mode elements. The values for bgnd (the background color of the area outside the axis), win (the background color of the area in- side the axis), text (the color of the text), axis (the color of the axis) and symb ... (the color of the plotting symbols) are integers.
-        # The first 10 colors are standardized according to the following table:
-        # 0 background (normally white or black) 1 foreground (normallyblackorwhite) 2blue 3red
-        # 4green 5yellow 6cyan 7magenta 8white 9black
-        # Other colors may be available depending on the particular device. You don’t have to assign values to all colors.
-        # "colors[numb]" — Returns the current color assignments, where numb is a number between zero and 67. Numbers zero through three return the colors assigned to the bgnd, win, text and axis elements respectively. Numbers from 4 through 67 return the colors assigned to the symbols for data elements zero through 63.
-        # "filternumb" — Selects filter number numb , where numb can be any of the nu- merals from 1 through 5. All plotting commands are directed to this fil- ter. The default filter is filter 1. Each filter is associated with a sepa- rate process. On an X windows display, each filter is associated with a separate window.
-        # "title=string" — On an X windows display, the title given by string is used in the XSetWMName() and XSetWMIconName() calls to set the window and icon labels. With most X11 window managers, that means the title will appear in the window’s title bar.
-        # "geometry=widthxheight+xoff+yoff" — With the x11 high-resolution plot win- dows, sets the size and position of the window. As with the conventional X11 syntax for specifying window geometry, not all parts of the geome- try string are required.
-        # "open" — Turn on graphics mode. If there is no graphics filter program cur- rently active for the current filter number (see above), the filter program associated with the current GTERM variable is started. Recognized GTERM values are vga, ega, cga, herc, x11, and sun.
-        # "close" — Turn off graphics mode, unless the perpetual or persistent mode has been selected.
-        # "kill" — Turn off graphics mode and terminate graphics process.
-        # "erase" — Clear the graphics-mode screen (or the text screen if graphics mode
-        # is off).
-        # "addpoint" — Before a call to data_plot() will cause the plot to be made with
-        # minimal redrawing. Used for updated plotting during scans.
-        # "addline" — Before a call to data_plot() will prevent the current data from being erased and the new data from changing the ranges when the new data points are drawn. Used for plotting several data sets from differ-
-        # ent data groups on top of each other.
-        # "mca" — Before a call to data_plot() will cause the data points to be dis-
-        # played using a minimal redrawing algorithm, appropriate for displaying data actively being accumulated by an MCA-type device. The "dots" and "ebars" modes must be turned off for the algorithm to work effec- tively.
-        # "lp" — Before a call to data_plot() will generate printing instructions appro- priate for plotting on a 132-column printer.
+        - `"colors=bgnd:win:text:axis:symb:..."` — Assigns colors for drawing the various graphics-mode elements.
+          The values for `bgnd` (the background color of the area outside the axis), `win` (the background color of the area inside the axis), `text` (the color of the text), `axis` (the color of the axis) and `symb ...` (the color of the plotting symbols) are integers.
+          The first 10 colors are standardized according to the following table:
+        
+          - 0 background (normally white or black)
+          - 1 foreground (normally black or white)
+          - 2 blue
+          - 3 red
+          - 4 green
+          - 5 yellow
+          - 6 cyan
+          - 7 magenta
+          - 8 white
+          - 9 black
+        
+          Other colors may be available depending on the particular device. You don’t have to assign values to all colors.
+        - `"colors[numb]"` — Returns the current color assignments, where `numb` is a number between zero and 67.
+          Numbers zero through three return the colors assigned to the `bgnd`, `win`, `text` and `axis` elements respectively.
+          Numbers from 4 through 67 return the colors assigned to the symbols for data elements zero through 63.
+        - `"filternumb"` — Selects filter number `numb`, where `numb` can be any of the numerals from 1 through 5. All plotting commands are directed to this filter. The default filter is filter 1. Each filter is associated with a sepa- rate process. On an X windows display, each filter is associated with a separate window.
+        - `"title=string"` — On an X windows display, the title given by string is used in the *XSetWMName()* and *XSetWMIconName()* calls to set the window and icon labels.
+          With most X11 window managers, that means the title will appear in the window’s title bar.
+        - `"geometry=widthxheight+xoff+yoff"` — With the *x11* high-resolution plot windows, sets the size and position of the window.
+          As with the conventional X11 syntax for specifying window geometry, not all parts of the geometry string are required.
+        - `"open"` — Turn on graphics mode.
+          If there is no graphics filter program currently active for the current filter number (see above), the filter program associated with the current `GTERM` variable is started.
+          Recognized `GTERM` values are `vga`, `ega`, `cga`, `herc`, `x11`, and `sun`.
+        - `"close"` — Turn off graphics mode, unless the perpetual or persistent mode has been selected.
+        - `"kill"` — Turn off graphics mode and terminate graphics process.
+        - `"erase"` — Clear the graphics-mode screen (or the text screen if graphics mode is off).
+        - `"addpoint"` — Before a call to `data_plot()` will cause the plot to be made with minimal redrawing.
+          Used for updated plotting during scans.
+        - `"addline"` — Before a call to `data_plot()` will prevent the current data from being erased and the new data from changing the ranges when the new data points are drawn. Used for plotting several data sets from different data groups on top of each other.
+        - `"mca"` — Before a call to `data_plot()` will cause the data points to be displayed using a minimal redrawing algorithm, appropriate for displaying data actively being accumulated by an MCA-type device.
+          The `"dots"` and `"ebars"` modes must be turned off for the algorithm to work effectively.
+        - `"lp"` — Before a call to `data_plot()` will generate printing instructions appropriate for plotting on a 132-column printer.
   plot_move:
     usages:
     - signature: plot_move(x, y[, string[, color]])
@@ -1374,7 +1335,7 @@ functions:
         Assigns the value `val` to element `elem` of point `npt` in group `grp`.
   data_nput:
     usages:
-    - signature: data_nput(grp, npt, val0[, val1 ... ])
+    - signature: data_nput(grp, npt, val0[, val1 ...])
       description: |
         Assigns values to point `npt` of group `grp`.
         Element 0 is assigned `val0`, element 1 is assigned `val1`, etc.
@@ -1494,7 +1455,7 @@ functions:
         The fit algorithm is along the same lines as the *lfit()* routine in *Numerical Recipes* (W. H. Press, et al., Cambridge University Press, 1986, page 512).
   data_plot:
     usages:
-    - signature: data_plot(grp, start, npts, el_0, el_1[, el_2 ... ])
+    - signature: data_plot(grp, start, npts, el_0, el_1[, el_2 ...])
       description: |
         Plots the current data in group `grp` starting at point start and plotting `npts` points.
         Element `el_0` is used for *x*.
@@ -1516,12 +1477,12 @@ functions:
         Efficiently writes elements from group `grp` to turned on output devices.
         The starting point is start and the number of points is npts.
         The elements specified by `el_0`, `e1_1`, etc., are printed.
-        If `el_0` is the string `"all"` , all the elements for each point are printed.
+        If `el_0` is the string `"all"`, all the elements for each point are printed.
         If `npts` is zero, only the points from `start` to the last point added using `data_nput()` or `data_put()` are printed.
         The element arguments can be combined in a single space- or comma-delimited string.
 
         The optional argument `fmt1` is a string, having the format `"%#"`, that specifies how many data points (specified by the number `#`) are to be printed on each line.
-        If the number `#` is followed by the letter `C` , a backslash is added to each continued line, appropriate for saving MCA data in manageable length lines.
+        If the number `#` is followed by the letter `C`, a backslash is added to each continued line, appropriate for saving MCA data in manageable length lines.
         New versions (since May 1, 1995) of the **C-PLOT** *scans.4* user function interpret the continued lines correctly for MCA data.
         The optional argument `fmt2` is a string that specifies an alternate *printf()*-style format for the values.
         Only `e`, `g` and `f` formats are recognized.
@@ -1661,41 +1622,81 @@ functions:
         Recognized values for the string `par` follow.
         Note, not all parameters are meaningful for all motor controllers.
 
-        - `"step_size"`
-        - `"acceleration"`
-        - `"base_rate"`
-        - `"velocity"`
-        - `"backlash"`
-        - `"config_step_size"`
-        - `"config_acceleration"`
-        - `"config_velocity"`
-        - `"config_base_rate"`
-        - `"config_backlash"`
-        - `"controller"`
-        - `"unit"`
-        - `"channel"`
-        - `"responsive"`
-        - `"active"`
-        - `"disable"`
-        - `"slop"`
-        - `"home_slew_rate"`
-        - `"home_base_rate"`
-        - `"home_acceleration"`
-        - `"dc_dead_band"`
-        - `"dc_settle_time"`
-        - `"dc_gain"`
-        - `"dc_dynamic_gain"`
-        - `"dc_damping_constant"`
-        - `"dc_integration_constant"`
-        - `"dc_integration_limit"`
-        - `"dc_following_error"`
-        - `"dc_sampling_interval"`
-        - `"encoder_step_size"`
-        - `"step_mode"`
-        - `"deceleration"`
-        - `"torque"`
-
-        ( **description of list items not shown** )
+        - `"step_size"` — returns the current step-size parameter.
+          The units are generally in steps per degree or steps per millimeter.
+          If `val` is given, then the parameter is set to that value, but only if changes to the step-size parameter have been enabled using `spec_par("modify_step_size", "yes")`.
+        - `"acceleration"` — returns the value of the current acceleration parameter.
+          The units of acceleration are the time in milliseconds for the motor to accelerate to full speed.
+          If `val` is given, then the acceleration is set to that value.
+        - `"base_rate"` — returns the current base-rate parameter.
+          The units are steps per second.
+          If `val` is given, then the base rate is set to that value.
+        - `"velocity"` — returns the current steady-state velocity parameter.
+          The units are steps per second.
+          If `val` is given, then the steady-state velocity is set to that value.
+        - `"backlash"` — returns the value of the backlash parameter.
+          Its sign and magnitude determine the direction and extent of the motor’s backlash correction.
+          If `val` is given, then the backlash is set to that value.
+          Setting the backlash to zero disables the backlash correction.
+        - `"config_step_size"` — returns the step-size parameter contained in the *config* file.
+        - `"config_acceleration"` — returns the acceleration parameter contained in the *config* file.
+        - `"config_velocity"` — returns the steady-state velocity parameter contained in the *config* file.
+        - `"config_base_rate"` — returns the base-rate parameter contained in the *config* file.
+        - `"config_backlash"` - returns the backlash parameter contained in the *config* file.
+        - `"controller"` - returns a string containing the controller name of the specified motor.
+          The controller names are those used in **spec**’s *config* files.
+        - `"unit"` - returns the unit number of the specified motor.
+          Each motor controller unit may contain more than one motor channel.
+        - `"channel"` - returns the channel number of the specified motor.
+        - `"responsive"` - returns a nonzero value if the motor responded to an initial presence test or appears otherwise to be working.
+        - `"active"` - returns a nonzero value if the motor is currently moving.
+        - `"disable"` - returns a nonzero value if the motor has been disabled by software.
+          If `val` is given and is nonzero, then the motor is disabled.
+          If val is given and is zero, the motor becomes no longer disabled.
+          A disabled motor channel will not be accessed by any of **spec**’s commands, and, of course, cannot be moved.
+          Any `cdef()`-defined macros will automatically exclude the portions of the macro keyed to the particular motor when the motor is software disabled.
+        - `"slop"` — returns the value of the slop parameter.
+          If `val` is given, sets the slop parameter.
+          When this parameter is present, discrepancies between hardware and software motors positions are silently resolved in favor of the the hardware when the number of steps in the discrepancy is less than the value of the slop parameter. (Not yet implemented for all motor controllers.)
+        - `"home_slew_rate"` — returns the value of the home-slew-rate parameter.
+          If `val` is given, sets the parameter.
+          This parameter is the steady-state velocity used during a home search.
+          (Only available for selected controllers.)
+        - `"home_base_rate"` — returns the value of the home-base-rate parameter.
+          If `val` is given, sets the parameter.
+          This parameter is the base-rate velocity used during a home search.
+          (Only available for selected controllers.)
+        - `"home_acceleration"` — returns the value of the home-acceleration parameter.
+          If `val` is given, sets the parameter.
+          This parameter is the acceleration used during a home search.
+          (Only available for selected controllers.)
+        - `"dc_dead_band"` — returns the value of the dead-band parameter for certain DC motors.
+          Sets the parameter if `val` is given.
+        - `"dc_settle_time"` — returns the value of the settle-time parameter for certain DC motors.
+          Sets the parameter if `val` is given.
+        - `"dc_gain"` — returns the value of the gain parameter for certain DC motors.
+          Sets the parameter if `val` is given.
+        - `"dc_dynamic_gain"` — returns the value of the dynamic-gain parameter for certain DC motors.
+          Sets the parameter if `val` is given.
+        - `"dc_damping_constant"` — returns the value of the damping-constant parameter for certain DC motors.
+          Sets the parameter if `val` is given.
+        - `"dc_integration_constant"` — returns the value of the integration-constant parameter for certain DC motors.
+          Sets the parameter if `val` is given.
+        - `"dc_integration_limit"` — returns the value of the integration-limit parameter for certain DC motors.
+          Sets the parameter if `val` is given.
+        - `"dc_following_error"` — returns the value of the dc-following parameter for certain DC motors.
+          Sets the parameter if `val` is given.
+        - `"dc_sampling_interval"` — returns the value of the sampling-interval parameter for certain DC motors.
+          Sets the parameter if `val` is given.
+        - `"encoder_step_size"` — returns the value of the encoder step size parameter.
+          Sets the parameter if `val` is given.
+        - `"step_mode"` — returns the value of the step-mode parameter.
+          Sets the parameter if `val` is given.
+          A zero indicates full-step mode, while a one indicates half-step mode.
+        - `"deceleration"` — returns the value of the deceleration parameter.
+          Sets the parameter if `val` is given.
+        - `"torque"` — returns the value of the torque parameter.
+          Sets the parameter if `val` is given.
 
         Rereading the *config* file resets the values of all the motor parameters to the values in the *config* file.
         Little consistency checking is done by **spec** on the values programmed with `motor_par()`.
@@ -1748,7 +1749,50 @@ functions:
         If called with a motor number or mnemonic as a single argument, the function returns a one-dimensional associative array, indexed by the above keywords containing values for the one motor.
         If called with two arguments, motor number and keyword, the function returns the corresponding single value.
         
-        ( **paragraphs below not shown** )
+        No matter how the function is called, the internal code will calculate values for all motors.
+        Thus, if multiple values are needed, it is most efficient and recommended to call the function once selecting arguments that will return all the needed values.
+
+        The `"to_move"` element will be 1 or 0, indicating whether the motor would move or not.
+        If there is condition that prevents the move, the `"error"` element will contain one of these strings:
+
+        - `"low limit"` - move exceeds low limit
+        - `"high limit"` - move exceeds high limit
+        - `"busy"` - motor is busy
+        - `"read only"` - motor is configured as read only
+        - `"protected"` -  motor configuration does not allow moving 
+        - `"disabled"` -  motor has been disabled
+        - `"externally disabled"` - shared motor has been disabled
+        - `"unusable"` -  motor did not respond to presence test
+        
+        Otherwise, there will be no `"error"` array element.
+        
+        The `"target"` and `"target_dial"` values are the final position after backlash.
+        The `"magnitude"` value contains the distance to the target position and does not include the magnitude of the backlash.
+        
+        The `"leftover"` value is the fractional value that is the difference between the requested position and the achievable position given the finite resolution of the motor.
+        For example, if a motor has 1000 steps per degree, each step corresponds to 0.001 degrees.
+        If one asks to move the motor to a position of 1.0004 degrees, the motor will move to 1 degree and the leftover value will be 0.0004 degrees.
+
+        The `"commanded"` value is the target position in user units to the full precision requested.
+        The other postion-related values are rounded to the motor resolution.
+        The `"commanded"` position is saved after a move and is available using special arguments to the built-in `read_motors()` functions.
+        
+        As mentioned above, if multiple values are needed, it is better to make a single call of `move_info()` saving the return values in an array, rather than making multiple calls, as each call involves calculations for all the motor positions and values, even if only selected values are returned.
+        For example,
+        
+        ```
+        {
+          local i, m[]
+          m = move_info()
+          for (i = 0; i < MOTORS; i++)
+            if (m[i]["to_move"]) {
+                    ...
+            }
+        }
+        ```
+        
+        For the most part, the `move_info()` function will reflect what will happen on the next `move_all` command.
+        However, for shared motors that can be moved by other processes or for motors that have positions that drift or have jitter, the status and position may change between the `move_info()` call and the `move_all` call.
   chg_dial:
     usages:
     - signature: chg_dial(motor, dial_angle)
@@ -1876,9 +1920,40 @@ functions:
       description: |
         Waits for specified activity to complete or returns status indicating whether specified activity is active.
         The function `wait()` is used to synchronize the flow of commands in **spec** with moving, counting and other activity.
-        Since the built-in commands and functions `move_all`, `move_cnt`, `tcount()` and `mcount()` return immediately after starting moving or counting, macros need to include some form of `wait()` if the next command requires the previ- ous move or count to complete.
+        Since the built-in commands and functions `move_all`, `move_cnt`, `tcount()` and `mcount()` return immediately after starting moving or counting, macros need to include some form of `wait()` if the next command requires the previous move or count to complete.
 
-        ( **paragraphs below not shown**)
+        Bits set in the mode argument affect the behavior as follows:
+
+        | Bit | Value | Activity Waited For Or Other Action
+        | ---: | ---: | :--- |
+        |   |  0 | Moving, counting and other acquisition
+        | 0 |  1 | Moving
+        | 1 |  2 | Counting (by the master timer)
+        | 2 |  4 | Other acquisition (MCAs, CCDs, etc.)
+        | 3 |  8 | Remote connections and remote asynchronous events
+        | 4 | 16 | Shared motors started by other clients
+        | 5 | 32 | Return zero or nonzero to indicate if busy
+        
+        If `mode` is a negative number, `wait()` will behave as for `mode = 0`, but a message will be printed showing what is being waited on.
+
+        For acquisition devices with `"auto_run"` mode enabled (such devices are started automatically during counting), waiting for counting will also include waiting for those devices.
+        
+        When **spec** is running as client to a **spec** server, bit 3 checks if `remote_async()` replies have all arrived.
+        In addition, bit 3 also checks if all configured **spec** servers have connected and if all **spec** server and EPICS remote motors have connected.
+
+        Waiting for **spec** server and remote motor connections is mainly an issue on start up or after `reconfig`.
+        One might use `wait(8)` or `wait(0x28)` in the built-in special macro `config_mac` if it is important to delay until all connections are up.
+        Note, until remote **spec** server and EPICS motors are fully connected and usable, the positions reported for those motors will be the last saved positions from **spec**’s *settings* file.
+
+        When **spec** is configured with shared motors either on a **spec** server or using EPICS channel access, if those motors are started by a different client, setting bit 4, as in `wait(16)` will cause **spec** to wait until those motors have completed their move.
+        Waiting can be interrupted with a **^C**, but that will not stop the motors.
+
+        Also, note that `wait(0)` does not check for the events flagged by bits 3 or 4.
+        To wait for remote events or externally busy motors requires explicitly setting bits 3 or 4 in `mode`.
+        Also, a **^C** interrupts a `wait(8)` or `wait(16)` but doesn’t change the conditions that caused `wait(8)` or `wait(16)` to block.
+        That is, the next `wait(8)` will still block if there are still pending connections, and the next `wait(16)` will still block if the external motors are still moving.
+        
+        If bit 5 (0x20) in `mode` is set, `wait()` returns **true** (1) if the activities flagged by bits 0, 1, 2, 3 or 4 are still going on, otherwise `wait()` returns **false** (0).
   stop:
     usages:
     - signature: stop()
@@ -2002,23 +2077,42 @@ functions:
         Returns the number of bytes written.
   sock_par:
     usages:
-    - signature: sock_par("host:port", cmd[, arg ])
+    - signature: sock_par("host:port", cmd[, arg])
       description: |
         Accesses various features for the given socket with values for `cmd` as follows:
 
-        - "?"
-        - "show"
-        - "info"
-        - "connect"
-        - "connect_udp"
-        - "listen"
-        - "close"
-        - "flush"
-        - "ignore_sim"
-        - "queue"
-        - "nodelay"
-
-        ( **description of list items not shown** )
+        - `"?"` — Lists the available commands.
+        - `"show"` — Lists the existing sockets along with additional information, such as whether the socket is UDP type, whether the socket is internal (as opposed to a user-level socket created by one of the functions described in this document) and whether the socket is set up for listening.
+          The command does not check whether the connection is still alive.
+        - `"info"` — Returns a string that contains the information displayed by the `"show"` command described above.
+        - `"connect"` — Opens a socket to the specified host and port.
+          Returns **true** for success and **false** for failure.
+          With the string `"silent"` as optional argument, error messages won’t be shown (as of **spec** release 6.00.02).
+        - `"connect_udp"` — Opens a socket to the specified host and port using the UDP protocol.
+          Returns **true** for success and **false** for failure.
+          With the string `"silent"` as optional option, error messages won’t be shown (as of **spec** release 6.00.02).
+        - `"listen"` — Sets up a socket for listening, allowing another instance of **spec** or some other program to make a connection.
+        - `"close"` — Closes the socket associated with the specified host and port.
+        - `"flush"` — Flushes **spec**’s input queue for the socket at `"host:port"`.
+          The input queue may contain characters if a `sock_get()` times out before the read is satisfied, or if more characters arrive than are requested.
+        - `"ignore_sim"` — With `arg` set to 1 or 0, turns *ignore-simulate* mode on or off, respectively.
+          Otherwise, returns the current state.
+          When *ignore-simulate* mode is on, the `sock_get()`, `sock_put()` and `sock_par()` commands will work even when simulate mode is on.
+          Note, simulate mode must be off to create a new socket connection.
+        - `"queue"` — Returns the number of characters in the socket’s input queue.
+          The input queue may contain characters if a `sock_get()` times out before the read is satisfied, or if more characters arrive than are requested.
+        - `"timeout"` — Returns or sets the read timeout for the socket described by `"host:port"`.
+          The units for `arg` are seconds.
+          A value of zero indicates no timeout − a `sock_get()` will wait until the read is satisfied or is interrupted by a  **^C**.
+          The smallest allowed value of 0.001 will cause the `sock_get()` to return immediately.
+          A negative value resets the timeout to the default of five seconds.
+        - `"nodelay"` — A value for `arg` of 1 or 0 sets or clears the state of the *TCP_NODELAY* socket option.
+          With no argument, the current state is retruned.
+          Normally, the underlying TCP protocol sends data along as it is made available.
+          However, if the previous data packet has not yet received acknowledgment from the client, the protocol holds onto and gathers small amounts of data into a single packet which will be sent once the pending acknowledgment is received or the size of the packet exceeds a threshold.
+          This algorithm increases network efficiency.
+          For some clients that send a stream of short packets that receive no replies, this algorithm may cause unwanted delays.
+          Set the `"nodelay"` option to 1 to turn off the algorithm, which corresponds to setting the *TCP_NODELAY* option at the system level.
 
   ### RS-232 Serial Interfaces
 
@@ -2072,24 +2166,49 @@ functions:
         Returns the number of bytes written.
   ser_par:
     usages:
-    - signature: par(addr, cmd[, arg])
+    - signature: ser_par(addr, cmd[, arg])
       description: |
         Accesses various features for the given socket with values for `cmd` as follows:
 
-        - `"device_id"`
-        - `"responsive"`
-        - `"drain"`
-        - `"flush"`
-        - `"queue"`
-        - `"timeout"`
-        - `"baud"`
-        - `"stop_bits"`
-        - `"data_bits"`
-        - `"dtr"`
-        - `"rts"`
-        - `"dsr"`
-
-        ( **description of list items not shown** )
+        - `"device_id"` — Returns the name of the associated serial device or −1 if there is no serial device configured as `addr`.
+        - `"responsive"` — Returns 1 if the associated serial device is open, 0 if the device could not be opened and −1 if there is no serial device configured as `addr`.
+        - `"drain"` — Waits for pending output on the associated serial device to be transmitted, but can be interrupted with **^C**.
+          Use the `"flush"` option, described next, to empty the output queue.
+        - `"flush"` — Flushes the input and/or output queues for the serial device with address `addr`.
+          If the optional argument `arg` is zero or absent, the input queue is flushed.
+          If Otherwise, both queues are flushed.
+          The input queue may contain characters if a `ser_get()` times out before the read is satisfied, or if more characters arrive than are requested.
+        - `"queue"` — Returns the number of characters in the serial device’s input queue.
+          The input queue may contain characters if a `ser_get()` times out before the read is satisfied, or if more characters arrive than are requested.
+        - `"timeout"` — Returns or sets the read timeout for the serial device with address `addr`.
+          The units for `arg` are seconds.
+          A value of zero indicates no timeout − a `ser_get()` will wait until the read is satisfied or is interrupted by a **^C**.
+          The smallest allowed value of 0.001 will cause the `ser_get()` to return immediately.
+          A negative value resets the timeout to the default of two seconds.
+        - `"baud"` — Returns or sets the baud rate for the serial device with address `addr`.
+          Valid baud rates are from 300 to 4000000.
+          The function returns the device’s baud rate.
+          If `arg` isn’t valid or if there was an error, the function returns −1.
+          Reading the hardware *config* file resets the baud rate to the value in the file.
+          **spec** cannot set the baud rate on `SOCKET` interfaces.
+        - `"stop_bits"` — Returns or sets the stop-bits value for the serial device with address `addr`.
+          Normal values are one or two.
+          The default value of one is appropriate for nearly every serial device, and this command should very rarely be needed.
+          Note, to set the non-default value, this command will need to be issued each time after reading the hardware *config* file.
+          This mode is not supported on `SOCKET` interfaces.
+        - `"data_bits"` — Returns or sets the data-bits value for the serial device with address `addr`.
+          Accepted values are 5, 6, 7 and 8.
+          The default values of seven if parity is enabled and eight if parity is disabled should work for nearly every serial device, and this command should very rarely be needed.
+          Note, to override the default value, this command needs to be issued after reading the hardware *config* file `reconfig`).
+          This mode is not supported on `SOCKET` interfaces.
+        - `"dtr"` — Returns the current setting or sets or clears the Data Terminal Ready (DTR) control line.
+          Only available on standard serial interfaces. 
+          Reset on hardware reconfiguration.
+        - `"rts"` — Returns the current setting or sets or clears the Request To Send (RTS) control line.
+          Only available on standard serial interfaces.
+          Reset on hardware reconfiguration.
+        - `"dsr"` — Returns the current setting of the Data Set Ready (DSR) control line.
+          Only available on standard serial interfaces.
         
         Values for any combination of the parameters `"timeout"`, `"baud"`, `"stop_bits"`, `"data_bits"`, `"dtr"`, and `"rts"` can be set in one call of `ser_par()` by combining assignments in a comma-separated list, as in
         
@@ -2164,7 +2283,7 @@ functions:
         Writes data to `addr` in the 64K A16 address space.
   vme_get32:
     usages:
-    - signature: vme_get32(addr[, dmode ])
+    - signature: vme_get32(addr[, dmode])
       description: |
         Returns the data at `addr` in the A32 address space.
   vme_put32:
@@ -2225,7 +2344,7 @@ functions:
         Resets to command level if not configured for `device`.
   ca_fna:
     usages:
-    - signature: ca_fna(f, n, a[, v ])
+    - signature: ca_fna(f, n, a[, v])
       description: |
         Sends the arbitrary FNA command to the module in slot `n`.
         If the dataway command given by `f` is a write function, the 24-bit value to be written is contained in `v`.
@@ -2233,7 +2352,7 @@ functions:
         The user should avoid issuing commands that would cause a LAM and should certainly avoid issuing commands to slots that are being used for motor or counter control by **spec**’s internal hardware code.
   ca_cntl:
     usages:
-    - signature: ca_cntl(cmd[, arg ])
+    - signature: ca_cntl(cmd[, arg])
       description: |
         Performs the selected CAMAC crate command according to the parameter `cmd`, as follows:
 
@@ -2338,7 +2457,7 @@ macros:
         ```
   eprint:
     usages:
-    - signature: eprint a[, b ... ]
+    - signature: eprint a[, b ...]
       description: |
         As above, except that if an error-log file is open, the generated string will also be written to that file prefixed by the `#E` characters.
 
