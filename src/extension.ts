@@ -8,6 +8,7 @@ export function activate(context: vscode.ExtensionContext) {
 	const builtinProvider = new provider();
 	const selector = { scheme: '*', language: 'spec' };
 	context.subscriptions.push(
+		vscode.languages.registerCompletionItemProvider(selector, builtinProvider),
 		vscode.languages.registerHoverProvider(selector, builtinProvider)
 	);
 }
