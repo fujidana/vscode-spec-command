@@ -5,10 +5,11 @@ import {SpecBuiltinProvider as provider} from './specProvider';
 
 // this method is called when your extension is activated
 export function activate(context: vscode.ExtensionContext) {
-	const builtinProvider = new provider();
+	const builtinProvider = new provider(context.asAbsolutePath('./syntaxes/spec.apiReference.json'));
 	const selector = { scheme: '*', language: 'spec' };
 	context.subscriptions.push(
 		vscode.languages.registerCompletionItemProvider(selector, builtinProvider),
+		vscode.languages.registerSignatureHelpProvider(selector, builtinProvider, '(', ')', ','),
 		vscode.languages.registerHoverProvider(selector, builtinProvider)
 	);
 }
