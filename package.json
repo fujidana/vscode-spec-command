@@ -43,7 +43,42 @@
 				"language": "spec",
 				"path": "./syntaxes/spec.snippets.json"
 			}
-		]
+		],
+		"configuration":{
+			"title": "spec",
+			"properties": {
+				"spec.helpDocumentVolume.hover": {
+					"type": "string",
+					"default": "full",
+					"description": "Volume of explanatory text in hovers, which is shown when the mouse cursor is on the symbol.",
+					"enum": [
+						"sentence",
+						"paragraph",
+						"full"
+					]
+				},
+				"spec.helpDocumentVolume.completionItem": {
+					"type": "string",
+					"default": "sentence",
+					"description": "Volume of explanatory text in auto-complete items, which is shown when the user types a symbol.",
+					"enum": [
+						"sentence",
+						"paragraph",
+						"full"
+					]
+				},
+				"spec.helpDocumentVolume.signatureHelp": {
+					"type": "string",
+					"default": "sentence",
+					"description": "Volume of explanatory text in signature help, which is shown when the user enters a function.",
+					"enum": [
+						"sentence",
+						"paragraph",
+						"full"
+					]
+				}
+			}
+		}
 	},
 	"scripts": {
 		"vscode:prepublish": "npm-run-all compile js-yaml:*",

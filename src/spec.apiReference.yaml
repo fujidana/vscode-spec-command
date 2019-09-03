@@ -236,6 +236,7 @@ functions:
   ### System functions
 
   chdir:
+    signature: chdir([directory])
     usages:
     - signature: chdir()
       description: |
@@ -246,6 +247,7 @@ functions:
       description: |
         As above, but changes to the directory `directory`, which must be a string constant or expression.
   unix:
+    signature: unix([command[, str[, len]]])
     usages:
     - signature: unix()
       description: |
@@ -271,6 +273,7 @@ functions:
         The UNIX epoch is the number of seconds from January 1, 1970, 00:00:00 GMT.
         The value returned includes a fractional part with microsecond resolution as provided by the host *gettimeofday()* system call.
   date:
+    signature: date([<fmt|seconds[, fmt]>])
     usages:
     - signature: date()
       description: |
@@ -301,6 +304,7 @@ functions:
         If the environment variable is unset, the null string is returned.
         Environment variables are exported to **spec** by the invoking shell program.
   file_info:
+    signature: file_info(filename|pid[, cmd])
     usages:
     - signature: file_info(filename[, cmd])
       description: |
@@ -418,6 +422,7 @@ functions:
         
         The paths and options for the system tools used by **spec**’s help facility are configured in the file `SPECD`/*spec.conf*.
   whatis:
+    signature: whatis(string[, 1])
     usages:
     - signature: whatis(string)
       description: |
@@ -428,7 +433,7 @@ functions:
         | ---: | ---: | :--- |
         | 0 | 0 | Not a command, macro or keyword. |
         | 0 | 1 | Command or keyword. |
-        | *length* | 2 | Macro (length is in bytes). |
+        | *length* | 2 | Macro (*length* is in bytes). |
         | 0x0001 | 4 | A data array or data array element. |
         | 0x0010 | 4 | Number-valued symbol. |
         | 0x0020 | 4 | String-valued symbol. |
@@ -487,6 +492,7 @@ functions:
 
         ( **description of list items not shown** )
   calc:
+    signature: calc(i[, x])
     usages:
     - signature: calc(i)
       description: |
@@ -500,6 +506,7 @@ functions:
         A description of the particular calls implemented for the four-circle diffractometer are in the *Four-Circle Reference*.
         See page 225 in the *Administrator’s Guide* for information on how to include other user-added functions in the program.
   open:
+    signature: open([filename])
     usages:
     - signature: open()
       description: |
@@ -519,6 +526,7 @@ functions:
         Returns zero for success, −1 if the file wasn’t open.
         Files should be closed before modifying them with editors.
   on:
+    signature: on([filename])
     usages:
     - signature: on()
       description: |
@@ -577,6 +585,7 @@ functions:
   ### Keyboard Input
 
   input:
+    signature: input([<prompt|n>])
     usages:
     - signature: input()
       description: |
@@ -617,6 +626,7 @@ functions:
         On the other hand, when **spec** is invoked with the `−p` *fd pid* option, with nonzero *fd*, `input()` reads nothing but does return the number of characters available to be read.
         If `n` is nonzero, `input()` simply reads and returns a line of text, as if it had been invoked with no argument.
   yesno:
+    signature: yesno([prompt, ]val)
     usages:
     - signature: yesno(val)
       description: |
@@ -630,6 +640,7 @@ functions:
         The characters `" (YES)? "` are appended to the prompt string if `val` is nonzero.
         Otherwise the characters `" (NO)? "` are added.
   getval:
+    signature: getval([prompt, ]val)
     usages:
     - signature: getval(val)
       description: |
@@ -662,7 +673,7 @@ functions:
   
   printf:
     usages:
-    - signature: printf(format[, a ...])
+    - signature: printf(format[, a...])
       description: |
         Does formatted printing on the turned-on output devices.
         `format` contains the format specifications for any following arguments.
@@ -670,12 +681,12 @@ functions:
         Returns **true**.
   eprintf:
     usages:
-    - signature: eprintf(format[, a ...])
+    - signature: eprintf(format[, a...])
       description: |
         As above, except that if an error-log file is open, the generated string will also be written to that file prefixed by the `#E` characters.
   fprintf:
     usages:
-    - signature: fprintf(file_name, format[, a ...])
+    - signature: fprintf(file_name, format[, a...])
       description: |
         Does formatted printing on `file_name`.
         All other devices (except *log* files) are turned off while the string is printed.
@@ -752,8 +763,9 @@ functions:
   ### Built-In Commands
 
   cdef:
+    signature: cdef(<name, string[, key[, flags]]|"?">)
     usages:
-    - signature: cdef("name", string[, "key"[, flags]])
+    - signature: cdef(name, string[, key[, flags]])
       description: |
         Defines parts of *chained* macros.
         A chained macro definition is maintained in pieces that can be selectively included to form the complete macro definition.
@@ -788,7 +800,7 @@ functions:
     - signature: cdef("?")
       description: |
         Lists all the pieces of all the chained macros.
-    - signature: cdef("name", "", "?")
+    - signature: cdef(name, "", "?")
       description: |
         Lists the pieces of the macro named `name`.
   clone:
@@ -798,14 +810,15 @@ functions:
         Duplicates the macro `source` as a new macro named `destination`.
         A clone of a chained macro becomes an ordinary macro.
   strdef:
+    signature: strdef(name[, <arr|key[, arr]>])
     usages:
-    - signature: strdef("name"[, arr])
+    - signature: strdef(name[, arr])
       description: |
         Returns a string containing the macro definition of `name`.
         If `name` is not a defined macro, returns the string `name` itself.
         If an associative array `arr` is included as an argument and if the macro `name` is a macro function, elements of `arr` indexed starting at 0 will be assigned the string names of the arguments to the macro function.
         The element `arr["file"]` will be assigned the name of file where the macro was defined or `"tty"` if the macro was defined at the keyboard.
-    - signature: strdef("name", key[, arr])
+    - signature: strdef(name, key[, arr])
       description: |
         If `name` is a chained macro, returns a string containing only the definition segment associated with `key`.
         If `name` is not a defined macro, returns the string `name` itself.
@@ -860,6 +873,7 @@ functions:
         Returns the integer part of `x`.
         The integer part is formed by truncation towards zero.
   rand:
+    signature: rand([x])
     usages:
     - signature: rand()
       description: |
@@ -928,6 +942,7 @@ functions:
       description: |
         Returns an integer indicating the position of the first occurrence of string `s2` in string `s1`, counted from 1, or zero if `s1` does not contain `s2`.
   split:
+    signature: split(string, arr[, delimiter])
     usages:
     - signature: split(string, arr)
       description: |
@@ -939,6 +954,7 @@ functions:
         As above, but splits the string into elements that are delimited by the string `delimiter`.
         The delimiting characters are eliminated.
   substr:
+    signature: substr(string, m[, n])
     usages:
     - signature: substr(string, m)
       description: |
@@ -953,13 +969,13 @@ functions:
         Returns the length of the string `string`.
   sprintf:
     usages:
-    - signature: sprintf(format[, a, b, ...])
+    - signature: sprintf(format[, a...])
       description: |
         Returns a string containing the formatted print.
         See *sprintf()* in a C-language reference manual.
   sscanf:
     usages:
-    - signature: sscanf(string, format, a[, b, ...])
+    - signature: sscanf(string, format, a[, b...])
       description: |
         Scans the literal string or string variable *string* for data, where *format* contains a format specification in the same style as the C language *scanf()* function.
         Each subsequent argument is a variable name or array element that will be assigned the values scanned for.
@@ -1047,7 +1063,7 @@ functions:
 
   array_op:
     usages:
-    - signature: array_op(cmd, arr[, args ...])
+    - signature: array_op(cmd, arr[, args...])
       description: |
         Performs operations on the array based on the values for `cmd`:
         
@@ -1202,7 +1218,7 @@ functions:
     - signature: array_pipe(program[, args[, arr_out[, arr_in]]]))
   array_plot:
     usages:
-    - signature: array_plot(arr[, arr2 ...]))
+    - signature: array_plot(arr[, arr2...]))
       description: |
         Plots the data in the array `arr` (and optional additional array arguments).
         Depending on whether `arr` is a row-wise or column-wise array, the first column or first row elements are used for *x*.
@@ -1214,7 +1230,7 @@ functions:
         See `plot_cntl()` for other options that affect drawing the plot.
   array_fit:
     usages:
-    - signature: array_fit(pars, arr[, arr2 ...])
+    - signature: array_fit(pars, arr[, arr2...])
       description: |
         Performs a linear fit of the data in the array `arr`.
         The fitted parameters are returned in the associative array `pars`.
@@ -1335,7 +1351,7 @@ functions:
         Assigns the value `val` to element `elem` of point `npt` in group `grp`.
   data_nput:
     usages:
-    - signature: data_nput(grp, npt, val0[, val1 ...])
+    - signature: data_nput(grp, npt, val0[, val1...])
       description: |
         Assigns values to point `npt` of group `grp`.
         Element 0 is assigned `val0`, element 1 is assigned `val1`, etc.
@@ -1455,7 +1471,7 @@ functions:
         The fit algorithm is along the same lines as the *lfit()* routine in *Numerical Recipes* (W. H. Press, et al., Cambridge University Press, 1986, page 512).
   data_plot:
     usages:
-    - signature: data_plot(grp, start, npts, el_0, el_1[, el_2 ...])
+    - signature: data_plot(grp, start, npts, el_0, el_1[, el_2...])
       description: |
         Plots the current data in group `grp` starting at point start and plotting `npts` points.
         Element `el_0` is used for *x*.
@@ -1515,6 +1531,7 @@ functions:
         The optional `header` argument is an associative array that may containing identifying information to be saved with the binary values in the data array.
         The optional `flags` argument is reserved for future enhancements.
   data_pipe:
+    signature: data_pipe(program[, args[, <grp_out|arr_out>[, <grp_in|arr_in>]]])
     usages:
     - signature: data_pipe("?")
       description: |
@@ -1556,10 +1573,12 @@ functions:
     usages:
     - signature: prop_watch(host, property)
   remote_stat:
+    signature: remote_stat(host[, "?"])
     usages:
     - signature: remote_stat(host)
     - signature: remote_stat(host, "?")
   remote_par:
+    signature: remote_par(host, cmd[, value])
     usages:
     - signature: remote_par(host, "connect")
     - signature: remote_par(host, "close")
@@ -1575,6 +1594,7 @@ functions:
     usages:
     - signature: id = remote_async(host, cmd)
   remote_poll:
+    signature: remote_poll(id[, "status"])
     usages:
     - signature: remote_poll(id, "status")
     - signature: remote_poll(id)
@@ -1794,6 +1814,7 @@ functions:
         For the most part, the `move_info()` function will reflect what will happen on the next `move_all` command.
         However, for shared motors that can be moved by other processes or for motors that have positions that drift or have jitter, the status and position may change between the `move_info()` call and the `move_all` call.
   chg_dial:
+    signature: chg_dial(motor, <dial_angle|cmd>)
     usages:
     - signature: chg_dial(motor, dial_angle)
       description: |
@@ -1911,6 +1932,7 @@ functions:
         Whenever simulation mode is turned off, the motor settings file is reread to restore the motor positions.
         Simulation mode cannot be turned off if **spec** was invoked with the **−s** flag.
   wait:
+    signature: wait([mode])
     usages:
     - signature: wait()
       description: |
@@ -1955,6 +1977,7 @@ functions:
         
         If bit 5 (0x20) in `mode` is set, `wait()` returns **true** (1) if the activities flagged by bits 0, 1, 2, 3 or 4 are still going on, otherwise `wait()` returns **false** (0).
   stop:
+    signature: stop([mode])
     usages:
     - signature: stop()
       description: |
@@ -1968,6 +1991,7 @@ functions:
   ### MCA (1D) Data Acquisition
 
   mca_sel:
+    signature: mca_sel(<n|"?">)
     usages:
     - signature: mca_sel(n)
       description: |
@@ -2030,6 +2054,7 @@ functions:
   ### Socket Functions
 
   sock_get:
+    signature: sock_get("host:port", <n|eos|d|mode>)
     usages:
     - signature: sock_get("host:port")
       description: |
@@ -2061,6 +2086,7 @@ functions:
         On both, the incoming data is treated as bigendian.
         If the incoming data is littleendian use `"short_swap"` or `"long_swap"`.
   sock_put:
+    signature: sock_put("host:port", <s|d[, cnt]|cmd[, arg]>)
     usages:
     - signature: sock_put("host:port", s)
       description: |
@@ -2117,6 +2143,7 @@ functions:
   ### RS-232 Serial Interfaces
 
   ser_get:
+    signature: ser_get(addr[, <n|eos|d|mode>])
     usages:
     - signature: ser_get(addr)
       description: |
@@ -2150,6 +2177,7 @@ functions:
         The last two modes work the same on both *big-endian* and *little-endian* platforms.
         On both, the incoming data is treated as bigendian If the incoming data is littleendian use `"short_swap"` or `"long_swap"`.
   ser_put:
+    signature: ser_put(addr, <s|d[, cnt]>)
     usages:
     - signature: ser_put(addr, s)
       description: |
@@ -2233,6 +2261,7 @@ functions:
         - `"ifc"` — Interface clear. This command resets the GPIB bus by sending the IFC message. The address `addr` is ignored. **spec** runs the same code sequence with the `"ifc"` command as it does when it initializes the GPIB controller on start up or on the `reconfig` command. For most controllers, **spec** sleeps for some fraction of a second after resetting the bus. Also, for most controllers, **spec** asserts the REN (remote enable) command after sending IFC.
         - `"responsive"` — Not a GPIB command, but returns 1 or 0 indicating whether the associated controller is configured and working. Note, the test is on the controller, not the device. To test controllers other than unit 0, the address syntax for `addr` is `"1:1"` or `101` for unit 1, etc. The device ad- dress isn’t looked at for this option.
   gpib_get:
+    signature: gpib_get(addr[, <n|s|mode>])
     usages:
     - signature: gpib_get(addr)
       description: |
@@ -2385,11 +2414,12 @@ macros:
   ### Miscellaneous
 
   lscmd:
+    signature: lscmd [pattern ...]
     usages:
     - signature: lscmd
       description: |
         This command lists all the built-in commands, functions and keywords.
-    - signature: lscmd pattern ...
+    - signature: lscmd pattern...
       description: |
         As above, except only names matching `pattern` are listed.
   memstat:
@@ -2398,6 +2428,7 @@ macros:
       description: |
         Shows the current memory usage.
   history:
+    signature: history [N]
     usages:
     - signature: history
       description: |
@@ -2434,7 +2465,7 @@ macros:
 
   print:
     usages:
-    - signature: print a[, b ...]
+    - signature: print a[, b...]
       description: |
         Prints the string value of each argument, adding a space between each string.
         If the argument is an associative array, each element of the array is printed in a list, as in:
@@ -2457,7 +2488,7 @@ macros:
         ```
   eprint:
     usages:
-    - signature: eprint a[, b ...]
+    - signature: eprint a[, b...]
       description: |
         As above, except that if an error-log file is open, the generated string will also be written to that file prefixed by the `#E` characters.
 
@@ -2465,7 +2496,7 @@ macros:
 
   delete:
     usages:
-    - signature: delete assoc-array[elem] ...
+    - signature: delete assoc_array[elem] ...
       description: |
         Removes the element `elem` of the associative array *assoc-array*.
   syms:
@@ -2495,6 +2526,7 @@ macros:
   ### Built-In Commands
 
   prdef:
+    signature: prdef [pattern ...]
     usages:
     - signature: prdef
       description: |
@@ -2505,6 +2537,7 @@ macros:
       description: |
         As above, except only macro names matching `pattern` are listed, where `pattern` may contain the metacharacters `?` or `*`, which have the usual meaning: `?` matches any single character and `*` matches any string.
   lsdef:
+    signature: lsdef [pattern ...]
     usages:
     - signature: lsdef
       description: |
@@ -2643,10 +2676,10 @@ keywords:
 
   def:
     usages:
-    - signature: def name string
+    - signature: def name 'string'
       description: |
         Defines a macro named `name` to be `string`. 
-        Each time `name` occurs on input, it is replaced with string.
+        Each time `name` occurs on input, it is replaced with `string`.
         The definition is made immediately, so the macro can be used later in the same statement block in which it is defined and can be redefined within the same statement block.
 
         Note that the macro definition is made regardless of any surrounding flow control statements, since the enclosing mini-program is not yet completely parsed and is not executing.
@@ -2672,7 +2705,7 @@ keywords:
         Clearly, it is necessary for the mini-program to be parsed and executed to decide which is the appropriate definition to assign to the `plot` macro.
   undef:
     usages:
-    - signature: undef name ...
+    - signature: undef name...
       description: |
         Removes the named macros, which can be ordinary macros, macro functions or `cdef()` macros.
 
@@ -2705,6 +2738,7 @@ keywords:
         The name may be that of a macro, in which case the macro definition is unavailable within the statement block.
         By appending empty square brackets to `name` the type of the symbol can be forced to be an associative array, which may be useful if `name` is to be used as an argument to a macro function before its type has been established by usage.
   array:
+    signature: array
     usages:
     - signature: '[[extern] shared] [type] array var[cols]'
       description: |

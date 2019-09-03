@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 
 interface ReferenceItem {
+	signature?: string;
+	description?: string;
 	usages: Usage[];
 }
 
@@ -10,11 +12,25 @@ interface Usage {
 	description?: string;
 }
 
+function truncateDocument(rawDocument: string, settingKey: string): string {
+	const volume = vscode.workspace.getConfiguration('spec.helpDocumentVolume').get(settingKey);
+	if (volume === 'full') {
+		return rawDocument;
+	} else if (volume === 'paragraph') {
+		const endIndex = rawDocument.indexOf('\n\n');
+		return (endIndex >= 0) ? rawDocument.substr(0, endIndex) + '\n\n...' : rawDocument;
+	} else if (volume === 'sentence') {
+		const endIndex = rawDocument.indexOf('.');
+		return (endIndex >= 0) ? rawDocument.substr(0, endIndex) + '. ...' : rawDocument;
+	} else {
+		return '';
+	}
+}
+
 function getUnresolvedCompletionItems(reference: Map<string, ReferenceItem>, kind: vscode.CompletionItemKind): vscode.CompletionItem[] {
 	const cItems: vscode.CompletionItem[] = [];
 	//  vscode.CompletionItem(identifier, kind);
 	for (const key of reference.keys()) {
-
 		cItems.push(new vscode.CompletionItem(key, kind));
 	}
 	return cItems;
@@ -31,24 +47,43 @@ function getResolvedCompletionItem(reference: Map<string, ReferenceItem>, cItem:
 		} else {
 			newCitem.detail = `(${label}) ${(usage.signature) ? usage.signature : cItem.label} (+${usageNum - 1} overload${(usageNum > 2) ? 's' : ''})`;
 		}
+		let descriptionMarkdown = new vscode.MarkdownString();
+		if (rItem.description) {
+			descriptionMarkdown = descriptionMarkdown.appendMarkdown(truncateDocument(rItem.description, 'completionItem'));
+		}
+
 		if (usage.description) {
-			const search = usage.description.search('\n');
-			newCitem.documentation = new vscode.MarkdownString((search >= 0) ? usage.description.substr(0, search) + ' ...' : usage.description);
+			newCitem.documentation = new vscode.MarkdownString(truncateDocument(usage.description, 'completionItem'));
 		}
 		return newCitem;
 	}
 }
 
 function getHover(reference: Map<string, ReferenceItem>, selectorName: string, label: string): vscode.Hover | undefined {
-	const refItem = reference.get(selectorName);
-	if (refItem !== undefined) {
-		const hover = new vscode.Hover([]);
+	const rItem = reference.get(selectorName);
+	if (rItem !== undefined) {
+		let mainMarkdown = new vscode.MarkdownString();
+		const usageNum = rItem.usages.length;
+		if (usageNum === 1) {
+			const usage = rItem.usages[0];
+			mainMarkdown = mainMarkdown.appendCodeblock(`${usage.signature ? usage.signature : selectorName} # ${label}`);
+		} else {
+			mainMarkdown = mainMarkdown.appendCodeblock(`${rItem.signature ? rItem.signature : selectorName + '(...)'} # ${label}, ${usageNum} overloads`);
+		}
+		if (rItem.description) {
+			mainMarkdown = mainMarkdown.appendMarkdown(truncateDocument(rItem.description, 'hover'));
+		}
+		const hover = new vscode.Hover(mainMarkdown);
 
-		refItem.usages.forEach((currentUsage: any) => {
-			hover.contents.push(new vscode.MarkdownString(`**(${label})** \`${currentUsage.signature ? currentUsage.signature : selectorName}\``));
-			if (currentUsage.description) {
-				hover.contents.push(new vscode.MarkdownString(currentUsage.description));
+		rItem.usages.forEach((usage: Usage) => {
+			let usageMarkdown = new vscode.MarkdownString();
+			if (rItem.usages.length !== 1) {
+				usageMarkdown = usageMarkdown.appendCodeblock(usage.signature ? usage.signature : selectorName);
+			} 
+			if (usage.description) {
+				usageMarkdown = usageMarkdown.appendMarkdown(truncateDocument(usage.description, 'hover'));
 			}
+			hover.contents.push(usageMarkdown);
 		});
 		return hover;
 	}
@@ -73,11 +108,11 @@ function getSignatureHelp(
 	activeSignatureHelp?: vscode.SignatureHelp):
 	vscode.SignatureHelp | undefined {
 	
-	const refItem = reference.get(signatureHint.signature);
-	if (refItem !== undefined) {
+	const rItem = reference.get(signatureHint.signature);
+	if (rItem !== undefined) {
 		const signatureHelp = new vscode.SignatureHelp();
 
-		refItem.usages.forEach((usage) => {
+		rItem.usages.forEach((usage) => {
 			// assume that usage.signature must exist.
 			let signatureInformation;
 			if (usage.signature) {
@@ -90,8 +125,8 @@ function getSignatureHelp(
 				signatureInformation = new vscode.SignatureInformation(signatureHint.signature);
 			}
 			if (usage.description) {
-				const search = usage.description.search('\n');
-				signatureInformation.documentation = new vscode.MarkdownString((search >= 0) ? usage.description.substr(0, search) + ' ...' : usage.description);
+				
+				signatureInformation.documentation = new vscode.MarkdownString(truncateDocument(usage.description, 'signatureHelp'));
 			}
 			signatureHelp.signatures.push(signatureInformation);
 		});
@@ -204,6 +239,7 @@ export class SpecBuiltinProvider implements vscode.CompletionItemProvider, vscod
 		if (range !== undefined) {
 			const selectorName = document.getText(range);
 			let hover: vscode.Hover | undefined;
+
 			if (/^[A-Z][[A-Z0-9_]*$/.test(selectorName)) { // all capitals, global variables
 				return getHover(this.variableReference, selectorName, 'built-in variable');
 			} else if (/^[A-Za-z][[A-Za-z0-9_]*$/.test(selectorName)) {
