@@ -2,13 +2,13 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 
 interface ReferenceItem {
-	signature?: string;
+	signature: string;
 	description?: string;
-	usages: Usage[];
+	overloads?: Overload[];
 }
 
-interface Usage {
-	signature?: string;
+interface Overload {
+	signature: string;
 	description?: string;
 }
 
@@ -39,22 +39,26 @@ function getUnresolvedCompletionItems(reference: Map<string, ReferenceItem>, kin
 function getResolvedCompletionItem(reference: Map<string, ReferenceItem>, cItem: vscode.CompletionItem, label: string): vscode.CompletionItem | undefined {
 	const rItem = reference.get(cItem.label);
 	if (rItem !== undefined) {
-		const usage = rItem.usages[0];
-		const usageNum = rItem.usages.length;
 		const newCitem = Object.assign({}, cItem);
-		if (usageNum === 1) {
-			newCitem.detail = `(${label}) ${(usage.signature) ? usage.signature : cItem.label}`;
-		} else {
-			newCitem.detail = `(${label}) ${(usage.signature) ? usage.signature : cItem.label} (+${usageNum - 1} overload${(usageNum > 2) ? 's' : ''})`;
+		newCitem.detail = `(${label}) ${rItem.signature}`;
+		if (rItem.overloads !== undefined && rItem.overloads.length > 1) {
+			newCitem.detail += `, ${rItem.overloads.length} overloads`;
 		}
 		let descriptionMarkdown = new vscode.MarkdownString();
-		if (rItem.description) {
+		if (rItem.description !== undefined) {
 			descriptionMarkdown = descriptionMarkdown.appendMarkdown(truncateDocument(rItem.description, 'completionItem'));
 		}
-
-		if (usage.description) {
-			newCitem.documentation = new vscode.MarkdownString(truncateDocument(usage.description, 'completionItem'));
+		if (rItem.overloads !== undefined) {
+			rItem.overloads.forEach((overload: Overload) => {
+				// descriptionMarkdown.appendMarkdown('---');
+				descriptionMarkdown.appendCodeblock(overload.signature);
+				if (overload.description) {
+					descriptionMarkdown.appendMarkdown(truncateDocument(overload.description, 'completionItem'));
+					// descriptionMarkdown.appendMarkdown('\n\n');
+				}
+			});
 		}
+		newCitem.documentation = descriptionMarkdown;
 		return newCitem;
 	}
 }
@@ -63,28 +67,27 @@ function getHover(reference: Map<string, ReferenceItem>, selectorName: string, l
 	const rItem = reference.get(selectorName);
 	if (rItem !== undefined) {
 		let mainMarkdown = new vscode.MarkdownString();
-		const usageNum = rItem.usages.length;
-		if (usageNum === 1) {
-			const usage = rItem.usages[0];
-			mainMarkdown = mainMarkdown.appendCodeblock(`${usage.signature ? usage.signature : selectorName} # ${label}`);
-		} else {
-			mainMarkdown = mainMarkdown.appendCodeblock(`${rItem.signature ? rItem.signature : selectorName + '(...)'} # ${label}, ${usageNum} overloads`);
+		let mainText = rItem.signature + ` # ${label}`;
+		if (rItem.overloads !== undefined && rItem.overloads.length > 1) {
+			mainText += `, ${rItem.overloads.length} overloads`;
 		}
-		if (rItem.description) {
+		mainMarkdown.appendCodeblock(mainText);
+		if (rItem.description !== undefined) {
 			mainMarkdown = mainMarkdown.appendMarkdown(truncateDocument(rItem.description, 'hover'));
 		}
+
 		const hover = new vscode.Hover(mainMarkdown);
 
-		rItem.usages.forEach((usage: Usage) => {
-			let usageMarkdown = new vscode.MarkdownString();
-			if (rItem.usages.length !== 1) {
-				usageMarkdown = usageMarkdown.appendCodeblock(usage.signature ? usage.signature : selectorName);
-			} 
-			if (usage.description) {
-				usageMarkdown = usageMarkdown.appendMarkdown(truncateDocument(usage.description, 'hover'));
-			}
-			hover.contents.push(usageMarkdown);
-		});
+		if (rItem.overloads !== undefined) {
+			rItem.overloads.forEach((overload: Overload) => {
+				let overloadMarkdown = new vscode.MarkdownString();
+				overloadMarkdown = overloadMarkdown.appendCodeblock(overload.signature);
+				if (overload.description) {
+					overloadMarkdown = overloadMarkdown.appendMarkdown(truncateDocument(overload.description, 'hover'));
+				}
+				hover.contents.push(overloadMarkdown);
+			});
+		}
 		return hover;
 	}
 }
@@ -102,31 +105,26 @@ function getParameterInformation(signature: string): vscode.ParameterInformation
 	});
 }
 
-function getSignatureHelp(
-	reference: Map<string, ReferenceItem>,
-	signatureHint: { signature: string, argumentIndex: number },
-	activeSignatureHelp?: vscode.SignatureHelp):
-	vscode.SignatureHelp | undefined {
-	
+function getSignatureHelp(reference: Map<string, ReferenceItem>, signatureHint: { signature: string, argumentIndex: number }, activeSignatureHelp?: vscode.SignatureHelp): vscode.SignatureHelp | undefined {	
 	const rItem = reference.get(signatureHint.signature);
 	if (rItem !== undefined) {
+		let overloads: Overload[];
+		if (rItem.overloads === undefined) {
+			overloads = [{signature: rItem.signature, description: rItem.description}];
+		} else {
+			overloads = rItem.overloads;
+		}
 		const signatureHelp = new vscode.SignatureHelp();
 
-		rItem.usages.forEach((usage) => {
+		overloads.forEach((overload) => {
 			// assume that usage.signature must exist.
-			let signatureInformation;
-			if (usage.signature) {
-				signatureInformation = new vscode.SignatureInformation(usage.signature);
-				let parameters;
-				if ((parameters = getParameterInformation(usage.signature)) !== undefined) {
-					signatureInformation.parameters = parameters;
-				}
-			} else {
-				signatureInformation = new vscode.SignatureInformation(signatureHint.signature);
+			let signatureInformation = new vscode.SignatureInformation(overload.signature);
+			if (overload.description !== undefined) {
+				signatureInformation.documentation = new vscode.MarkdownString(truncateDocument(overload.description, 'signatureHelp'));
 			}
-			if (usage.description) {
-				
-				signatureInformation.documentation = new vscode.MarkdownString(truncateDocument(usage.description, 'signatureHelp'));
+			let parameters;
+			if ((parameters = getParameterInformation(overload.signature)) !== undefined) {
+				signatureInformation.parameters = parameters;
 			}
 			signatureHelp.signatures.push(signatureInformation);
 		});
