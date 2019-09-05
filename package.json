@@ -56,7 +56,7 @@
 				"spec.helpDocumentVolume.hover": {
 					"type": "string",
 					"default": "full",
-					"description": "Volume of explanatory text in hovers, which is shown when the mouse cursor is on the symbol.",
+					"description": "Controls the volume of explanatory text in hovers, which is shown when the mouse cursor is on the symbol",
 					"enum": [
 						"sentence",
 						"paragraph",
@@ -66,7 +66,7 @@
 				"spec.helpDocumentVolume.completionItem": {
 					"type": "string",
 					"default": "sentence",
-					"description": "Volume of explanatory text in auto-complete items, which is shown when the user types a symbol.",
+					"description": "Controls the volume of explanatory text in auto-complete items, which is shown when the user types a symbol",
 					"enum": [
 						"sentence",
 						"paragraph",
@@ -76,12 +76,29 @@
 				"spec.helpDocumentVolume.signatureHelp": {
 					"type": "string",
 					"default": "sentence",
-					"description": "Volume of explanatory text in signature help, which is shown when the user enters a function.",
+					"description": "Controls the volume of explanatory text in signature help, which is shown when the user enters a function",
 					"enum": [
 						"sentence",
 						"paragraph",
 						"full"
 					]
+				},
+				"spec.mnemonics.motor.labels": {
+					"type": "array",
+					"items": {
+						"type": "string",
+						"pattern": "/^[a-zA-Z_][[a-zA-Z0-9_]{0,6}$/"
+					},
+					"default": [],
+					"description": "Specifies a string list of motor mnemonics"
+				},
+				"spec.mnemonics.motor.descriptions": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"default": [],
+					"description": "Specifies a string list of descriptions corresponding to motor mnemonics"
 				}
 			}
 		}
@@ -98,14 +115,14 @@
 	"devDependencies": {
 		"@types/glob": "^7.1.1",
 		"@types/mocha": "^5.2.6",
-		"@types/node": "^10.12.21",
-		"@types/vscode": "^1.37.0",
+		"@types/node": "^10.14.17",
+		"@types/vscode": "^1.38.0",
 		"glob": "^7.1.4",
 		"js-yaml": "^3.13.1",
 		"mocha": "^6.1.4",
 		"npm-run-all": "^4.1.5",
-		"tslint": "^5.12.1",
-		"typescript": "^3.3.1",
+		"tslint": "^5.19.0",
+		"typescript": "^3.6.2",
 		"vscode-test": "^1.0.2"
 	},
 	"license": "SEE LICENSE IN LICENSE",
