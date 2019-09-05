@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
 
 interface ReferenceItem {
 	signature: string;
@@ -180,31 +179,20 @@ function parseSignatureInEditing(line: string, position: number) {
 	return { 'signature': match[2], 'argumentIndex': substr.split(',').length - 1 };
 }
 
-export class SpecBuiltinProvider implements vscode.CompletionItemProvider, vscode.HoverProvider, vscode.SignatureHelpProvider {
-	private variableReference: Map<string, ReferenceItem> = new Map();
-	private macroReference: Map<string, ReferenceItem> = new Map();
-	private functionReference: Map<string, ReferenceItem> = new Map();
-	private keywordReference: Map<string, ReferenceItem> = new Map();
-	private completionItems: vscode.CompletionItem[] = [];
+export class SpecProvider implements vscode.CompletionItemProvider, vscode.HoverProvider, vscode.SignatureHelpProvider {
+	protected variableReference: Map<string, ReferenceItem> = new Map();
+	protected macroReference: Map<string, ReferenceItem> = new Map();
+	protected functionReference: Map<string, ReferenceItem> = new Map();
+	protected keywordReference: Map<string, ReferenceItem> = new Map();
+	protected completionItems: vscode.CompletionItem[] = [];
 
-	constructor(apiReferencePath: string) {
-		fs.readFile(apiReferencePath, 'utf-8', (err: any, data: string) => {
-			if (err !== null) {
-				throw err;
-			}
-			const jsonObject = JSON.parse(data);
-			this.variableReference = new Map(Object.entries(jsonObject.variables));
-			this.macroReference = new Map(Object.entries(jsonObject.macros));
-			this.functionReference = new Map(Object.entries(jsonObject.functions));
-			this.keywordReference = new Map(Object.entries(jsonObject.keywords));
-
-			this.completionItems = this.completionItems.concat(
-				getUnresolvedCompletionItems(this.variableReference, vscode.CompletionItemKind.Variable),
-				getUnresolvedCompletionItems(this.macroReference, vscode.CompletionItemKind.Function),
-				getUnresolvedCompletionItems(this.functionReference, vscode.CompletionItemKind.Function),
-				getUnresolvedCompletionItems(this.keywordReference, vscode.CompletionItemKind.Keyword)
-			);
-		});
+	protected updateCompletionItems() {
+		this.completionItems = this.completionItems.concat(
+			getUnresolvedCompletionItems(this.variableReference, vscode.CompletionItemKind.Variable),
+			getUnresolvedCompletionItems(this.macroReference, vscode.CompletionItemKind.Function),
+			getUnresolvedCompletionItems(this.functionReference, vscode.CompletionItemKind.Function),
+			getUnresolvedCompletionItems(this.keywordReference, vscode.CompletionItemKind.Keyword)
+		);
 	}
 
 	public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.CompletionItem[] | undefined {
@@ -254,9 +242,9 @@ export class SpecBuiltinProvider implements vscode.CompletionItemProvider, vscod
 
 	public provideSignatureHelp(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.SignatureHelpContext): vscode.SignatureHelp | undefined {
 		const signatureHint = parseSignatureInEditing(document.lineAt(position.line).text, position.character);
-		console.log(context);
 		if (signatureHint !== undefined) {
 			return getSignatureHelp(this.functionReference, signatureHint, context.activeSignatureHelp);
 		}
 	}
 }
+
