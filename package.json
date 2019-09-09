@@ -3,7 +3,7 @@
 	"name": "vscode-spec",
 	"displayName": "spec Language Support",
 	"description": "spec language support for Visual Studio Code",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"engines": {
 		"vscode": "^1.38.0"
 	},
@@ -87,7 +87,7 @@
 					"type": "array",
 					"items": {
 						"type": "string",
-						"pattern": "/^[a-zA-Z_][[a-zA-Z0-9_]{0,6}$/"
+						"pattern": "^[a-zA-Z_][a-zA-Z0-9_]{0,6}$"
 					},
 					"default": [],
 					"description": "Specifies a string list of motor mnemonics"
