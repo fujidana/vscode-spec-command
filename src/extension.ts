@@ -2,15 +2,24 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import {SpecBuiltinProvider as BuiltinProvider} from './specBuiltinProvider';
+import {SpecDocumentProvider as DocumentProvider} from './specDocumentProvider';
 
 // this method is called when your extension is activated
 export function activate(context: vscode.ExtensionContext) {
 	const builtinProvider = new BuiltinProvider(context.asAbsolutePath('./syntaxes/spec.apiReference.json'));
+	const documentProvider = new DocumentProvider();
 	const selector = { scheme: '*', language: 'spec' };
+	
 	context.subscriptions.push(
+		documentProvider.diagnosticCollection,
 		vscode.languages.registerCompletionItemProvider(selector, builtinProvider),
 		vscode.languages.registerSignatureHelpProvider(selector, builtinProvider, '(', ')', ','),
-		vscode.languages.registerHoverProvider(selector, builtinProvider)
+		vscode.languages.registerHoverProvider(selector, builtinProvider),
+		vscode.languages.registerCompletionItemProvider(selector, documentProvider),
+		vscode.languages.registerSignatureHelpProvider(selector, documentProvider, '(', ')', ','),
+		vscode.languages.registerHoverProvider(selector, documentProvider),
+		vscode.languages.registerDefinitionProvider(selector, documentProvider),
+		vscode.languages.registerDocumentSymbolProvider(selector, documentProvider)
 	);
 }
 

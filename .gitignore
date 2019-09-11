@@ -5,3 +5,4 @@ node_modules
 .DS_Store
 syntaxes/spec.tmLanguage.json
 syntaxes/spec.apiReference.json
+src/grammar.ts

@@ -1,93 +1,265 @@
 import * as vscode from 'vscode';
 
-interface ReferenceItem {
+export enum SymbolAffiliation {
+	Builtin,
+	Document,
+	Workspace,
+	Settings
+}
+
+// 'overloads' parameter is for built-in macros and functions.
+export interface SymbolInformation {
 	signature: string;
 	description?: string;
+	snippet?: string;
+	location?: PesRange;
 	overloads?: Overload[];
 }
 
-interface Overload {
+export interface Overload {
 	signature: string;
 	description?: string;
 }
 
-function truncateDocument(rawDocument: string, settingKey: string): string {
+interface PesPosition {
+    offset: number;
+    line: number;
+    column: number;
+}
+
+interface PesRange {
+    start: PesPosition;
+    end: PesPosition;
+}
+
+export function convertPosition(pesPosition: PesPosition) {
+    return new vscode.Position(pesPosition.line - 1, pesPosition.column - 1);
+}
+
+export function convertRange(pesRange: PesRange) {
+    return new vscode.Range(convertPosition(pesRange.start), convertPosition(pesRange.end));
+}
+
+
+/**
+ * Symbol Storage: this instance stores symbol information of a specified type, such as variables or functions.
+ */
+export class SymbolStorage extends Map<string, SymbolInformation> {
+	constructor(
+		entries: Iterable<readonly [string, SymbolInformation]> | readonly (readonly [string, SymbolInformation])[],
+		public affiliation: SymbolAffiliation,
+		public itemKind: vscode.CompletionItemKind,
+		public uri?: vscode.Uri) {
+		super(entries);
+	}
+
+	/**
+	 * findHover
+	 */
+	public findHover(selector: string): vscode.Hover | undefined {
+		const symbolInfo = this.get(selector);
+		if (symbolInfo) { // if the specified symbol is found
+			// prepare the first line: the signature and short description.
+			let mainText = symbolInfo.signature + ` # ${this.getShortDescription()}`;
+			if (symbolInfo.overloads && symbolInfo.overloads.length > 1) {
+				mainText += `, ${symbolInfo.overloads.length} overloads`;
+			}
+			let mainMarkdown = new vscode.MarkdownString().appendCodeblock(mainText);
+
+			// prepare the second line: the description (if it exists)
+			if (symbolInfo.description) {
+				mainMarkdown = mainMarkdown.appendMarkdown(truncateText(symbolInfo.description, 'hover'));
+			}
+			const hover = new vscode.Hover(mainMarkdown);
+
+			// for overloaded functions, prepare additional markdown blocks
+			if (symbolInfo.overloads) {
+				for (const overload of symbolInfo.overloads) {
+					let overloadMarkdown = new vscode.MarkdownString().appendCodeblock(overload.signature);
+					if (overload.description) {
+						overloadMarkdown = overloadMarkdown.appendMarkdown(truncateText(overload.description, 'hover'));
+					}
+					hover.contents.push(overloadMarkdown);
+				}
+			}
+			return hover;
+		}
+	}
+
+	/**
+	 * getUnresolvedCompletionItems
+	 */
+	public getUnresolvedCompletionItems() {
+		const items: vscode.CompletionItem[] = [];
+		for (const [key, symbolInfo] of this.entries()) {
+			const item = new vscode.CompletionItem(key, this.itemKind);
+			if (symbolInfo.snippet) {
+				item.insertText = new vscode.SnippetString(symbolInfo.snippet);
+			}
+			items.push(item);
+		}
+		return items;
+	}
+
+	/**
+	 * resolveCompletionItem
+	 */
+	public resolveCompletionItem(item: vscode.CompletionItem) {
+		// find the symbol information about the symbol.
+		const symbolInfo = this.get(item.label);
+		if (symbolInfo) {
+			// copy completion item.
+			const newItem = Object.assign({}, item);
+
+			// set the detail of the completion item
+			newItem.detail = `(${this.getShortDescription()}) ${symbolInfo.signature}`;
+			if (symbolInfo.overloads && symbolInfo.overloads.length > 1) {
+				newItem.detail += `, ${symbolInfo.overloads.length} overloads`;
+			}
+
+			// set the description of the completion item
+			// if the main description exists, append it.
+			let descriptionMarkdown =
+				symbolInfo.description ?
+					new vscode.MarkdownString(truncateText(symbolInfo.description, 'completionItem')) :
+					new vscode.MarkdownString();
+
+			// if overloaded, append overload information.
+			if (symbolInfo.overloads) {
+				for (const overload of symbolInfo.overloads) {
+					// descriptionMarkdown.appendMarkdown('---');
+					descriptionMarkdown.appendCodeblock(overload.signature);
+					if (overload.description) {
+						descriptionMarkdown.appendMarkdown(truncateText(overload.description, 'completionItem'));
+						// descriptionMarkdown.appendMarkdown('\n\n');
+					}
+				}
+			}
+
+			// 
+			newItem.documentation = descriptionMarkdown;
+			return newItem;
+		}
+	}
+
+	public getSignatureHelp(signatureHint: { signature: string, argumentIndex: number }, activeSignatureHelp?: vscode.SignatureHelp) {
+		const symbolInfo = this.get(signatureHint.signature);
+		if (symbolInfo) {
+			let overloads: Overload[];
+			if (symbolInfo.overloads) {
+				overloads = symbolInfo.overloads;
+			} else {
+				overloads = [{ signature: symbolInfo.signature, description: symbolInfo.description }];
+			}
+			const signatureHelp = new vscode.SignatureHelp();
+
+			for (const overload of overloads) {
+				// assume that usage.signature must exist.
+				let signatureInformation = new vscode.SignatureInformation(overload.signature);
+				if (overload.description !== undefined) {
+					signatureInformation.documentation = new vscode.MarkdownString(truncateText(overload.description, 'signatureHelp'));
+				}
+				let parameters;
+				if ((parameters = getParameterInformation(overload.signature)) !== undefined) {
+					signatureInformation.parameters = parameters;
+				}
+				signatureHelp.signatures.push(signatureInformation);
+			}
+	
+			signatureHelp.activeParameter = signatureHint.argumentIndex;
+	
+			// if ((activeSignatureHelp !== undefined) && (activeSignatureHelp.signatures === signatureHelp.signatures)) {
+			if ((activeSignatureHelp !== undefined) && (activeSignatureHelp.signatures[0].label === signatureHelp.signatures[0].label)) {
+				signatureHelp.activeSignature = activeSignatureHelp.activeSignature;
+			} else {
+				signatureHelp.activeSignature = 0;
+			}
+	
+			if (signatureHelp.activeSignature >= signatureHelp.signatures.length) {
+				signatureHelp.activeSignature = signatureHelp.signatures.length;
+			}
+			return signatureHelp;
+		}
+	}
+	
+	/**
+	 * findLocation
+	 */
+	public findLocation(selector: string): vscode.Location | undefined{
+		const symbolInfo = this.get(selector);
+		if (symbolInfo) { // if the specified symbol is found
+			if (this.uri && symbolInfo.location) {
+				return new vscode.Location(this.uri, convertRange(symbolInfo.location));
+			}
+		}
+	}
+
+	/**
+	 * getSymbolInformation
+	 */
+	public getSymbolInformation() {
+		const symbols = [];
+		for (const [key, value] of this.entries()) {
+			let kind;
+			if (this.uri && value.location) {
+				switch (this.itemKind) {
+					case vscode.CompletionItemKind.Method:
+						kind = vscode.SymbolKind.Method; break;
+					case vscode.CompletionItemKind.Function:
+						kind = vscode.SymbolKind.Function; break;
+					default:
+						kind = vscode.SymbolKind.Null;
+				}
+				const location = new vscode.Location(this.uri, convertRange(value.location));
+				symbols.push(new vscode.SymbolInformation(key, kind, '', location));
+				// symbols.push(new vscode.DocumentSymbol(key, '', kind, convertRange(value.location), convertRange(value.location)));
+			}
+		}
+		return symbols;
+	}
+
+	private getShortDescription() {
+		let symbolLabel: string;
+		switch (this.itemKind) {
+			case vscode.CompletionItemKind.Variable:
+				symbolLabel = "variable"; break;
+			case vscode.CompletionItemKind.Constant:
+				symbolLabel = "constant"; break;
+			case vscode.CompletionItemKind.Method:
+				symbolLabel = "function"; break;
+			case vscode.CompletionItemKind.Function:
+				symbolLabel = "macro"; break;
+			case vscode.CompletionItemKind.Keyword:
+				symbolLabel = "keyword"; break;
+			case vscode.CompletionItemKind.EnumMember:
+				symbolLabel = "member"; break;
+			case vscode.CompletionItemKind.Snippet:
+				symbolLabel = "snippet"; break;
+			default:
+				symbolLabel = "symbol"; break;
+		}
+		if (this.affiliation === SymbolAffiliation.Builtin) {
+			return 'built-in ' + symbolLabel;
+		} else if (this.affiliation === SymbolAffiliation.Settings) {
+			return 'spec language support, dynamic ' + symbolLabel;
+		} else {
+			return symbolLabel;
+		}
+	}
+}
+
+function truncateText(text: string, settingKey: string): string {
 	const volume = vscode.workspace.getConfiguration('spec.helpDocumentVolume').get(settingKey);
 	if (volume === 'full') {
-		return rawDocument;
+		return text;
 	} else if (volume === 'paragraph') {
-		const endIndex = rawDocument.indexOf('\n\n');
-		return (endIndex >= 0) ? rawDocument.substr(0, endIndex) + '\n\n...' : rawDocument;
+		const endIndex = text.indexOf('\n\n');
+		return (endIndex >= 0) ? text.substr(0, endIndex) + '\n\n...' : text;
 	} else if (volume === 'sentence') {
-		const endIndex = rawDocument.indexOf('.');
-		return (endIndex >= 0) ? rawDocument.substr(0, endIndex) + '. ...' : rawDocument;
+		const endIndex = text.indexOf('.');
+		return (endIndex >= 0 && endIndex !== text.length - 1) ? text.substr(0, endIndex) + '. ...' : text;
 	} else {
 		return '';
-	}
-}
-
-function getUnresolvedCompletionItems(reference: Map<string, ReferenceItem>, kind: vscode.CompletionItemKind): vscode.CompletionItem[] {
-	const cItems: vscode.CompletionItem[] = [];
-	//  vscode.CompletionItem(identifier, kind);
-	for (const key of reference.keys()) {
-		cItems.push(new vscode.CompletionItem(key, kind));
-	}
-	return cItems;
-}
-
-function getResolvedCompletionItem(reference: Map<string, ReferenceItem>, cItem: vscode.CompletionItem, label: string): vscode.CompletionItem | undefined {
-	const rItem = reference.get(cItem.label);
-	if (rItem !== undefined) {
-		const newCitem = Object.assign({}, cItem);
-		newCitem.detail = `(${label}) ${rItem.signature}`;
-		if (rItem.overloads !== undefined && rItem.overloads.length > 1) {
-			newCitem.detail += `, ${rItem.overloads.length} overloads`;
-		}
-		let descriptionMarkdown = new vscode.MarkdownString();
-		if (rItem.description !== undefined) {
-			descriptionMarkdown = descriptionMarkdown.appendMarkdown(truncateDocument(rItem.description, 'completionItem'));
-		}
-		if (rItem.overloads !== undefined) {
-			rItem.overloads.forEach((overload: Overload) => {
-				// descriptionMarkdown.appendMarkdown('---');
-				descriptionMarkdown.appendCodeblock(overload.signature);
-				if (overload.description) {
-					descriptionMarkdown.appendMarkdown(truncateDocument(overload.description, 'completionItem'));
-					// descriptionMarkdown.appendMarkdown('\n\n');
-				}
-			});
-		}
-		newCitem.documentation = descriptionMarkdown;
-		return newCitem;
-	}
-}
-
-function getHover(reference: Map<string, ReferenceItem>, selectorName: string, label: string): vscode.Hover | undefined {
-	const rItem = reference.get(selectorName);
-	if (rItem !== undefined) {
-		let mainMarkdown = new vscode.MarkdownString();
-		let mainText = rItem.signature + ` # ${label}`;
-		if (rItem.overloads !== undefined && rItem.overloads.length > 1) {
-			mainText += `, ${rItem.overloads.length} overloads`;
-		}
-		mainMarkdown.appendCodeblock(mainText);
-		if (rItem.description !== undefined) {
-			mainMarkdown = mainMarkdown.appendMarkdown(truncateDocument(rItem.description, 'hover'));
-		}
-
-		const hover = new vscode.Hover(mainMarkdown);
-
-		if (rItem.overloads !== undefined) {
-			rItem.overloads.forEach((overload: Overload) => {
-				let overloadMarkdown = new vscode.MarkdownString();
-				overloadMarkdown = overloadMarkdown.appendCodeblock(overload.signature);
-				if (overload.description) {
-					overloadMarkdown = overloadMarkdown.appendMarkdown(truncateDocument(overload.description, 'hover'));
-				}
-				hover.contents.push(overloadMarkdown);
-			});
-		}
-		return hover;
 	}
 }
 
@@ -102,46 +274,6 @@ function getParameterInformation(signature: string): vscode.ParameterInformation
 	return argumentList.map((argStr) => {
 		return new vscode.ParameterInformation(argStr.trim());
 	});
-}
-
-function getSignatureHelp(reference: Map<string, ReferenceItem>, signatureHint: { signature: string, argumentIndex: number }, activeSignatureHelp?: vscode.SignatureHelp): vscode.SignatureHelp | undefined {	
-	const rItem = reference.get(signatureHint.signature);
-	if (rItem !== undefined) {
-		let overloads: Overload[];
-		if (rItem.overloads === undefined) {
-			overloads = [{signature: rItem.signature, description: rItem.description}];
-		} else {
-			overloads = rItem.overloads;
-		}
-		const signatureHelp = new vscode.SignatureHelp();
-
-		overloads.forEach((overload) => {
-			// assume that usage.signature must exist.
-			let signatureInformation = new vscode.SignatureInformation(overload.signature);
-			if (overload.description !== undefined) {
-				signatureInformation.documentation = new vscode.MarkdownString(truncateDocument(overload.description, 'signatureHelp'));
-			}
-			let parameters;
-			if ((parameters = getParameterInformation(overload.signature)) !== undefined) {
-				signatureInformation.parameters = parameters;
-			}
-			signatureHelp.signatures.push(signatureInformation);
-		});
-
-		signatureHelp.activeParameter = signatureHint.argumentIndex;
-
-		// if ((activeSignatureHelp !== undefined) && (activeSignatureHelp.signatures === signatureHelp.signatures)) {
-		if ((activeSignatureHelp !== undefined) && (activeSignatureHelp.signatures[0].label === signatureHelp.signatures[0].label)) {
-			signatureHelp.activeSignature = activeSignatureHelp.activeSignature;
-		} else {
-			signatureHelp.activeSignature = 0;
-		}
-
-		if (signatureHelp.activeSignature >= signatureHelp.signatures.length) {
-			signatureHelp.activeSignature = signatureHelp.signatures.length;
-		}
-		return signatureHelp;
-	}
 }
 
 function parseSignatureInEditing(line: string, position: number) {
@@ -179,72 +311,119 @@ function parseSignatureInEditing(line: string, position: number) {
 	return { 'signature': match[2], 'argumentIndex': substr.split(',').length - 1 };
 }
 
-export class SpecProvider implements vscode.CompletionItemProvider, vscode.HoverProvider, vscode.SignatureHelpProvider {
-	protected variableReference: Map<string, ReferenceItem> = new Map();
-	protected macroReference: Map<string, ReferenceItem> = new Map();
-	protected functionReference: Map<string, ReferenceItem> = new Map();
-	protected keywordReference: Map<string, ReferenceItem> = new Map();
+/**
+ * abstract provider
+ */
+export class SpecProvider implements vscode.CompletionItemProvider, vscode.HoverProvider, vscode.SignatureHelpProvider, vscode.DefinitionProvider, vscode.DocumentSymbolProvider {
+	protected symbolStorages: SymbolStorage[] = [];
 	protected completionItems: vscode.CompletionItem[] = [];
 
+	/**
+	 * generate completion item cache from all symbols in all storages.
+	 */
 	protected updateCompletionItems() {
-		this.completionItems = this.completionItems.concat(
-			getUnresolvedCompletionItems(this.variableReference, vscode.CompletionItemKind.Variable),
-			getUnresolvedCompletionItems(this.macroReference, vscode.CompletionItemKind.Function),
-			getUnresolvedCompletionItems(this.functionReference, vscode.CompletionItemKind.Function),
-			getUnresolvedCompletionItems(this.keywordReference, vscode.CompletionItemKind.Keyword)
-		);
+		const items: vscode.CompletionItem[] = [];
+		for (const symbolStorage of this.symbolStorages) {
+			items.push(...symbolStorage.getUnresolvedCompletionItems());
+		}
+		this.completionItems = items;
 	}
 
+	/**
+	 * filter
+	 */
+	protected getFilteredSymbolStoragesByItemKind(itemKind: vscode.CompletionItemKind) {
+		return this.symbolStorages.filter((storage) => storage.itemKind === itemKind);
+	}
+
+	/**
+	 * required implementation of vscode.CompletionItemProvider
+	 */
 	public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.CompletionItem[] | undefined {
 		const range = document.getWordRangeAtPosition(position);
-		if (range !== undefined) {
+		if (range) {
 			const selectorName = document.getText(range);
-			if (/^[A-Za-z][[A-Za-z0-9_]*$/.test(selectorName)) {
+			if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(selectorName)) {
 				return this.completionItems;
 			}
 		}
 	}
 
+	/**
+	 * optional implementation of vscode.CompletionItemProvider
+	 */
 	public resolveCompletionItem(item: vscode.CompletionItem, token: vscode.CancellationToken): vscode.CompletionItem | undefined {
-		if (item.kind === vscode.CompletionItemKind.Variable) {
-			return getResolvedCompletionItem(this.variableReference, item, 'built-in variable');
-		} else if (item.kind === vscode.CompletionItemKind.Keyword) {
-			return getResolvedCompletionItem(this.keywordReference, item, 'keyword');
-		} else if (item.kind === vscode.CompletionItemKind.Function) {
-			let newItem: vscode.CompletionItem | undefined;
-			if ((newItem = getResolvedCompletionItem(this.macroReference, item, 'built-in macro')) !== undefined) {
-				return newItem;
-			} else if ((newItem = getResolvedCompletionItem(this.functionReference, item, 'built-in function')) !== undefined) {
-				return newItem;
-			}
+		const symbolStorages = this.symbolStorages.filter((symbolStorage) => symbolStorage.itemKind === item.kind);
+		if (symbolStorages.length > 0) {
+			return symbolStorages[0].resolveCompletionItem(item);
 		}
 	}
 
+	/**
+	 * required implementation of vscode.HoverProvider
+	 */
 	public provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.Hover | undefined {
 		const range = document.getWordRangeAtPosition(position);
-		if (range !== undefined) {
+		if (range) {
 			const selectorName = document.getText(range);
-			let hover: vscode.Hover | undefined;
-
-			if (/^[A-Z][[A-Z0-9_]*$/.test(selectorName)) { // all capitals, global variables
-				return getHover(this.variableReference, selectorName, 'built-in variable');
-			} else if (/^[A-Za-z][[A-Za-z0-9_]*$/.test(selectorName)) {
-				if ((hover = getHover(this.macroReference, selectorName, 'built-in macro')) !== undefined) {
-					return hover;
-				} else if ((hover = getHover(this.functionReference, selectorName, 'built-in function')) !== undefined) {
-					return hover;
-				} else if ((hover = getHover(this.keywordReference, selectorName, 'keyword')) !== undefined) {
-					return hover;
+			if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(selectorName)) {
+				for (const SymbolStorage of this.symbolStorages) {
+					let hover = SymbolStorage.findHover(selectorName);
+					if (hover) {
+						return hover;
+					}
 				}
 			}
 		}
 	}
 
+	/**
+	 * required implementation of vscode.SignatureHelpProvider
+	 */
 	public provideSignatureHelp(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.SignatureHelpContext): vscode.SignatureHelp | undefined {
 		const signatureHint = parseSignatureInEditing(document.lineAt(position.line).text, position.character);
 		if (signatureHint !== undefined) {
-			return getSignatureHelp(this.functionReference, signatureHint, context.activeSignatureHelp);
+			const symbolStorages = this.symbolStorages.filter((symbolStorage) => symbolStorage.itemKind === vscode.CompletionItemKind.Method);
+			for (const symbolStorage of symbolStorages) {
+				if (symbolStorage.has(signatureHint.signature)) {
+					return symbolStorage.getSignatureHelp(signatureHint, context.activeSignatureHelp);
+				}
+			}
 		}
 	}
-}
 
+	/**
+	 * required implementation of vscode.DefinitionProvider
+	 */
+    provideDefinition(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.ProviderResult<vscode.Definition | vscode.DefinitionLink[]> {
+		const range = document.getWordRangeAtPosition(position);
+		if (range) {
+			const selectorName = document.getText(range);
+			if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(selectorName)) {
+				const locations: vscode.Location[] = [];
+                for (const storage of this.symbolStorages) {
+					const location = storage.findLocation(selectorName);
+					if (location) {
+						locations.push(location);
+					}
+				}
+				if (locations.length > 0) {
+					return locations;
+				}
+			}
+        }
+	}
+	
+	/**
+	 * required implementation of vscode.DocumentSymbolProvider
+	 */
+	provideDocumentSymbols(document: vscode.TextDocument, token: vscode.CancellationToken): vscode.ProviderResult<vscode.SymbolInformation[] | vscode.DocumentSymbol[]>
+	{
+		const filteredStorages = this.symbolStorages.filter((storage) => storage.uri === document.uri);
+		const symbols = [];
+		for (const storage of filteredStorages) {
+			symbols.push(...storage.getSymbolInformation());
+		}
+		return symbols;
+	}
+}

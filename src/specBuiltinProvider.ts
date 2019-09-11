@@ -1,136 +1,120 @@
-import { SpecProvider } from "./specProvider";
+import { SpecProvider, SymbolStorage, SymbolAffiliation } from "./specProvider";
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 
-interface MotorMacro {
-	label: string;
-	minMotors: number;
-	snippetTemplate: string;
-	description: string;
+interface APIReference {
+	variables: any[];
+	functions: any[];
+	macros: any[];
+	keywords: any[];
 }
 
-const MOTOR_MACROS: MotorMacro[] = [
-	{ label: 'mv',     minMotors: 1, snippetTemplate: 'mv ${1|%s|} ${2:pos}', description: 'absolute-position motor move' },
-	{ label: 'mvr',    minMotors: 1, snippetTemplate: 'mvr ${1|%s|} ${2:pos}', description: 'relative-position motor move' },
-	{ label: 'ascan',  minMotors: 1, snippetTemplate: 'ascan ${1|%s|} ${2:begin} ${3:end} ${4:steps} ${5:time}', description: 'single-motor absolute-position scan' },
-	{ label: 'dscan',  minMotors: 1, snippetTemplate: 'dscan ${1|%s|} ${2:begin} ${3:end} ${4:steps} ${5:time}', description: 'single-motor relative-position scan' },
-	{ label: 'a2scan', minMotors: 2, snippetTemplate: 'a2scan ${1|%s|} ${2:begin1} ${3:end1} ${4|%s|} ${5:begin2} ${6:end2} ${7:steps} ${8:time}', description: 'two-motor absolute-position scan' },
-	{ label: 'd2scan', minMotors: 2, snippetTemplate: 'd2scan ${1|%s|} ${2:begin1} ${3:end1} ${4|%s|} ${5:begin2} ${6:end2} ${7:steps} ${8:time}', description: 'two-motor relative-position scan' },
-	{ label: 'mesh',   minMotors: 2, snippetTemplate: 'mesh ${1|%s|} ${2:begin1} ${3:end1} ${4:time1} ${5|%s|} ${6:begin2} ${7:end2} ${8:steps2} ${9:time}', description: 'nested two-motor scan that scanned over a grid of points' },
-	{ label: 'a3scan', minMotors: 3, snippetTemplate: 'a3scan ${1|%s|} ${2:begin1} ${3:end1} ${4|%s|} ${5:begin2} ${6:end2} ${7|%s|} ${8:begin3} ${9:end3} ${10:steps} ${11:time}', description: 'three-motor absolute-position scan' },
-	{ label: 'd3scan', minMotors: 3, snippetTemplate: 'd3scan ${1|%s|} ${2:begin1} ${3:end1} ${4|%s|} ${5:begin2} ${6:end2} ${7|%s|} ${8:begin3} ${9:end3} ${10:steps} ${11:time}', description: 'three-motor relative-position scan' }
+const SNIPPET_TEMPLATES: string[] = [
+	'mv ${1|%s|} ${2:pos}',
+	'mvr ${1|%s|} ${2:pos}',
+	'ascan ${1|%s|} ${2:begin} ${3:end} ${4:steps} ${5:sec}',
+	'dscan ${1|%s|} ${2:begin} ${3:end} ${4:steps} ${5:sec}',
+	'a2scan ${1|%s|} ${2:begin1} ${3:end1} ${4|%s|} ${5:begin2} ${6:end2} ${7:steps} ${8:sec}',
+	'd2scan ${1|%s|} ${2:begin1} ${3:end1} ${4|%s|} ${5:begin2} ${6:end2} ${7:steps} ${8:sec}',
+	'mesh ${1|%s|} ${2:begin1} ${3:end1} ${4:step1} ${5|%s|} ${6:begin2} ${7:end2} ${8:steps2} ${9:sec}',
+	'a3scan ${1|%s|} ${2:begin1} ${3:end1} ${4|%s|} ${5:begin2} ${6:end2} ${7|%s|} ${8:begin3} ${9:end3} ${10:steps} ${11:sec}',
+	'd3scan ${1|%s|} ${2:begin1} ${3:end1} ${4|%s|} ${5:begin2} ${6:end2} ${7|%s|} ${8:begin3} ${9:end3} ${10:steps} ${11:sec}',
+];
+
+const SNIPPET_DESCRIPTIONS: string[] = [
+	'absolute-position motor move',
+	'relative-position motor move',
+	'single-motor absolute-position scan',
+	'single-motor relative-position scan',
+	'two-motor absolute-position scan',
+	'two-motor relative-position scan',
+	'nested two-motor scan that scanned over a grid of points',
+	'three-motor absolute-position scan',
+	'three-motor relative-position scan',
 ];
 
 export class SpecBuiltinProvider extends SpecProvider {
-	mnemonicCompletionItems: vscode.CompletionItem[] = [];
+	private mnemonicEnumStorage: SymbolStorage;
+	private mnemonicSnippetStorage: SymbolStorage;
 
 	constructor(apiReferencePath: string) {
 		super();
 
-		this.updateMnemonicCompletionItems();
-
-		vscode.workspace.onDidChangeConfiguration((event) => {
-			this.updateMnemonicCompletionItems();
-		});
+		this.mnemonicSnippetStorage = new SymbolStorage([], SymbolAffiliation.Settings, vscode.CompletionItemKind.Snippet);
+		this.mnemonicEnumStorage = new SymbolStorage([], SymbolAffiliation.Settings, vscode.CompletionItemKind.EnumMember);
+		this.symbolStorages.push(this.mnemonicEnumStorage, this.mnemonicSnippetStorage);
 
 		fs.readFile(apiReferencePath, 'utf-8', (err: any, data: string) => {
 			if (err !== null) {
 				throw err;
 			}
-			const jsonObject = JSON.parse(data);
-			this.variableReference = new Map(Object.entries(jsonObject.variables));
-			this.macroReference = new Map(Object.entries(jsonObject.macros));
-			this.functionReference = new Map(Object.entries(jsonObject.functions));
-			this.keywordReference = new Map(Object.entries(jsonObject.keywords));
+			const apiReference: APIReference = JSON.parse(data);
+
+			this.symbolStorages.push(
+				new SymbolStorage(Object.entries(apiReference.variables), SymbolAffiliation.Builtin, vscode.CompletionItemKind.Variable),
+				new SymbolStorage(Object.entries(apiReference.macros), SymbolAffiliation.Builtin, vscode.CompletionItemKind.Function),
+				new SymbolStorage(Object.entries(apiReference.functions), SymbolAffiliation.Builtin, vscode.CompletionItemKind.Method),
+				new SymbolStorage(Object.entries(apiReference.keywords), SymbolAffiliation.Builtin, vscode.CompletionItemKind.Keyword)
+			);
+
+			vscode.workspace.onDidChangeConfiguration((event) => {
+				if (event.affectsConfiguration('spec.mnemonics.motor')) {
+					this.updateCompletionItems();
+				}
+			});
 
 			this.updateCompletionItems();
 		});
 	}
 
-	public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.CompletionItem[] | undefined {
-		const items = super.provideCompletionItems(document, position, token, context);
-		if (items) {
-			return items.concat(this.mnemonicCompletionItems);
-		} else {
-			return this.mnemonicCompletionItems;
-		}
-	}
-
-	public provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.Hover | undefined {
-		const hover = super.provideHover(document, position, token);
-		if (hover) {
-			return hover;
-		}
-
-		const range = document.getWordRangeAtPosition(position);
-		if (range !== undefined) {
-			const motorConfig = vscode.workspace.getConfiguration('spec.mnemonics.motor');
-			const mneLabels: string[] = motorConfig.get('labels', []);
-			const mneDescriptions: string[] = motorConfig.get('descriptions', []);
-			if (mneLabels.length > 0) {
-				const selectorName = document.getText(range);
-
-				// check if the selectext is found in moter mnemonics array
-				const index = mneLabels.indexOf(selectorName);
-				if (index >= 0) {
-					const mneDescription = (mneDescriptions.length > index) ? mneDescriptions[index] : undefined;
-					const markdownString = new vscode.MarkdownString();
-					markdownString.appendCodeblock(selectorName + ' # motor mnemonics');
-					if (mneDescription) {
-						markdownString.appendMarkdown(mneDescription);
-					}
-					return new vscode.Hover(markdownString);
-				}
-
-				// check if the selectext is found in motor-macro array
-				const motorMacros = MOTOR_MACROS.filter((motorMacro) => motorMacro.label === selectorName);
-				if (motorMacros.length > 0) {
-					const motorMacro = motorMacros[0];
-					const markdownString = new vscode.MarkdownString();
-					markdownString.appendCodeblock(convertSnippetExample(motorMacro.snippetTemplate, mneLabels[0]) + ' # common macro');
-					markdownString.appendMarkdown(motorMacro.description);
-					return new vscode.Hover(markdownString);
-				}
-			}
-		}
-	}
-
-	private updateMnemonicCompletionItems() {
+	protected updateCompletionItems() {
 		const motorConfig = vscode.workspace.getConfiguration('spec.mnemonics.motor');
 		const mneLabels: string[] = motorConfig.get('labels', []);
 		const mneDescriptions: string[] = motorConfig.get('descriptions', []);
 
+		// refresh storages related to motor mnemonic, which is configured in the settings.
+		this.mnemonicEnumStorage.clear();
+		this.mnemonicSnippetStorage.clear();
+
 		if (mneLabels.length > 0) {
-			const completionItems: vscode.CompletionItem[] = [];
-			let commpaSeparatedList = "";
+			// refresh storage for motor mnemonic label
 			for (let index = 0; index < mneLabels.length; index++) {
 				const mneLabel = mneLabels[index];
 				const mneDescription = (mneDescriptions.length > index) ? mneDescriptions[index] : undefined;
-				const item = new vscode.CompletionItem(mneLabel, vscode.CompletionItemKind.EnumMember);
-				item.detail = '(motor mnemonic name) ' + mneLabel;
-				item.documentation = mneDescription;
-				completionItems.push(item);
-
-				commpaSeparatedList += mneLabel + ',';
+				this.mnemonicEnumStorage.set(mneLabel, { signature: mneLabel, description: mneDescription });
 			}
 
-			commpaSeparatedList = commpaSeparatedList.substring(0, commpaSeparatedList.length - 1);
-			const motorMacros = MOTOR_MACROS.filter((object): boolean =>  mneLabels.length >= object.minMotors);
-			
-			for (const motorMacro of motorMacros) {
-				const item = new vscode.CompletionItem(motorMacro.label, vscode.CompletionItemKind.Snippet);
-				const snippetCode = motorMacro.snippetTemplate.replace(/%s/g, commpaSeparatedList);
-				item.insertText = new vscode.SnippetString(snippetCode);
-				item.detail = `${motorMacro.description} (spec Language Support, dynamic)`;
-				item.documentation = new vscode.MarkdownString().appendCodeblock(convertSnippetExample(motorMacro.snippetTemplate, mneLabels[0]));
-				completionItems.push(item);
-			}
+			// refresh storage for motor mnemonic macro (snippet)
+			for (let index = 0; index < SNIPPET_TEMPLATES.length; index++) {
+				const snippetTemplate = SNIPPET_TEMPLATES[index];
+				const snippetDesription = (SNIPPET_DESCRIPTIONS.length > index) ? SNIPPET_DESCRIPTIONS[index] : '';
 
-			this.mnemonicCompletionItems = completionItems;
+				// treat the first word of the template as the snippet key.
+				const offset = snippetTemplate.indexOf(' ');
+				if (offset < 0) {
+					console.log('Unexpected Snippet Format:', snippetTemplate);
+					continue;
+				}
+				const snippetKey = snippetTemplate.substring(0, offset);
+
+				// check the necessary number of motors. If not satisfied, skip the template.
+				const minMotor = snippetTemplate.match(/%s/g);
+				if (minMotor === null) {
+					console.log('Unexpected Snippet Format:', snippetTemplate);
+					continue;
+				}
+				if (minMotor.length > mneLabels.length) {
+					continue;
+				}
+
+				// reformat the information.
+				const snippetSignature = snippetTemplate.replace(/\$\{\d+:([^}]*)\}/g, '$1').replace(/\$\{\d+\|%s\|\}/g, mneLabels[0]);
+				const snippetCode = snippetTemplate.replace(/%s/g, mneLabels.join(','));
+
+				this.mnemonicSnippetStorage.set(snippetKey, { signature: snippetSignature, description: snippetDesription, snippet: snippetCode });
+			}
 		}
-	}
-}
 
-function convertSnippetExample(snippetTemplete: string, mne: string): string {
-	return snippetTemplete.replace(/\$\{\d+:([^}]*)\}/g, '$1').replace(/\$\{\d+\|%s\|\}/g, mne);
+		super.updateCompletionItems();
+	}
 }
