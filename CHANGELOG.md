@@ -6,6 +6,13 @@ All notable changes to the "spec" extension will be documented in this file.
 
 ## [Unreleased]
 
+## [0.3.1] - 2019-09-11
+
+### Fixed
+
+* Fix of corrupted rule for motor mnemonics
+* Overhaul of syntax highlighting
+
 ## [0.3.0] - 2019-09-07
 
 ### Added
@@ -30,7 +37,8 @@ All notable changes to the "spec" extension will be documented in this file.
 * Syntax highlighting feature
 * Code Snippets feature
 
-[Unreleased]: https://github.com/fujidana/vscode-spec/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/fujidana/vscode-spec/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/fujidana/vscode-spec/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/fujidana/vscode-spec/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/fujidana/vscode-spec/releases/tag/v0.1.1
