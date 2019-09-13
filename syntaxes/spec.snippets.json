@@ -4,6 +4,7 @@
             "def-macro-fixed"
         ],
         "body": [
+            "\"\"\" Usage: ${1:macro_name} ${3:arg1 ...} \"\"\"",
             "def ${1:macro_name} '{",
             "\tif (\\$# != ${2:arg_num}) {",
             "\t\teprintf(\"Usage: %s ${3:arg1 ...}\\n\", \"\\$0\")",
@@ -19,6 +20,7 @@
             "def-macro-variable"
         ],
         "body": [
+            "\"\"\" Usage: ${1:macro_name} ... \"\"\"",
             "def ${1:macro_name} '{",
             "\tlocal ${2:arg_num}, ${3:arg_array}[]",
             "\t${2:arg_num} = split(\"$@\", ${3:arg_array}, \"\\a\")",
@@ -32,9 +34,9 @@
             "def-func"
         ],
         "body": [
+            "\"\"\" ${3:comment} \"\"\"",
             "def ${1:func_name}(${2:arg1, ...}) '{",
-            "\t$0",
-            "\treturn 0",
+            "\t$0return 0",
             "}'"
         ],
         "description": "macro function definition"
@@ -106,7 +108,8 @@
             "for"
         ],
         "body": [
-            "for (${1:i = 0}; ${2:i < n}; ${3:i++}) {",
+            "local ${1:i}",
+            "for (${1:i} = 0; ${1:i} < ${2:n}; ${1:i}++) {",
             "\t$0",
             "}"
         ],
@@ -117,7 +120,9 @@
             "for-in"
         ],
         "body": [
-            "for (${1:identifier} in ${2:assoc_array}) {",
+            "local ${1:key}, ${2:value}",
+            "for (${1:key} in ${3:assoc_array}) {",
+            "\t${2:value} = ${3:assoc_array}[${1:key}]",
             "\t$0",
             "}"
         ],
