@@ -1,4 +1,4 @@
-import { SpecProvider, SymbolStorage, SymbolAffiliation } from "./specProvider";
+import * as provider from "./specProvider";
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 
@@ -33,29 +33,34 @@ const SNIPPET_DESCRIPTIONS: string[] = [
 	'three-motor relative-position scan',
 ];
 
-export class SpecBuiltinProvider extends SpecProvider {
-	private mnemonicEnumStorage: SymbolStorage;
-	private mnemonicSnippetStorage: SymbolStorage;
+export class SpecBuiltinProvider extends provider.SpecProvider {
+	private mnemonicEnumRefMap = new provider.ReferenceMap();
+	private mnemonicSnippetRefMap = new provider.ReferenceMap();
 
 	constructor(apiReferencePath: string) {
 		super();
 
-		this.mnemonicSnippetStorage = new SymbolStorage([], SymbolAffiliation.Settings, vscode.CompletionItemKind.Snippet);
-		this.mnemonicEnumStorage = new SymbolStorage([], SymbolAffiliation.Settings, vscode.CompletionItemKind.EnumMember);
-		this.symbolStorages.push(this.mnemonicEnumStorage, this.mnemonicSnippetStorage);
+		// register motor-mnemonic storage
+		const motorStorage = new provider.ReferenceStorage();
+		motorStorage.set(provider.ReferenceItemKind.Enum, this.mnemonicEnumRefMap);
+		motorStorage.set(provider.ReferenceItemKind.Snippet, this.mnemonicSnippetRefMap);
+		this.registeredStorages.set(provider.MOTOR_URI, motorStorage);
 
+		// load the API reference file
 		fs.readFile(apiReferencePath, 'utf-8', (err: any, data: string) => {
 			if (err !== null) {
 				throw err;
 			}
+			// convert JSON string to a javascript object.
 			const apiReference: APIReference = JSON.parse(data);
 
-			this.symbolStorages.push(
-				new SymbolStorage(Object.entries(apiReference.variables), SymbolAffiliation.Builtin, vscode.CompletionItemKind.Variable),
-				new SymbolStorage(Object.entries(apiReference.macros), SymbolAffiliation.Builtin, vscode.CompletionItemKind.Function),
-				new SymbolStorage(Object.entries(apiReference.functions), SymbolAffiliation.Builtin, vscode.CompletionItemKind.Method),
-				new SymbolStorage(Object.entries(apiReference.keywords), SymbolAffiliation.Builtin, vscode.CompletionItemKind.Keyword)
-			);
+			// store them in a ReferenceStorage object and register it.
+			const builtinStorage = new provider.ReferenceStorage();
+			builtinStorage.set(provider.ReferenceItemKind.Variable, new provider.ReferenceMap(Object.entries(apiReference.variables)));
+			builtinStorage.set(provider.ReferenceItemKind.Macro, new provider.ReferenceMap(Object.entries(apiReference.macros)));
+			builtinStorage.set(provider.ReferenceItemKind.Function, new provider.ReferenceMap(Object.entries(apiReference.functions)));
+			builtinStorage.set(provider.ReferenceItemKind.Keyword, new provider.ReferenceMap(Object.entries(apiReference.keywords)));
+			this.registeredStorages.set(provider.BUILTIN_URI, builtinStorage);
 
 			vscode.workspace.onDidChangeConfiguration((event) => {
 				if (event.affectsConfiguration('spec.mnemonics.motor')) {
@@ -67,21 +72,26 @@ export class SpecBuiltinProvider extends SpecProvider {
 		});
 	}
 
+	/**
+	 * override the super class.
+	 * Invoked when initialized and configuration is changed. 
+	 * Update the contents of motor-mnemonic storage.
+	 */
 	protected updateCompletionItems() {
 		const motorConfig = vscode.workspace.getConfiguration('spec.mnemonics.motor');
 		const mneLabels: string[] = motorConfig.get('labels', []);
 		const mneDescriptions: string[] = motorConfig.get('descriptions', []);
 
 		// refresh storages related to motor mnemonic, which is configured in the settings.
-		this.mnemonicEnumStorage.clear();
-		this.mnemonicSnippetStorage.clear();
+		this.mnemonicEnumRefMap.clear();
+		this.mnemonicSnippetRefMap.clear();
 
 		if (mneLabels.length > 0) {
 			// refresh storage for motor mnemonic label
 			for (let index = 0; index < mneLabels.length; index++) {
 				const mneLabel = mneLabels[index];
 				const mneDescription = (mneDescriptions.length > index) ? mneDescriptions[index] : undefined;
-				this.mnemonicEnumStorage.set(mneLabel, { signature: mneLabel, description: mneDescription });
+				this.mnemonicEnumRefMap.set(mneLabel, { signature: mneLabel, description: mneDescription });
 			}
 
 			// refresh storage for motor mnemonic macro (snippet)
@@ -111,7 +121,7 @@ export class SpecBuiltinProvider extends SpecProvider {
 				const snippetSignature = snippetTemplate.replace(/\$\{\d+:([^}]*)\}/g, '$1').replace(/\$\{\d+\|%s\|\}/g, mneLabels[0]);
 				const snippetCode = snippetTemplate.replace(/%s/g, mneLabels.join(','));
 
-				this.mnemonicSnippetStorage.set(snippetKey, { signature: snippetSignature, description: snippetDesription, snippet: snippetCode });
+				this.mnemonicSnippetRefMap.set(snippetKey, { signature: snippetSignature, description: snippetDesription, snippet: snippetCode });
 			}
 		}
 

@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import { SpecProvider, SymbolStorage, SymbolInformation, SymbolAffiliation, convertRange } from "./specProvider";
+import * as provider from "./specProvider";
 import { SyntaxError, parse } from './grammar';
 
-export class SpecDocumentProvider extends SpecProvider {
+export class SpecDocumentProvider extends provider.SpecProvider {
 
     diagnosticCollection: vscode.DiagnosticCollection;
 
@@ -41,52 +41,27 @@ export class SpecDocumentProvider extends SpecProvider {
         //         this.scanDocument(editor.document, 'active editor changed.');
         //     }
         // });
-
-        // if (vscode.workspace.workspaceFolders) {
-        //     vscode.workspace.workspaceFolders.forEach((workspaceFolder) =>{
-        //         const pattern = new vscode.RelativePattern(workspaceFolder, '**/*.mac');
-        //         vscode.workspace.findFiles(pattern).then(urls => {
-        //             // console.log(urls);
-        //         });
-        //     });
-        // }
-        // console.log(vscode.workspace);
-
-        // vscode.workspace.onDidChangeWorkspaceFolders((e) => {
-        // 	console.log('onDidChangeWorkspaceFolders', e);
-        // });
-    }
-
-    private registerStoragesForDocumentUri(uri: vscode.Uri) {
-        const functionStorage = new SymbolStorage([], SymbolAffiliation.Document, vscode.CompletionItemKind.Method, uri);
-        const macroStorage = new SymbolStorage([], SymbolAffiliation.Document, vscode.CompletionItemKind.Function, uri);
-        this.symbolStorages.push(functionStorage, macroStorage);
-        return [functionStorage, macroStorage];
-    }
-
-    private findStoragesForDocumentUri(uri: vscode.Uri) {
-        const storages = this.symbolStorages.filter((storage) => storage.uri === uri);
-        const macroStorages = storages.filter((storage) => storage.itemKind === vscode.CompletionItemKind.Function);
-        const functionStorages = storages.filter((storage) => storage.itemKind === vscode.CompletionItemKind.Method);
-        return [functionStorages[0], macroStorages[0]];
     }
 
     private unregisterStoragesForDocumentUri(uri: vscode.Uri) {
-        this.symbolStorages = this.symbolStorages.filter((storage) => storage.uri !== uri);
+        this.registeredStorages.delete(uri);
         this.diagnosticCollection.delete(uri);
     }
 
-    public scanDocument(document: vscode.TextDocument, createStorages: boolean) {
+    protected scanDocument(document: vscode.TextDocument, createStorages: boolean) {
         if (document.languageId === 'spec') {
-            let storages;
-            if (createStorages) {
-                storages = this.registerStoragesForDocumentUri(document.uri);
-            } else {
-                storages = this.findStoragesForDocumentUri(document.uri);
-            }
-            const functionStorage = storages[0];
-            const macroStorage = storages[1];
-            
+
+            const macroRefMap = new provider.ReferenceMap();
+            const functionRefMap = new provider.ReferenceMap();
+
+            const documentStorage = new provider.ReferenceStorage(
+                [
+                    [provider.ReferenceItemKind.Macro, macroRefMap],
+                    [provider.ReferenceItemKind.Function, functionRefMap]
+                ]
+            );
+            this.registeredStorages.set(document.uri, documentStorage);
+
             try {
                 const simpleAST = parse(document.getText());
 
@@ -95,13 +70,13 @@ export class SpecDocumentProvider extends SpecProvider {
                         const prevItem = (i > 0) ? simpleAST.body[i - 1] : undefined;
                         const currItem = simpleAST.body[i];
                         if ('type' in currItem && currItem.type === 'FunctionDeclaration') {
-                            let refItem: SymbolInformation;
+                            let refItem: provider.ReferenceItem;
                             if (currItem.params) {
                                 refItem = { signature: `${currItem.id.name}(${currItem.params.join(', ')})`, location: currItem.location };
-                                functionStorage.set(currItem.id.name, refItem);
+                                functionRefMap.set(currItem.id.name, refItem);
                             } else {
                                 refItem = { signature: currItem.id.name, location: currItem.location };
-                                macroStorage.set(currItem.id.name, refItem);
+                                macroRefMap.set(currItem.id.name, refItem);
                             }
                             if (i > 0 && prevItem.hasOwnProperty('type') && prevItem.type === 'EmptyStatement' && prevItem.hasOwnProperty('docstring')) {
                                 refItem.description = prevItem.docstring;
@@ -111,7 +86,7 @@ export class SpecDocumentProvider extends SpecProvider {
                 }
                 this.diagnosticCollection.delete(document.uri);
             } catch (error) {
-                const diagnostic = new vscode.Diagnostic(convertRange(error.location), error.message, vscode.DiagnosticSeverity.Error);
+                const diagnostic = new vscode.Diagnostic(provider.convertRange(error.location), error.message, vscode.DiagnosticSeverity.Error);
                 this.diagnosticCollection.set(document.uri, [diagnostic]);
             }
 
