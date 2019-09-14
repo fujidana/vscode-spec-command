@@ -12,13 +12,21 @@ This extension is not the official one developed by Certified Scientific Softwar
 
 ## Features
 
-This extension currently supports
+This extension supports the following features:
 
-* Syntax Highlight
-* Code Snippets
-* Hovers (of built-in symbols and motor-related macros)
-* Code completion proposals (of built-in symbols and motor-related macros)
-* Help with function signatures (of built-in functions)
+* __Diagnostics__ - syntax check, _still primitive_
+* __Syntax highlight__ - colorizing symbols using a grammer
+* __IntelliSense__ - code completion and hinting
+  * __Hovers__
+  * __Code completion proposals__ - autocompletion that works during a user types a symbol
+    * __Code snippets__
+  * __Help with function signatures__ - help that appears during a user types an argument in a function call.
+* __Code navigation__
+  * __Show all symbol definitions within a document__ - symbol definitions in a file, used in: _Go to Symbol in File_ (Ctrl+Shift+O) and the navigation bar below the editor tabs
+  * __Show definitions of a symbol__ - symbol definitions in open files, used in: _Go to Definition_ (F12) and _Peek Definition_ (Alt+F12) in right-click menu
+
+These features cover user-defined functions and macros in open documents, in addition to built-in variables, constants, functions, macros and some other keywords.
+User-defined variables are currently outside the scope.
 
 This extension was developed with reference to the recent official PDF document about **spec** release 6 (version 3 of the spec documentation, printed 16 July 2017).
 
@@ -43,4 +51,5 @@ Read [Visual Studio Code User and Workspace Settings](https://code.visualstudio.
 
 ## Known Issues
 
+* Currently the syntax diagnostics covers limited parts of the grammar and its error message is primitive.
 * Statement continuation by putting a backslash at the end of the line is not supported.
