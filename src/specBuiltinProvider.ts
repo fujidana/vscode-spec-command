@@ -1,6 +1,6 @@
-import * as provider from "./specProvider";
 import * as vscode from 'vscode';
-import * as fs from 'fs';
+import { TextDecoder } from "util";
+import * as provider from "./specProvider";
 
 interface APIReference {
 	variables: any[];
@@ -40,44 +40,40 @@ export class SpecBuiltinProvider extends provider.SpecProvider {
 	constructor(apiReferencePath: string) {
 		super();
 
-		// register motor-mnemonic storage
-		const motorStorage = new provider.ReferenceStorage();
-		motorStorage.set(provider.ReferenceItemKind.Enum, this.mnemonicEnumRefMap);
-		motorStorage.set(provider.ReferenceItemKind.Snippet, this.mnemonicSnippetRefMap);
-		this.registeredStorages.set(provider.MOTOR_URI, motorStorage);
-
 		// load the API reference file
-		fs.readFile(apiReferencePath, 'utf-8', (err: any, data: string) => {
-			if (err !== null) {
-				throw err;
-			}
-			// convert JSON string to a javascript object.
-			const apiReference: APIReference = JSON.parse(data);
-
-			// store them in a ReferenceStorage object and register it.
+		vscode.workspace.fs.readFile(vscode.Uri.file(apiReferencePath)).then((uint8Array) => {
+			// convert JSON-formatted file contents to a javascript object.
+			const apiReference: APIReference = JSON.parse(new TextDecoder('utf-8').decode(uint8Array));
+			
+			// convert the object to ReferenceMap and register the set.
 			const builtinStorage = new provider.ReferenceStorage();
 			builtinStorage.set(provider.ReferenceItemKind.Variable, new provider.ReferenceMap(Object.entries(apiReference.variables)));
 			builtinStorage.set(provider.ReferenceItemKind.Macro, new provider.ReferenceMap(Object.entries(apiReference.macros)));
 			builtinStorage.set(provider.ReferenceItemKind.Function, new provider.ReferenceMap(Object.entries(apiReference.functions)));
 			builtinStorage.set(provider.ReferenceItemKind.Keyword, new provider.ReferenceMap(Object.entries(apiReference.keywords)));
-			this.registeredStorages.set(provider.BUILTIN_URI, builtinStorage);
+			this.storageCollection.set(provider.BUILTIN_URI, builtinStorage);
+			this.updateCompletionItemsForUriString(provider.BUILTIN_URI);
+		});
+		
+		// register motor-mnemonic storage
+		const motorStorage = new provider.ReferenceStorage();
+		motorStorage.set(provider.ReferenceItemKind.Enum, this.mnemonicEnumRefMap);
+		motorStorage.set(provider.ReferenceItemKind.Snippet, this.mnemonicSnippetRefMap);
+		this.storageCollection.set(provider.MOTOR_URI, motorStorage);
+		this.updateMotorMnemonicsStorage();
 
-			vscode.workspace.onDidChangeConfiguration((event) => {
-				if (event.affectsConfiguration('spec.mnemonics.motor')) {
-					this.updateCompletionItems();
-				}
-			});
-
-			this.updateCompletionItems();
+		vscode.workspace.onDidChangeConfiguration((event) => {
+			if (event.affectsConfiguration('spec.mnemonics.motor')) {
+				this.updateMotorMnemonicsStorage();
+			}
 		});
 	}
 
 	/**
-	 * override the super class.
 	 * Invoked when initialized and configuration is changed. 
 	 * Update the contents of motor-mnemonic storage.
 	 */
-	protected updateCompletionItems() {
+	private updateMotorMnemonicsStorage() {
 		const motorConfig = vscode.workspace.getConfiguration('spec.mnemonics.motor');
 		const mneLabels: string[] = motorConfig.get('labels', []);
 		const mneDescriptions: string[] = motorConfig.get('descriptions', []);
@@ -125,6 +121,6 @@ export class SpecBuiltinProvider extends provider.SpecProvider {
 			}
 		}
 
-		super.updateCompletionItems();
+		this.updateCompletionItemsForUriString(provider.MOTOR_URI);
 	}
 }
