@@ -6,9 +6,17 @@ All notable changes to the "spec" extension will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.0] - 2019-09-13
+
+### Add
+
+* Syntax diagnostics (primitive)
+* IntelliSense features expanded user-defined macros and functions in open documents
+* Code navigation such as 'Go to Definition' for user-defined macros and functions in open documents
+
 ## [0.3.1] - 2019-09-11
 
-### Fixed
+### Changed
 
 * Fix of corrupted rule for motor mnemonics
 * Overhaul of syntax highlighting
@@ -17,15 +25,13 @@ All notable changes to the "spec" extension will be documented in this file.
 
 ### Added
 
-* The following IntelliSence feature for common macros related to motor actions, such as `mv` and `ascan`:
-  * hovers
-  * code completion proposals
+* IntelliSence features expanded to common macros related to motor actions, such as `mv` and `ascan`
 
 ## [0.2.0] - 2019-09-04
 
 ### Added
 
-* The following IntelliSense features for built-in functions, macros, variables and several other keywords:
+* The following IntelliSense features covering built-in functions, macros, variables and several other keywords:
   * hovers
   * code completion proposals
   * Help with function signatures
@@ -37,7 +43,8 @@ All notable changes to the "spec" extension will be documented in this file.
 * Syntax highlighting feature
 * Code Snippets feature
 
-[Unreleased]: https://github.com/fujidana/vscode-spec/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/fujidana/vscode-spec/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/fujidana/vscode-spec/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/fujidana/vscode-spec/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/fujidana/vscode-spec/compare/v0.1.1...v0.2.0
