@@ -85,20 +85,25 @@
 				},
 				"spec.mnemonics.motor.labels": {
 					"type": "array",
+					"default": [],
+					"description": "Specifies a string list of motor mnemonics",
 					"items": {
 						"type": "string",
 						"pattern": "^[a-zA-Z_][a-zA-Z0-9_]{0,6}$"
-					},
-					"default": [],
-					"description": "Specifies a string list of motor mnemonics"
+					}
 				},
 				"spec.mnemonics.motor.descriptions": {
 					"type": "array",
+					"default": [],
+					"description": "Specifies a string list of descriptions corresponding to motor mnemonics",
 					"items": {
 						"type": "string"
-					},
-					"default": [],
-					"description": "Specifies a string list of descriptions corresponding to motor mnemonics"
+					}
+				},
+				"spec.parser.enableWorkspaceScan": {
+					"type": "boolean",
+					"default": false,
+					"description": "Specifies whether syntax check and code navigation range over all files in the workspace"
 				}
 			}
 		}
