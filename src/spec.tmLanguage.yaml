@@ -15,7 +15,7 @@ repository:
       - include: "#control"
       - include: "#declaration"
       - include: "#builtin-macro"
-      - include: "#another-statement"
+      - include: "#expression-statement"
     repository:
       code-block:
         begin: \{
@@ -60,10 +60,11 @@ repository:
           - match: \b(break|continue|exit)\s*(?=$|;|#|"""|})
             captures:
               "1": { name: keyword.control.transfer.spec }
-          - match: \b(return)(?:\s*|\s++(.+))(?=$|;|#|"""|})
-            captures:
+          - begin: \b(return)\b\s*
+            beginCaptures: 
               "1": { name: keyword.control.transfer.spec }
-              "2": { patterns: [{ include: "#expression-single" }] }
+            end: (?=$|;|#|"""|})
+            patterns: [{ include: "#expression-single" }]
         repository:
           for-condition:
             patterns:
@@ -135,8 +136,8 @@ repository:
                   patterns: [{ include: "#validation-id" }],
                 }
           - ### usage: constant identifier [=] expression
-            match: \b(constant)\s+(\S+)(?:\s*(=)\s*|\s+)(\S.*?)(?=$|;|#|"""|})
-            captures:
+            begin: \b(constant)\s+(\S+)(?:\s*(=)\s*|\s+)
+            beginCaptures:
               "1": { name: storage.modifier.constant.spec }
               "2":
                 {
@@ -144,7 +145,8 @@ repository:
                   patterns: [{ include: "#validation-id" }],
                 }
               "3": { name: keyword.operator.arithmetic.assignment.spec }
-              "4": { patterns: [{ include: "#expression-single" }] }
+            end: (?=$|;|#|"""|})
+            patterns: [{ include: "#expression-single" }]
           - ### (local|global|unglobal) <identifier-list>
             match: \b(local|global|unglobal)\s+(\S.*?)(?=$|;|#|"""|})
             captures:
@@ -167,16 +169,18 @@ repository:
               "1": { name: support.function.built-in.macro.spec }
               "2": { patterns: [{ include: "#list-pattern" }] }
           - ### usage: (print|eprint) <expression-list>
-            match: \b(print|eprint)\s+(\S.*?)(?=$|;|#|"""|})
-            captures:
+            begin: \b(print|eprint)\b
+            beginCaptures:
               "1": { name: support.function.built-in.macro.spec }
-              "2": { patterns: [{ include: "#expression-multiple" }] }
+            end: (?=$|;|#|"""|})
+            patterns: [{ include: "#expression-multiple" }]
           - ### usage: (history) N?
-            match: \b(history)(?:\s*|\s+(\S.*?))(?=$|;|#|"""|})
-            captures:
+            begin: \b(history)\b
+            beginCaptures:
               "1": { name: support.function.built-in.macro.spec }
-              "2": { patterns: [{ include: "#expression-single" }] }
-      another-statement:
+            end: (?=$|;|#|"""|})
+            patterns: [{ include: "#expression-single" }]
+      expression-statement:
         patterns:
           - begin: (?=.)
             end: (?=$|;|#|"""|'|})
@@ -189,6 +193,7 @@ repository:
   expression-single:
     patterns:
       - include: "#expression-block"
+      - include: "#operator"
       - include: "#function-call"
       - include: "#lvalue"
       - include: "#literal-numeric"
@@ -196,7 +201,6 @@ repository:
       - include: "#comment"
       - include: "#docstring"
       - include: "#invalid-word"
-      - include: "#operator"
       - include: "#array-access"
     repository:
       function-call: ### No spacing is allowed before the opening parenthesis.
@@ -277,27 +281,27 @@ repository:
       operator:
         patterns:
           - match: \b(in)\b
-            name: keyword.operator.access-array-item.spec
+            name: keyword.operator.binary.access-array-item.spec
           - match: --|\+\+
-            name: keyword.operator.arithmetic.increment-decrement.spec
+            name: keyword.operator.unary.arithmetic.increment-decrement.spec
           - match: <<=|>>=|\^=|&=|\|=
-            name: keyword.operator.bitwise.assignment.spec
+            name: keyword.operator.assignment.bitwise.spec
           - match: <<|>>
-            name: keyword.operator.bitwise.shift.spec
+            name: keyword.operator.binary.bitwise.shift.spec
           - match: ==|!=|<=|>=|<|>
-            name: keyword.operator.arithmetic.comparison.spec
+            name: keyword.operator.binary.arithmetic.comparison.spec
           - match: \+=|−=|\*=|/=|%=|=
-            name: keyword.operator.arithmetic.assignment.spec
+            name: keyword.operator.assignment.arithmetic.spec
           - match: \|\||&&
-            name: keyword.operator.logical.and-or.spec
+            name: keyword.operator.binary.logical.and-or.spec
           - match: \*|/|-|\+|%
-            name: keyword.operator.arithmetic.spec
+            name: keyword.operator.binary.arithmetic.four-operations.spec
           - match: \||&|\^
-            name: keyword.operator.bitwise.logical.spec
+            name: keyword.operator.binary.bitwise.logical.spec
           - match: "!"
-            name: keyword.operator.logical.not.spec
+            name: keyword.operator.unary.logical.not.spec
           - match: \~
-            name: keyword.operator.bitwise.not.spec
+            name: keyword.operator.unary.bitwise.not.spec
           - match: (@)([a-zA-Z_][a-zA-Z0-9_]*)\b
             captures:
               "1": { name: keyword.operator.indirection.spec }
@@ -315,8 +319,7 @@ repository:
             endCaptures:
               "0": { name: punctuation.array.right.spec }
             name: meta.array.spec
-            patterns:
-              - include: "#expression-single"
+            patterns: [{ include: "#expression-single" }]
       invalid-word:
         patterns:
           - match: \{
