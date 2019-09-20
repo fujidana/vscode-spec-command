@@ -28,21 +28,21 @@ docstring   = '"""' p:$(!'"""' .)* '"""' { return p; }
 eos_space  = $(' ' / '\t' / '\\' eol / docstring / eol / comment)
 
 
-string = '"' ('\\' [abfnrt'"\\] / [^"])* '"'
+string = '"' $[^"]* '"' / "\\'" $(!("\\'" / "'") .)* "\\'"
 macro_argument = $('$' ([0-9][0-9]? / '*' / '#'))
 expression_block = '(' opt_expression ')'
 word  = $[a-zA-Z0-9_]+
 
 // # expressions (to be refined in future)
 
-expression = p:$(expression_block / macro_argument / spaces / [^'"#$;\r\n(){}] / string)+ {
+expression = p:$(expression_block / macro_argument / spaces / string / [^'"#$;\r\n(){}])+ {
     return {
         type: "Expression",
         value: p,
     };
 }
 
-opt_expression = p:$(expression_block / macro_argument / spaces / [^'"#$;\r\n(){}] / string)* {
+opt_expression = p:$(expression_block / macro_argument / spaces / string / [^'"#$;\r\n(){}])* {
     return {
         type: "Expression",
         value: p,
