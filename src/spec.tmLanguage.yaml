@@ -121,20 +121,12 @@ repository:
               "3": { name: storage.type.data-array.spec }
               "4": { patterns: [{ include: "#list-array" }] }
           - ### usage: extern shared array <spec-identifier>:<id-number>:<array-identifier>;
-            match: \b(extern)\s+(shared)\s+(array)\s+((?:(\w+?)(:)(?:(\d+?):)?)?(\w+)\s )+(?=$|;|#|"""|})
+            match: \b(extern)\s+(shared)\s+(array)\s+(\S.*?)(?=$|;|#|"""|})
             captures:
               "1": { name: storage.modifier.array.spec }
               "2": { name: storage.modifier.array.spec }
               "3": { name: storage.type.data-array.spec }
-              "4": { name: entity.other.process-version.spec }
-              "5": { name: punctuation.extern.separator.spec }
-              "6": { name: entity.other.process-id.spec }
-              "7": { name: punctuation.extern.separator.spec }
-              "8":
-                {
-                  name: entity.other.array.spec,
-                  patterns: [{ include: "#validation-id" }],
-                }
+              "4": { patterns: [{ include: "#list-extern-array"}] }
           - ### usage: constant identifier [=] expression
             begin: \b(constant)\s+(\S+)(?:\s*(=)\s*|\s+)
             beginCaptures:
@@ -394,6 +386,19 @@ repository:
         patterns: [{ include: "#expression-single" }]
       - match: .*(?:\s*(,)\s*|\s+|$)
         name: invalid.illegal.invalid-array.spec
+  list-extern-array: # e.g., spec:0:arr0, spec:arr1, arr2
+    match: (?:(\w+?)(:)(?:(\d+)(:))?)?(\w+)(?:\s*(,)\s*|\s+|$)
+    captures:
+      "1": { name: entity.other.process-version.spec }
+      "2": { name: punctuation.extern.separator.spec }
+      "3": { name: entity.other.process-id.spec }
+      "4": { name: punctuation.extern.separator.spec }
+      "5":
+        {
+          name: entity.other.array.spec,
+          patterns: [{ include: "#validation-id" }],
+        }
+      "6": { name: punctuation.id-separator.spec }
   list-pattern: # comma is not allowed as the seprator
     match: (\S+)(\s|$)
     captures:
