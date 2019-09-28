@@ -135,7 +135,7 @@ function getShortDescription(refItem: ReferenceItem, refItemKind: ReferenceItemK
 	if (refItem.overloads && refItem.overloads.length > 1) {
 		mainText += `, ${refItem.overloads.length} overloads`;
 	}
-	
+
 	if (outputsMarkdown) {
 		let markdownString = new vscode.MarkdownString().appendCodeblock(mainText);
 		if (relativePath) {
@@ -174,8 +174,8 @@ function truncateText(text: string, settingKey: string): string {
 		const endIndex = text.indexOf('\n\n');
 		return (endIndex >= 0) ? text.substr(0, endIndex) + '\n\n...' : text;
 	} else if (volume === 'sentence') {
-		const endIndex = text.indexOf('.');
-		return (endIndex >= 0 && endIndex !== text.length - 1) ? text.substr(0, endIndex) + '. ...' : text;
+		const endIndex = text.search(/\.\s/g);
+		return (endIndex >= 0) ? text.substr(0, endIndex) + '. ...' : text;
 	} else {
 		return '';
 	}
@@ -233,7 +233,7 @@ function parseSignatureInEditing(line: string, position: number) {
  * provider
  */
 export class SpecProvider implements vscode.CompletionItemProvider, vscode.HoverProvider, vscode.SignatureHelpProvider, vscode.DefinitionProvider {
-	
+
 	// vscode.Uri objects can not be used as a key for a Map object because 
 	// these objects having the same string representation can be recognize to be different,
 	// i.e., uriA.toString() === uriB.toString() but uriA !== uriB.
@@ -304,17 +304,17 @@ export class SpecProvider implements vscode.CompletionItemProvider, vscode.Hover
 				if (refItem) {
 					// copy completion item.
 					const newCompletionItem = Object.assign({}, completionItem);
-					
+
 					// set the detail of the completion item
 					newCompletionItem.detail = <string>getShortDescription(refItem, refItemKind, refUriString, documentUriString, false);
-					
+
 					// set the description of the completion item
 					// if the main description exists, append it.
 					let descriptionMarkdown =
-					refItem.description ?
-					new vscode.MarkdownString(truncateText(refItem.description, 'completionItem')) :
-					new vscode.MarkdownString();
-					
+						refItem.description ?
+							new vscode.MarkdownString(truncateText(refItem.description, 'completionItem')) :
+							new vscode.MarkdownString();
+
 					// if overloaded signature exists, append them.
 					if (refItem.overloads) {
 						for (const overload of refItem.overloads) {
@@ -344,7 +344,7 @@ export class SpecProvider implements vscode.CompletionItemProvider, vscode.Hover
 			if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(selectorName)) {
 				// start to seek if the selection is a proper identifier.
 				let hover: vscode.Hover | undefined;
-				
+
 				for (const [refUriString, refStorage] of this.storageCollection.entries()) {
 					for (const [refItemKind, refMap] of refStorage.entries()) {
 						// find the symbol information about the symbol.

@@ -3,6 +3,7 @@ import { TextDecoder } from "util";
 import * as provider from "./specProvider";
 
 interface APIReference {
+	constants: any[];
 	variables: any[];
 	functions: any[];
 	macros: any[];
@@ -47,6 +48,7 @@ export class SpecBuiltinProvider extends provider.SpecProvider {
 			
 			// convert the object to ReferenceMap and register the set.
 			const builtinStorage = new provider.ReferenceStorage();
+			builtinStorage.set(provider.ReferenceItemKind.Constant, new provider.ReferenceMap(Object.entries(apiReference.constants)));
 			builtinStorage.set(provider.ReferenceItemKind.Variable, new provider.ReferenceMap(Object.entries(apiReference.variables)));
 			builtinStorage.set(provider.ReferenceItemKind.Macro, new provider.ReferenceMap(Object.entries(apiReference.macros)));
 			builtinStorage.set(provider.ReferenceItemKind.Function, new provider.ReferenceMap(Object.entries(apiReference.functions)));
