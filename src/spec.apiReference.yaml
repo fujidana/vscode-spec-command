@@ -4,6 +4,11 @@
 
 ### Built-In Variables ###
 
+constants:
+  PI:
+    signature: PI
+    description: |-
+      is a number-valued symbol with the value 3.14159….
 variables:
   A:
     signature: A[]
@@ -186,10 +191,6 @@ variables:
       ```
       Note, the special built-in name `"pipe"` is not included in `OUTFILES`.
       The special built-in name `"/dev/null"` includes the full path in both `"name"` and `"path"` to work with the standard macros that always refer to that special file by the full path name.
-  PI:
-    signature: PI
-    description: |-
-      is a number-valued symbol with the value 3.14159….
   ROWS:
     signature: ROWS
     description: |-
@@ -2271,8 +2272,45 @@ functions:
       During normal operation, you should not need to issue these commands. 
       You should probably issue a `reconfig` after sending a crate initialize or clear.
 
-  ## added by the language support developper
+  ## Not documented. Added by the language support developper
+
+  taco_io:
+    signature: taco_io(...)
+  taco_db:
+    signature: taco_db(...)
+  taco_dc:
+    signature: taco_dc(...)
+
+  tango_io:
+    signature: tango_io(...)
+  tango_get:
+    signature: tango_get(...)
+  tango_put:
+    signature: tango_put(...)
+  tango_db:
+    signature: tango_db(...)
+  epics_par:
+    signature: epics_par(...)
+  epics_get:
+    signature: epics_get(...)
+  em_io:
+    signature: em_io(...)
+
+  gpib_par:
+    signature: gpib_par(...)
+
+  vxi11_par:
+    signature: vxi11_par(...)
+  vxi11_get:
+    signature: vxi11_get(...)
+  vxi11_put:
+    signature: vxi11_put(...)
   
+  fbus_get:
+    signature: fbus_get(...)
+  fbus_put:
+    signature: fbus_put(...)
+
   h5_attr:
     signature: h5_attr(...)
   h5_file:
