@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
+import { TextDecoder } from 'util';
+import * as estraverse from "estraverse";
 import * as provider from "./specProvider";
 import { SyntaxError, parse } from './grammar';
-import { TextDecoder } from 'util';
 
 /**
  * check whether the document exists in the workspace and have been parsed
@@ -82,43 +83,85 @@ export class SpecDocumentProvider extends provider.SpecProvider implements vscod
     private parseDocumentContents(contents: string, uri: vscode.Uri) {
 
         const uriString = uri.toString();
+        const constantRefMap = new provider.ReferenceMap();
         const macroRefMap = new provider.ReferenceMap();
         const functionRefMap = new provider.ReferenceMap();
         const documentStorage = new provider.ReferenceStorage(
             [
+                [provider.ReferenceItemKind.Constant, constantRefMap],
                 [provider.ReferenceItemKind.Macro, macroRefMap],
                 [provider.ReferenceItemKind.Function, functionRefMap],
             ]
         );
 
+        let tree;
         try {
-            const ast = parse(contents);
-
-            for (let i = 0; i < ast.body.length; i++) {
-                const prevItem = (i > 0) ? ast.body[i - 1] : undefined;
-                const currItem = ast.body[i];
-
-                if ('type' in currItem && currItem.type === 'FunctionDeclaration') {
-                    let refItem: provider.ReferenceItem;
-                    if (currItem.params) {
-                        refItem = { signature: `${currItem.id.name}(${currItem.params.join(', ')})`, location: currItem.location };
-                        functionRefMap.set(currItem.id.name, refItem);
-                    } else {
-                        refItem = { signature: currItem.id.name, location: currItem.location };
-                        macroRefMap.set(currItem.id.name, refItem);
-                    }
-                    if (i > 0 && prevItem.hasOwnProperty('type') && prevItem.type === 'EmptyStatement' && prevItem.hasOwnProperty('docstring')) {
-                        refItem.description = prevItem.docstring;
-                    }
-                }
-                this.diagnosticCollection.delete(uri);
-                this.storageCollection.set(uriString, documentStorage);
-            }
+            tree = parse(contents);
         } catch (error) {
             const diagnostic = new vscode.Diagnostic(provider.convertRange(error.location), error.message, vscode.DiagnosticSeverity.Error);
             this.diagnosticCollection.set(uri, [diagnostic]);
             this.storageCollection.delete(uriString);
+            // this.updateCompletionItemsForUriString(uriString);
+            return false;
         }
+        console.log(JSON.stringify(tree, null, 2));
+
+        const diagnostics = [];
+        for (const item of tree.x_diagnostics) {
+            const diagnostic = new vscode.Diagnostic(provider.convertRange(item.location), item.message, item.severity);
+            diagnostics.push(diagnostic);
+        }
+        this.diagnosticCollection.set(uri, diagnostics);
+        
+        estraverse.traverse(tree, {
+            enter: function(currentNode, parentNode) {
+                // console.log('enter', currentNode.type, parentNode && parentNode.type);
+                // only scan the top-level items
+                if (parentNode && parentNode.type === 'Program') {
+                    return estraverse.VisitorOption.Skip;
+                }
+            },
+            leave: function(currentNode, parentNode) {
+                // console.log('leave', currentNode.type, parentNode && parentNode.type);
+                let refItem: provider.ReferenceItem | undefined;
+                if (currentNode.type === 'FunctionDeclaration' && currentNode.id) {
+                    if (currentNode.params) {
+                        let signatureStr = currentNode.id.name + '(';
+                        signatureStr += currentNode.params.map((param) => {
+                            return (param.type === 'Identifier') ? param.name : '';
+                        }).join(', ') + ')';
+                        refItem = { signature: signatureStr, location: <any>currentNode.loc };
+                        functionRefMap.set(currentNode.id.name, refItem);
+                    } else {
+                        refItem = { signature: currentNode.id.name, location: <any>currentNode.loc };
+                        macroRefMap.set(currentNode.id.name, refItem);
+                    }
+                } else if (currentNode.type === 'VariableDeclaration' && currentNode.kind === 'const') {
+                    for (const declarator of currentNode.declarations) {
+                        if (declarator.type === "VariableDeclarator" && declarator.id.type === 'Identifier') {
+                            let signatureStr = declarator.id.name;
+                            if (declarator.init && declarator.init.type === 'Literal') {
+                                signatureStr += ' = ' + declarator.init.raw;
+                            }
+                            refItem = { signature: signatureStr, location: <any>currentNode.loc };
+                            constantRefMap.set(declarator.id.name, refItem);
+                        }
+                        break;
+                    }
+                }
+                if (refItem && currentNode.leadingComments && currentNode.leadingComments.length > 0) {
+                    refItem.description = currentNode.leadingComments[currentNode.leadingComments.length - 1].value;
+                }
+        },
+            keys: {
+                MacroStatement: ['arguments'],
+                InvalidStatement: [],
+                ExitStatement: [],
+                NullExpression: [],
+            }
+        });
+
+        this.storageCollection.set(uriString, documentStorage);
         this.updateCompletionItemsForUriString(uriString);
     }
 
