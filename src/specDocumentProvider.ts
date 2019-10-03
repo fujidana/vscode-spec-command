@@ -104,7 +104,7 @@ export class SpecDocumentProvider extends provider.SpecProvider implements vscod
             // this.updateCompletionItemsForUriString(uriString);
             return false;
         }
-        console.log(JSON.stringify(tree, null, 2));
+        // console.log(JSON.stringify(tree, null, 2));
 
         const diagnostics = [];
         for (const item of tree.x_diagnostics) {

@@ -19,8 +19,8 @@ export function convertRange(pesRange: PesRange) {
 	return new vscode.Range(convertPosition(pesRange.start), convertPosition(pesRange.end));
 }
 
-export const BUILTIN_URI = vscode.Uri.parse('spec:/built-in').toString();
-export const MOTOR_URI = vscode.Uri.parse('spec:/mnemonic.motor').toString();
+export const BUILTIN_URI = 'spec://static/built-in.md';
+export const MOTOR_URI = 'spec://static/mnemonic-motor.md';
 
 export const enum ReferenceItemKind {
 	Constant,
@@ -33,7 +33,7 @@ export const enum ReferenceItemKind {
 	Undefined,
 }
 
-export function convertCompletionItemKindToReferenceItemKind(completionItemKind?: vscode.CompletionItemKind): ReferenceItemKind {
+export function getReferenceItemKindFromCompletionItemKind(completionItemKind?: vscode.CompletionItemKind): ReferenceItemKind {
 	switch (completionItemKind) {
 		case vscode.CompletionItemKind.Constant:
 			return ReferenceItemKind.Constant;
@@ -54,7 +54,7 @@ export function convertCompletionItemKindToReferenceItemKind(completionItemKind?
 	}
 }
 
-export function convertReferenceItemKindToCompletionItemKind(refItemKind: ReferenceItemKind): vscode.CompletionItemKind | undefined {
+export function getCompletionItemKindFromReferenceItemKind(refItemKind: ReferenceItemKind): vscode.CompletionItemKind | undefined {
 	switch (refItemKind) {
 		case ReferenceItemKind.Constant:
 			return vscode.CompletionItemKind.Constant;
@@ -98,27 +98,32 @@ export function convertReferenceItemKindToSymbolKind(refItemKind: ReferenceItemK
 	}
 }
 
+export function getStringFromReferenceItemKind(refItemKind: ReferenceItemKind): string {
+	switch (refItemKind) {
+		case ReferenceItemKind.Constant:
+			return "constant";
+		case ReferenceItemKind.Variable:
+			return "variable";
+		case ReferenceItemKind.Macro:
+			return "macro";
+		case ReferenceItemKind.Function:
+			return "function";
+		case ReferenceItemKind.Keyword:
+			return "keyword";
+		case ReferenceItemKind.Snippet:
+			return "snippet";
+		case ReferenceItemKind.Enum:
+			return "member";
+		default:
+			return "symbol";
+	}
+}
+
 function getShortDescription(refItem: ReferenceItem, refItemKind: ReferenceItemKind, refItemUriString: string, documentUriString: string, outputsMarkdown: boolean) {
 	let symbolLabel: string;
 	let relativePath: string | undefined;
-	switch (refItemKind) {
-		case ReferenceItemKind.Constant:
-			symbolLabel = "constant"; break;
-		case ReferenceItemKind.Variable:
-			symbolLabel = "variable"; break;
-		case ReferenceItemKind.Macro:
-			symbolLabel = "macro"; break;
-		case ReferenceItemKind.Function:
-			symbolLabel = "function"; break;
-		case ReferenceItemKind.Keyword:
-			symbolLabel = "keyword"; break;
-		case ReferenceItemKind.Snippet:
-			symbolLabel = "snippet"; break;
-		case ReferenceItemKind.Enum:
-			symbolLabel = "member"; break;
-		default:
-			symbolLabel = "symbol"; break;
-	}
+
+	symbolLabel = getStringFromReferenceItemKind(refItemKind);
 
 	if (refItemUriString === BUILTIN_URI) {
 		symbolLabel = 'built-in ' + symbolLabel;
@@ -250,7 +255,7 @@ export class SpecProvider implements vscode.CompletionItemProvider, vscode.Hover
 		if (refStorage) {
 			const completionItems: vscode.CompletionItem[] = [];
 			for (const [refItemKind, refMap] of refStorage.entries()) {
-				const completionItemKind = convertReferenceItemKindToCompletionItemKind(refItemKind);
+				const completionItemKind = getCompletionItemKindFromReferenceItemKind(refItemKind);
 				for (const [identifier, refItem] of refMap.entries()) {
 					const completionItem = new vscode.CompletionItem(identifier, completionItemKind);
 					// embed `uriString` into `detail` property in order to resolve it later efficiently.
@@ -289,7 +294,7 @@ export class SpecProvider implements vscode.CompletionItemProvider, vscode.Hover
 	 * optional implementation of vscode.CompletionItemProvider
 	 */
 	public resolveCompletionItem(completionItem: vscode.CompletionItem, token: vscode.CancellationToken): vscode.CompletionItem | undefined {
-		const refItemKind = convertCompletionItemKindToReferenceItemKind(completionItem.kind);
+		const refItemKind = getReferenceItemKindFromCompletionItemKind(completionItem.kind);
 
 		// The URI is stored in `detail` property in unresolved completion item.
 		const refUriString = completionItem.detail;
