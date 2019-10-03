@@ -51,6 +51,20 @@
 				"path": "./syntaxes/spec.snippets.json"
 			}
 		],
+		"commands": [
+			{
+				"command": "spec.open-document.built-in",
+				"title": "spec: Open Reference Manual"
+			}
+		],
+		"menus": {
+			"commandPalette": [
+				{
+				"command": "spec.open-document.built-in",
+				"when": "resourceLangId == spec"
+				}
+			]
+		},
 		"configuration": {
 			"title": "spec",
 			"properties": {

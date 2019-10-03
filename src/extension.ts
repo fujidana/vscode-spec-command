@@ -15,6 +15,7 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.languages.registerCompletionItemProvider(selector, builtinProvider),
 		vscode.languages.registerSignatureHelpProvider(selector, builtinProvider, '(', ')', ','),
 		vscode.languages.registerHoverProvider(selector, builtinProvider),
+		vscode.workspace.registerTextDocumentContentProvider('spec', builtinProvider),
 		// document provider
 		documentProvider.diagnosticCollection,
 		vscode.languages.registerCompletionItemProvider(selector, documentProvider),

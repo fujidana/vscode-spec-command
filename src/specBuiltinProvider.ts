@@ -34,7 +34,7 @@ const SNIPPET_DESCRIPTIONS: string[] = [
 	'three-motor relative-position scan',
 ];
 
-export class SpecBuiltinProvider extends provider.SpecProvider {
+export class SpecBuiltinProvider extends provider.SpecProvider implements vscode.TextDocumentContentProvider {
 	private mnemonicEnumRefMap = new provider.ReferenceMap();
 	private mnemonicSnippetRefMap = new provider.ReferenceMap();
 
@@ -45,7 +45,7 @@ export class SpecBuiltinProvider extends provider.SpecProvider {
 		vscode.workspace.fs.readFile(vscode.Uri.file(apiReferencePath)).then((uint8Array) => {
 			// convert JSON-formatted file contents to a javascript object.
 			const apiReference: APIReference = JSON.parse(new TextDecoder('utf-8').decode(uint8Array));
-			
+
 			// convert the object to ReferenceMap and register the set.
 			const builtinStorage = new provider.ReferenceStorage();
 			builtinStorage.set(provider.ReferenceItemKind.Constant, new provider.ReferenceMap(Object.entries(apiReference.constants)));
@@ -56,7 +56,7 @@ export class SpecBuiltinProvider extends provider.SpecProvider {
 			this.storageCollection.set(provider.BUILTIN_URI, builtinStorage);
 			this.updateCompletionItemsForUriString(provider.BUILTIN_URI);
 		});
-		
+
 		// register motor-mnemonic storage
 		const motorStorage = new provider.ReferenceStorage();
 		motorStorage.set(provider.ReferenceItemKind.Enum, this.mnemonicEnumRefMap);
@@ -67,6 +67,25 @@ export class SpecBuiltinProvider extends provider.SpecProvider {
 		vscode.workspace.onDidChangeConfiguration((event) => {
 			if (event.affectsConfiguration('spec.mnemonics.motor')) {
 				this.updateMotorMnemonicsStorage();
+			}
+		});
+
+		// register command to show reference manual as a virtual document
+		vscode.commands.registerCommand('spec.open-document.built-in', async () => {
+			const storage = this.storageCollection.get(provider.BUILTIN_URI);
+			if (storage) {
+				let quickPickLabels: string[] = ['all'];
+				for (const itemKind of storage.keys()) {
+					quickPickLabels.push(provider.getStringFromReferenceItemKind(itemKind));
+				}
+				const quickPickLabel = await vscode.window.showQuickPick(quickPickLabels);
+				if (quickPickLabel) {
+					let uri = vscode.Uri.parse(provider.BUILTIN_URI);
+					if (quickPickLabel !== 'all') {
+						uri = uri.with({ query: quickPickLabel });
+					}
+					await vscode.window.showTextDocument(uri, { preview: false });
+				}
 			}
 		});
 	}
@@ -124,5 +143,45 @@ export class SpecBuiltinProvider extends provider.SpecProvider {
 		}
 
 		this.updateCompletionItemsForUriString(provider.MOTOR_URI);
+	}
+
+	/**
+	 * required implementation of vscode.TextDocumentContentProvider
+	 */
+	public provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken): vscode.ProviderResult<string> {
+		if (uri.scheme === 'spec' && uri.authority === 'static') {
+			const storage = this.storageCollection.get(uri.with({ query: '' }).toString());
+			if (storage) {
+				let mdText = '# __spec__ Reference Manual\n\n';
+				mdText += 'The contents of this page are cited from the _Reference Manual_ section in [PDF version](https://www.certif.com/downloads/css_docs/spec_man.pdf) of the _User manual and Tutorials_, written by [Certified Scientific Software](https://www.certif.com/).\n\n';
+
+				for (const [itemKind, map] of storage.entries()) {
+					const itemKindString = provider.getStringFromReferenceItemKind(itemKind);
+					
+					// if 'query' is specified, skip maps other than the speficed query.
+					if (uri.query && uri.query !== itemKindString) {
+						continue;
+					}
+
+					// add heading for each category
+					mdText += `## ${itemKindString}\n\n`;
+					
+					// add each item
+					for (const [key, item] of map.entries()) {
+						mdText += `### ${key}\n\n`;
+						mdText += `\`${item.signature}\``;
+						mdText += (item.description) ? ` \u2014 ${item.description}\n\n` : '\n\n';
+
+						if (item.overloads) {
+							for (const overload of item.overloads) {
+								mdText += `\`${overload.signature}\``;
+								mdText += (overload.description) ? `\n${overload.description}\n\n` : '\n\n';
+							}
+						}
+					}
+				}
+				return mdText;
+			}
+		}
 	}
 }
