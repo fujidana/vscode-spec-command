@@ -6,7 +6,15 @@ All notable changes to the __spec__ extension will be documented in this file.
 
 ## [Unreleased]
 
-## [0.5.1] - 2019-09-28
+## [0.6.0] - 2019-10-04
+
+### Add
+
+* equip totally rewritten syntax parser, which covers most grammar
+* expand IntelliSense and code navigation features into constants
+* enable to open the reference manual as a virtual document
+
+## [0.5.2] - 2019-09-28
 
 ### Changed
 
@@ -18,7 +26,7 @@ All notable changes to the __spec__ extension will be documented in this file.
 
 ### Added
 
-* expand IntelliSensse and navigation features into workspace files (disabled by default; use the settings to enable it)
+* expand IntelliSense and code navigation features into workspace files (disabled by default; use the settings to enable it)
 
 ### Changed
 
@@ -30,10 +38,9 @@ All notable changes to the __spec__ extension will be documented in this file.
 ### Added
 
 * add new features:
-  * syntax diagnostics (primitive)
+  * syntax diagnostics (primitive; only some parts of statements are validated but most expressions are not)
   * code navigation such as 'Go to Definition', which covers user-defined macros and functions in open documents
 * expand IntelliSense features into user-defined macros and functions in open documents
-
 
 ## [0.3.1] - 2019-09-11
 
@@ -65,8 +72,9 @@ All notable changes to the __spec__ extension will be documented in this file.
   * syntax highlighting feature
   * code snippets feature
 
-[Unreleased]: https://github.com/fujidana/vscode-spec/compare/v0.5.1...HEAD
-[0.5.1]: https://github.com/fujidana/vscode-spec/compare/v0.5.0...v0.5.1
+[Unreleased]: https://github.com/fujidana/vscode-spec/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/fujidana/vscode-spec/compare/v0.5.2...v0.6.0
+[0.5.2]: https://github.com/fujidana/vscode-spec/compare/v0.5.0...v0.5.2
 [0.5.0]: https://github.com/fujidana/vscode-spec/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/fujidana/vscode-spec/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/fujidana/vscode-spec/compare/v0.3.0...v0.3.1
