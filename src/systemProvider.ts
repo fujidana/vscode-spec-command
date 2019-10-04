@@ -1,13 +1,14 @@
 import * as vscode from 'vscode';
 import { TextDecoder } from "util";
-import * as provider from "./specProvider";
+import * as spec from "./spec";
+import { Provider } from "./provider";
 
 interface APIReference {
-	constants: any[];
-	variables: any[];
-	functions: any[];
-	macros: any[];
-	keywords: any[];
+	constants: spec.ReferenceItem[];
+	variables: spec.ReferenceItem[];
+	functions: spec.ReferenceItem[];
+	macros: spec.ReferenceItem[];
+	keywords: spec.ReferenceItem[];
 }
 
 const SNIPPET_TEMPLATES: string[] = [
@@ -34,37 +35,42 @@ const SNIPPET_DESCRIPTIONS: string[] = [
 	'three-motor relative-position scan',
 ];
 
-export class SpecBuiltinProvider extends provider.SpecProvider implements vscode.TextDocumentContentProvider {
-	private mnemonicEnumRefMap = new provider.ReferenceMap();
-	private mnemonicSnippetRefMap = new provider.ReferenceMap();
+/**
+ * Provider for symbols that spec system manages.
+ * This class manages built-in symbols and motor mnemonics user added in VS Code configuraion.
+ */
+export class SystemProvider extends Provider implements vscode.TextDocumentContentProvider {
+	private mnemonicEnumRefMap = new spec.ReferenceMap();
+	private mnemonicSnippetRefMap = new spec.ReferenceMap();
 
 	constructor(apiReferencePath: string) {
 		super();
 
 		// load the API reference file
-		vscode.workspace.fs.readFile(vscode.Uri.file(apiReferencePath)).then((uint8Array) => {
+		vscode.workspace.fs.readFile(vscode.Uri.file(apiReferencePath)).then(uint8Array => {
 			// convert JSON-formatted file contents to a javascript object.
 			const apiReference: APIReference = JSON.parse(new TextDecoder('utf-8').decode(uint8Array));
 
 			// convert the object to ReferenceMap and register the set.
-			const builtinStorage = new provider.ReferenceStorage();
-			builtinStorage.set(provider.ReferenceItemKind.Constant, new provider.ReferenceMap(Object.entries(apiReference.constants)));
-			builtinStorage.set(provider.ReferenceItemKind.Variable, new provider.ReferenceMap(Object.entries(apiReference.variables)));
-			builtinStorage.set(provider.ReferenceItemKind.Macro, new provider.ReferenceMap(Object.entries(apiReference.macros)));
-			builtinStorage.set(provider.ReferenceItemKind.Function, new provider.ReferenceMap(Object.entries(apiReference.functions)));
-			builtinStorage.set(provider.ReferenceItemKind.Keyword, new provider.ReferenceMap(Object.entries(apiReference.keywords)));
-			this.storageCollection.set(provider.BUILTIN_URI, builtinStorage);
-			this.updateCompletionItemsForUriString(provider.BUILTIN_URI);
+			const builtinStorage = new spec.ReferenceStorage();
+			builtinStorage.set(spec.ReferenceItemKind.Constant, new spec.ReferenceMap(Object.entries(apiReference.constants)));
+			builtinStorage.set(spec.ReferenceItemKind.Variable, new spec.ReferenceMap(Object.entries(apiReference.variables)));
+			builtinStorage.set(spec.ReferenceItemKind.Macro, new spec.ReferenceMap(Object.entries(apiReference.macros)));
+			builtinStorage.set(spec.ReferenceItemKind.Function, new spec.ReferenceMap(Object.entries(apiReference.functions)));
+			builtinStorage.set(spec.ReferenceItemKind.Keyword, new spec.ReferenceMap(Object.entries(apiReference.keywords)));
+			this.storageCollection.set(spec.BUILTIN_URI, builtinStorage);
+			this.updateCompletionItemsForUriString(spec.BUILTIN_URI);
 		});
 
 		// register motor-mnemonic storage
-		const motorStorage = new provider.ReferenceStorage();
-		motorStorage.set(provider.ReferenceItemKind.Enum, this.mnemonicEnumRefMap);
-		motorStorage.set(provider.ReferenceItemKind.Snippet, this.mnemonicSnippetRefMap);
-		this.storageCollection.set(provider.MOTOR_URI, motorStorage);
+		const motorStorage = new spec.ReferenceStorage();
+		motorStorage.set(spec.ReferenceItemKind.Enum, this.mnemonicEnumRefMap);
+		motorStorage.set(spec.ReferenceItemKind.Snippet, this.mnemonicSnippetRefMap);
+		this.storageCollection.set(spec.MOTOR_URI, motorStorage);
 		this.updateMotorMnemonicsStorage();
 
-		vscode.workspace.onDidChangeConfiguration((event) => {
+		// observe the change in configuration
+		vscode.workspace.onDidChangeConfiguration(event => {
 			if (event.affectsConfiguration('spec.mnemonics.motor')) {
 				this.updateMotorMnemonicsStorage();
 			}
@@ -72,15 +78,15 @@ export class SpecBuiltinProvider extends provider.SpecProvider implements vscode
 
 		// register command to show reference manual as a virtual document
 		vscode.commands.registerCommand('spec.open-document.built-in', async () => {
-			const storage = this.storageCollection.get(provider.BUILTIN_URI);
+			const storage = this.storageCollection.get(spec.BUILTIN_URI);
 			if (storage) {
-				let quickPickLabels: string[] = ['all'];
+				let quickPickLabels = ['all'];
 				for (const itemKind of storage.keys()) {
-					quickPickLabels.push(provider.getStringFromReferenceItemKind(itemKind));
+					quickPickLabels.push(spec.getStringFromReferenceItemKind(itemKind));
 				}
 				const quickPickLabel = await vscode.window.showQuickPick(quickPickLabels);
 				if (quickPickLabel) {
-					let uri = vscode.Uri.parse(provider.BUILTIN_URI);
+					let uri = vscode.Uri.parse(spec.BUILTIN_URI);
 					if (quickPickLabel !== 'all') {
 						uri = uri.with({ query: quickPickLabel });
 					}
@@ -91,8 +97,8 @@ export class SpecBuiltinProvider extends provider.SpecProvider implements vscode
 	}
 
 	/**
-	 * Invoked when initialized and configuration is changed. 
 	 * Update the contents of motor-mnemonic storage.
+	 * Invoked when initialization completed or configuration modified. 
 	 */
 	private updateMotorMnemonicsStorage() {
 		const motorConfig = vscode.workspace.getConfiguration('spec.mnemonics.motor');
@@ -114,7 +120,7 @@ export class SpecBuiltinProvider extends provider.SpecProvider implements vscode
 			// refresh storage for motor mnemonic macro (snippet)
 			for (let index = 0; index < SNIPPET_TEMPLATES.length; index++) {
 				const snippetTemplate = SNIPPET_TEMPLATES[index];
-				const snippetDesription = (SNIPPET_DESCRIPTIONS.length > index) ? SNIPPET_DESCRIPTIONS[index] : '';
+				const snippetDesription = (SNIPPET_DESCRIPTIONS.length > index) ? SNIPPET_DESCRIPTIONS[index] : undefined;
 
 				// treat the first word of the template as the snippet key.
 				const offset = snippetTemplate.indexOf(' ');
@@ -142,22 +148,22 @@ export class SpecBuiltinProvider extends provider.SpecProvider implements vscode
 			}
 		}
 
-		this.updateCompletionItemsForUriString(provider.MOTOR_URI);
+		this.updateCompletionItemsForUriString(spec.MOTOR_URI);
 	}
 
 	/**
 	 * required implementation of vscode.TextDocumentContentProvider
 	 */
 	public provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken): vscode.ProviderResult<string> {
-		if (uri.scheme === 'spec' && uri.authority === 'static') {
+		if (uri.scheme === 'spec' && uri.authority === 'system') {
 			const storage = this.storageCollection.get(uri.with({ query: '' }).toString());
 			if (storage) {
 				let mdText = '# __spec__ Reference Manual\n\n';
 				mdText += 'The contents of this page are cited from the _Reference Manual_ section in [PDF version](https://www.certif.com/downloads/css_docs/spec_man.pdf) of the _User manual and Tutorials_, written by [Certified Scientific Software](https://www.certif.com/).\n\n';
 
 				for (const [itemKind, map] of storage.entries()) {
-					const itemKindString = provider.getStringFromReferenceItemKind(itemKind);
-					
+					const itemKindString = spec.getStringFromReferenceItemKind(itemKind);
+
 					// if 'query' is specified, skip maps other than the speficed query.
 					if (uri.query && uri.query !== itemKindString) {
 						continue;
@@ -165,7 +171,7 @@ export class SpecBuiltinProvider extends provider.SpecProvider implements vscode
 
 					// add heading for each category
 					mdText += `## ${itemKindString}\n\n`;
-					
+
 					// add each item
 					for (const [key, item] of map.entries()) {
 						mdText += `### ${key}\n\n`;

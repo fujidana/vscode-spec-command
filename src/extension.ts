@@ -1,29 +1,29 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import {SpecBuiltinProvider} from './specBuiltinProvider';
-import {SpecDocumentProvider} from './specDocumentProvider';
+import {SystemProvider} from './systemProvider';
+import {UserProvider} from './userProvider';
 
 // this method is called when your extension is activated
 export function activate(context: vscode.ExtensionContext) {
-	const builtinProvider = new SpecBuiltinProvider(context.asAbsolutePath('./syntaxes/spec.apiReference.json'));
-	const documentProvider = new SpecDocumentProvider();
+	const systemProvider = new SystemProvider(context.asAbsolutePath('./syntaxes/spec.apiReference.json'));
+	const userProvider = new UserProvider();
 	const selector = { scheme: '*', language: 'spec' };
 	
 	context.subscriptions.push(
 		// built-in provider
-		vscode.languages.registerCompletionItemProvider(selector, builtinProvider),
-		vscode.languages.registerSignatureHelpProvider(selector, builtinProvider, '(', ')', ','),
-		vscode.languages.registerHoverProvider(selector, builtinProvider),
-		vscode.workspace.registerTextDocumentContentProvider('spec', builtinProvider),
+		vscode.languages.registerCompletionItemProvider(selector, systemProvider),
+		vscode.languages.registerSignatureHelpProvider(selector, systemProvider, '(', ')', ','),
+		vscode.languages.registerHoverProvider(selector, systemProvider),
+		vscode.workspace.registerTextDocumentContentProvider('spec', systemProvider),
 		// document provider
-		documentProvider.diagnosticCollection,
-		vscode.languages.registerCompletionItemProvider(selector, documentProvider),
-		vscode.languages.registerSignatureHelpProvider(selector, documentProvider, '(', ')', ','),
-		vscode.languages.registerHoverProvider(selector, documentProvider),
-		vscode.languages.registerDefinitionProvider(selector, documentProvider),
-		vscode.languages.registerDocumentSymbolProvider(selector, documentProvider),
-		vscode.languages.registerWorkspaceSymbolProvider(documentProvider),
+		userProvider.diagnosticCollection,
+		vscode.languages.registerCompletionItemProvider(selector, userProvider),
+		vscode.languages.registerSignatureHelpProvider(selector, userProvider, '(', ')', ','),
+		vscode.languages.registerHoverProvider(selector, userProvider),
+		vscode.languages.registerDefinitionProvider(selector, userProvider),
+		vscode.languages.registerDocumentSymbolProvider(selector, userProvider),
+		vscode.languages.registerWorkspaceSymbolProvider(userProvider),
 	);
 }
 
