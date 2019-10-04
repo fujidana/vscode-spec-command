@@ -15,7 +15,7 @@ Use [GitHub issues](https://github.com/fujidana/vscode-spec/issues) for bug repo
 
 This extension supports the following features:
 
-* __Diagnostics__ - syntax check, _still primitive_
+* __Diagnostics__ - syntax check
 * __Syntax highlight__ - colorizing symbols using a grammer
 * __IntelliSense__ - code completion and hinting
   * __Hovers__
@@ -28,15 +28,30 @@ This extension supports the following features:
 
 These features cover both user-defined symbols and built-in symbols.
 Built-in symbols cover variables, constants, functions, macros and some other keywords.
-User-defined symbols cover functions and macros; currently variables are outside the scope.
+User-defined symbols cover constants, functions and macros; currently variables are outside the scope.
 User-defined symbols are scanned from open documents and optionally in files in the workspace.
 
+The help text of built-in symbols can also be shown as an indepedent document; select _spec: Open Reference Manual_ from _Command Palette_ (Ctrl+Shit+P).
+
 This extension was developed with reference to the recent official PDF document about __spec__ release 6 (version 3 of the spec documentation, printed 16 July 2017).
+The help text of built-in symbols are cited from this document.
 
 ## Requirements
 
 The extension assumes UTF-8 as the file encoding in workspace scan, regardless of user settings or selection in current editor.
 This does not mean the developer garantees UTF-8 characters are safe for __spec__ interpreters.
+
+The __spec__ grammar is torelant, lazy in other word.
+It is difficult to perfectly mimic its behavior.
+Instead, this extension requires stricter coding than the __spec__ interpreters does.
+For example, __spec__ interpreters evaluate the following two lines equivalently:
+
+```
+qdo /home/myuser/mymacro.mac
+qdo "/home/myuser/mymacro.mac"
+```
+
+but this extension shows an alert or error on the first line ("/" is the division operator and "." is not for any literal, symbols or operators.) because it expects explicit quotation marks for a string literal.
 
 ## Extension Settings
 
@@ -57,7 +72,7 @@ This extension is still beta and the identifiers (dot-separated string) of these
 
 ## Known Issues
 
-* Currently the syntax diagnostics covers limited parts of the grammar and its error message is primitive.
-* Statement continuation by putting a backslash at the end of the line is not supported.
+* Syntax check by this extension has small differences with actual __spec__ interpretters.
+* Statement continuation by putting a backslash at the end of the line is not supported in syntax highlight.
 
 Also read [GitHub issues](https://github.com/fujidana/vscode-spec/issues).
