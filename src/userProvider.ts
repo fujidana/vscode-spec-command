@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { TextDecoder } from 'util';
 import * as estraverse from "estraverse";
-import * as provider from "./specProvider";
+import * as spec from "./spec";
+import { Provider } from "./provider";
 import { SyntaxError, parse } from './grammar';
 
 /**
@@ -14,9 +15,10 @@ function isDocumentInScannedWorkspace(document: vscode.TextDocument) {
 }
 
 /**
- * provider for opened documents
+ * Provider for documents user created.
+ * This class manages opened documents and other documents in the current workspace.
  */
-export class SpecDocumentProvider extends provider.SpecProvider implements vscode.DocumentSymbolProvider, vscode.WorkspaceSymbolProvider {
+export class UserProvider extends Provider implements vscode.DocumentSymbolProvider, vscode.WorkspaceSymbolProvider {
 
     public diagnosticCollection: vscode.DiagnosticCollection;
 
@@ -29,7 +31,7 @@ export class SpecDocumentProvider extends provider.SpecProvider implements vscod
         this.refreshCollections();
 
         // register a hander invoked when the document is changed
-        vscode.workspace.onDidChangeTextDocument((documentChangeEvent) => {
+        vscode.workspace.onDidChangeTextDocument(documentChangeEvent => {
             const document = documentChangeEvent.document;
             if (document.languageId === 'spec') {
                 this.parseDocumentContents(document.getText(), document.uri);
@@ -38,14 +40,14 @@ export class SpecDocumentProvider extends provider.SpecProvider implements vscod
 
         // register a hander invoked when the document is opened
         // this is also invoked after the user changed the language id
-        vscode.workspace.onDidOpenTextDocument((document) => {
+        vscode.workspace.onDidOpenTextDocument(document => {
             if (document.languageId === 'spec' && !isDocumentInScannedWorkspace(document)) {
                 this.parseDocumentContents(document.getText(), document.uri);
             }
         });
 
         // register a hander invoked when the document is saved
-        vscode.workspace.onDidSaveTextDocument((document) => {
+        vscode.workspace.onDidSaveTextDocument(document => {
             if (document.languageId === 'spec') {
                 this.parseDocumentContents(document.getText(), document.uri);
             }
@@ -53,7 +55,7 @@ export class SpecDocumentProvider extends provider.SpecProvider implements vscod
 
         // register a hander invoked when the document is closed
         // this is also invoked after the user changed the language id
-        vscode.workspace.onDidCloseTextDocument((document) => {
+        vscode.workspace.onDidCloseTextDocument(document => {
             if (document.languageId === 'spec' && !isDocumentInScannedWorkspace(document)) {
                 const uriString = document.uri.toString();
                 this.storageCollection.delete(uriString);
@@ -62,20 +64,20 @@ export class SpecDocumentProvider extends provider.SpecProvider implements vscod
             }
         });
 
-        // vscode.window.onDidChangeActiveTextEditor((editor) => {
+        // vscode.window.onDidChangeActiveTextEditor(editor => {
         //     if (editor) {
         //         this.scanDocument(editor.document, 'active editor changed.');
         //     }
         // });
 
         // register a hander invoked when the configuration is changed
-        vscode.workspace.onDidChangeConfiguration((event) => {
+        vscode.workspace.onDidChangeConfiguration(event => {
             if (event.affectsConfiguration('spec.parser.enableWorkspaceScan')) {
                 this.refreshCollections();
             }
         });
 
-        vscode.workspace.onDidChangeWorkspaceFolders((event) => {
+        vscode.workspace.onDidChangeWorkspaceFolders(event => {
             this.refreshCollections();
         });
     }
@@ -83,14 +85,14 @@ export class SpecDocumentProvider extends provider.SpecProvider implements vscod
     private parseDocumentContents(contents: string, uri: vscode.Uri) {
 
         const uriString = uri.toString();
-        const constantRefMap = new provider.ReferenceMap();
-        const macroRefMap = new provider.ReferenceMap();
-        const functionRefMap = new provider.ReferenceMap();
-        const documentStorage = new provider.ReferenceStorage(
+        const constantRefMap = new spec.ReferenceMap();
+        const macroRefMap = new spec.ReferenceMap();
+        const functionRefMap = new spec.ReferenceMap();
+        const documentStorage = new spec.ReferenceStorage(
             [
-                [provider.ReferenceItemKind.Constant, constantRefMap],
-                [provider.ReferenceItemKind.Macro, macroRefMap],
-                [provider.ReferenceItemKind.Function, functionRefMap],
+                [spec.ReferenceItemKind.Constant, constantRefMap],
+                [spec.ReferenceItemKind.Macro, macroRefMap],
+                [spec.ReferenceItemKind.Function, functionRefMap],
             ]
         );
 
@@ -98,7 +100,7 @@ export class SpecDocumentProvider extends provider.SpecProvider implements vscod
         try {
             tree = parse(contents);
         } catch (error) {
-            const diagnostic = new vscode.Diagnostic(provider.convertRange(error.location), error.message, vscode.DiagnosticSeverity.Error);
+            const diagnostic = new vscode.Diagnostic(spec.convertRange(error.location), error.message, vscode.DiagnosticSeverity.Error);
             this.diagnosticCollection.set(uri, [diagnostic]);
             this.storageCollection.delete(uriString);
             // this.updateCompletionItemsForUriString(uriString);
@@ -108,7 +110,7 @@ export class SpecDocumentProvider extends provider.SpecProvider implements vscod
 
         const diagnostics = [];
         for (const item of tree.x_diagnostics) {
-            const diagnostic = new vscode.Diagnostic(provider.convertRange(item.location), item.message, item.severity);
+            const diagnostic = new vscode.Diagnostic(spec.convertRange(item.location), item.message, item.severity);
             diagnostics.push(diagnostic);
         }
         this.diagnosticCollection.set(uri, diagnostics);
@@ -123,13 +125,11 @@ export class SpecDocumentProvider extends provider.SpecProvider implements vscod
             },
             leave: function(currentNode, parentNode) {
                 // console.log('leave', currentNode.type, parentNode && parentNode.type);
-                let refItem: provider.ReferenceItem | undefined;
+                let refItem: spec.ReferenceItem | undefined;
                 if (currentNode.type === 'FunctionDeclaration' && currentNode.id) {
                     if (currentNode.params) {
                         let signatureStr = currentNode.id.name + '(';
-                        signatureStr += currentNode.params.map((param) => {
-                            return (param.type === 'Identifier') ? param.name : '';
-                        }).join(', ') + ')';
+                        signatureStr += currentNode.params.map(param => (param.type === 'Identifier') ? param.name : '').join(', ') + ')';
                         refItem = { signature: signatureStr, location: <any>currentNode.loc };
                         functionRefMap.set(currentNode.id.name, refItem);
                     } else {
@@ -165,6 +165,10 @@ export class SpecDocumentProvider extends provider.SpecProvider implements vscod
         this.updateCompletionItemsForUriString(uriString);
     }
 
+    /**
+     * scan open files and other files in workspace folders.
+     * invoked manually when needed.
+     */
     private async refreshCollections() {
         // clear the caches
         this.storageCollection.clear();
@@ -186,7 +190,7 @@ export class SpecDocumentProvider extends provider.SpecProvider implements vscod
         if (scansWorkspace && workspaceFolders) {
             for (const workspaceFolder of workspaceFolders) {
                 const pattern = new vscode.RelativePattern(workspaceFolder, '**/*.mac');
-                const uris = (await vscode.workspace.findFiles(pattern)).filter((uri) => !openedUriStringSet.has(uri.toString()));
+                const uris = (await vscode.workspace.findFiles(pattern)).filter(uri => !openedUriStringSet.has(uri.toString()));
                 for (const uri of uris) {
                     const contents = new TextDecoder('utf-8').decode(await vscode.workspace.fs.readFile(uri));
                     this.parseDocumentContents(contents, uri);
@@ -199,21 +203,19 @@ export class SpecDocumentProvider extends provider.SpecProvider implements vscod
 	 * required implementation of vscode.DocumentSymbolProvider
 	 */
     provideDocumentSymbols(document: vscode.TextDocument, token: vscode.CancellationToken): vscode.ProviderResult<vscode.SymbolInformation[] | vscode.DocumentSymbol[]> {
-        const refStorage = this.storageCollection.get(document.uri.toString());
-        if (refStorage) {
+        const storage = this.storageCollection.get(document.uri.toString());
+        if (storage) {
             const symbols = [];
-            for (const [refType, refMap] of refStorage.entries()) {
-                const symbolKind = provider.convertReferenceItemKindToSymbolKind(refType);
-                for (const [identifier, refItem] of refMap.entries()) {
-                    if (refItem.location) {
-                        const location = new vscode.Location(document.uri, provider.convertRange(refItem.location));
+            for (const [itemKind, map] of storage.entries()) {
+                const symbolKind = spec.getSymbolKindFromReferenceItemKind(itemKind);
+                for (const [identifier, item] of map.entries()) {
+                    if (item.location) {
+                        const location = new vscode.Location(document.uri, spec.convertRange(item.location));
                         symbols.push(new vscode.SymbolInformation(identifier, symbolKind, '', location));
                     }
                 }
             }
-            if (symbols.length > 0) {
-                return symbols;
-            }
+            return symbols;
         }
     }
 
@@ -223,7 +225,7 @@ export class SpecDocumentProvider extends provider.SpecProvider implements vscod
     provideWorkspaceSymbols(query: string, token: vscode.CancellationToken): vscode.ProviderResult<vscode.SymbolInformation[]> {
         // exit when the query is not empty and contains characters not allowed in an identifier.
         if (!/^[a-zA-Z0-9_]*$/.test(query)) {
-            return undefined;
+            return;
         }
 
         //  create a regular expression that filters symbols using the query
@@ -231,25 +233,20 @@ export class SpecDocumentProvider extends provider.SpecProvider implements vscod
         const regex = new RegExp(query.split('').join('.*'), 'i'); // e.g., 'abc' => /a.*b.*c/i
 
         const symbols = [];
-        for (const [uriString, refStorage] of this.storageCollection.entries()) {
-            for (const [refItemKind, refMap] of refStorage.entries()) {
-                const symbolKind = provider.convertReferenceItemKindToSymbolKind(refItemKind);
-                for (const [identifier, refItem] of refMap.entries()) {
+        for (const [uriString, storage] of this.storageCollection.entries()) {
+            for (const [itemKind, map] of storage.entries()) {
+                const symbolKind = spec.getSymbolKindFromReferenceItemKind(itemKind);
+                for (const [identifier, item] of map.entries()) {
                     if (query.length === 0 || regex.test(identifier)) {
-                        if (refItem.location) {
-                            const name = (refItemKind === provider.ReferenceItemKind.Function) ? identifier + '()' : identifier;
-                            const location = new vscode.Location(vscode.Uri.parse(uriString), provider.convertRange(refItem.location));
+                        if (item.location) {
+                            const name = (itemKind === spec.ReferenceItemKind.Function) ? identifier + '()' : identifier;
+                            const location = new vscode.Location(vscode.Uri.parse(uriString), spec.convertRange(item.location));
                             symbols.push(new vscode.SymbolInformation(name, symbolKind, '', location));
                         }
                     }
                 }
             }
         }
-        if (symbols.length > 0) {
-            return symbols;
-        }
+        return symbols;
     }
 }
-
-
-

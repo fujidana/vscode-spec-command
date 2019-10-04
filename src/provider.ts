@@ -1,175 +1,39 @@
 import * as vscode from 'vscode';
+import * as spec from './spec';
 
-interface PesPosition {
-	offset: number;
-	line: number;
-	column: number;
-}
 
-interface PesRange {
-	start: PesPosition;
-	end: PesPosition;
-}
-
-export function convertPosition(pesPosition: PesPosition) {
-	return new vscode.Position(pesPosition.line - 1, pesPosition.column - 1);
-}
-
-export function convertRange(pesRange: PesRange) {
-	return new vscode.Range(convertPosition(pesRange.start), convertPosition(pesRange.end));
-}
-
-export const BUILTIN_URI = 'spec://static/built-in.md';
-export const MOTOR_URI = 'spec://static/mnemonic-motor.md';
-
-export const enum ReferenceItemKind {
-	Constant,
-	Variable,
-	Macro,
-	Function,
-	Keyword,
-	Snippet,
-	Enum,
-	Undefined,
-}
-
-export function getReferenceItemKindFromCompletionItemKind(completionItemKind?: vscode.CompletionItemKind): ReferenceItemKind {
-	switch (completionItemKind) {
-		case vscode.CompletionItemKind.Constant:
-			return ReferenceItemKind.Constant;
-		case vscode.CompletionItemKind.Variable:
-			return ReferenceItemKind.Variable;
-		case vscode.CompletionItemKind.Function:
-			return ReferenceItemKind.Macro;
-		case vscode.CompletionItemKind.Method:
-			return ReferenceItemKind.Function;
-		case vscode.CompletionItemKind.Keyword:
-			return ReferenceItemKind.Keyword;
-		case vscode.CompletionItemKind.Snippet:
-			return ReferenceItemKind.Snippet;
-		case vscode.CompletionItemKind.EnumMember:
-			return ReferenceItemKind.Enum;
-		default:
-			return ReferenceItemKind.Undefined;
-	}
-}
-
-export function getCompletionItemKindFromReferenceItemKind(refItemKind: ReferenceItemKind): vscode.CompletionItemKind | undefined {
-	switch (refItemKind) {
-		case ReferenceItemKind.Constant:
-			return vscode.CompletionItemKind.Constant;
-		case ReferenceItemKind.Variable:
-			return vscode.CompletionItemKind.Variable;
-		case ReferenceItemKind.Macro:
-			return vscode.CompletionItemKind.Function;
-		case ReferenceItemKind.Function:
-			return vscode.CompletionItemKind.Method;
-		case ReferenceItemKind.Keyword:
-			return vscode.CompletionItemKind.Keyword;
-		case ReferenceItemKind.Snippet:
-			return vscode.CompletionItemKind.Snippet;
-		case ReferenceItemKind.Enum:
-			return vscode.CompletionItemKind.EnumMember;
-		case ReferenceItemKind.Undefined:
-			return undefined;
-		default:
-			return undefined;
-	}
-}
-
-export function convertReferenceItemKindToSymbolKind(refItemKind: ReferenceItemKind): vscode.SymbolKind {
-	switch (refItemKind) {
-		case ReferenceItemKind.Constant:
-			return vscode.SymbolKind.Constant;
-		case ReferenceItemKind.Variable:
-			return vscode.SymbolKind.Variable;
-		case ReferenceItemKind.Macro:
-			return vscode.SymbolKind.Function;
-		case ReferenceItemKind.Function:
-			return vscode.SymbolKind.Method;
-		// case ReferenceItemKind.Keyword:
-		// case ReferenceItemKind.Snippet:
-		case ReferenceItemKind.Enum:
-			return vscode.SymbolKind.EnumMember;
-		case ReferenceItemKind.Undefined:
-			return vscode.SymbolKind.Null;
-		default:
-			return vscode.SymbolKind.Null;
-	}
-}
-
-export function getStringFromReferenceItemKind(refItemKind: ReferenceItemKind): string {
-	switch (refItemKind) {
-		case ReferenceItemKind.Constant:
-			return "constant";
-		case ReferenceItemKind.Variable:
-			return "variable";
-		case ReferenceItemKind.Macro:
-			return "macro";
-		case ReferenceItemKind.Function:
-			return "function";
-		case ReferenceItemKind.Keyword:
-			return "keyword";
-		case ReferenceItemKind.Snippet:
-			return "snippet";
-		case ReferenceItemKind.Enum:
-			return "member";
-		default:
-			return "symbol";
-	}
-}
-
-function getShortDescription(refItem: ReferenceItem, refItemKind: ReferenceItemKind, refItemUriString: string, documentUriString: string, outputsMarkdown: boolean) {
+function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceItemKind, itemUriString: string, documentUriString: string, outputsMarkdown: boolean) {
 	let symbolLabel: string;
 	let relativePath: string | undefined;
 
-	symbolLabel = getStringFromReferenceItemKind(refItemKind);
+	symbolLabel = spec.getStringFromReferenceItemKind(itemKind);
 
-	if (refItemUriString === BUILTIN_URI) {
+	if (itemUriString === spec.BUILTIN_URI) {
 		symbolLabel = 'built-in ' + symbolLabel;
-	} else if (refItemUriString === MOTOR_URI) {
+	} else if (itemUriString === spec.MOTOR_URI) {
 		symbolLabel = 'user-configured ' + symbolLabel;
-	} else if (refItemUriString === documentUriString) {
+	} else if (itemUriString === documentUriString) {
 		symbolLabel = symbolLabel + ' defined in this file';
 	} else {
-		relativePath = vscode.workspace.asRelativePath(vscode.Uri.parse(refItemUriString));
+		relativePath = vscode.workspace.asRelativePath(vscode.Uri.parse(itemUriString));
 		symbolLabel = outputsMarkdown ? 'user-defined ' + symbolLabel : symbolLabel + ' defined in ' + relativePath;
 	}
 
-	let mainText = `${refItem.signature} # ${symbolLabel}`;
-	if (refItem.overloads && refItem.overloads.length > 1) {
-		mainText += `, ${refItem.overloads.length} overloads`;
+	let mainText = `${item.signature} # ${symbolLabel}`;
+	if (item.overloads && item.overloads.length > 1) {
+		mainText += `, ${item.overloads.length} overloads`;
 	}
 
 	if (outputsMarkdown) {
 		let markdownString = new vscode.MarkdownString().appendCodeblock(mainText);
 		if (relativePath) {
-			markdownString = markdownString.appendMarkdown(`_defined in_ [${relativePath}](${refItemUriString}).\n\n`);
+			markdownString = markdownString.appendMarkdown(`_defined in_ [${relativePath}](${itemUriString}).\n\n`);
 		}
 		return markdownString;
 	} else {
 		return mainText;
 	}
 }
-
-// 'overloads' parameter is for built-in macros and functions.
-export interface ReferenceItem {
-	signature: string;
-	description?: string;
-	snippet?: string;
-	location?: PesRange;
-	overloads?: Overload[];
-}
-
-export interface Overload {
-	signature: string;
-	description?: string;
-}
-
-export class ReferenceMap extends Map<string, ReferenceItem> { }
-
-export class ReferenceStorage extends Map<ReferenceItemKind, ReferenceMap> { }
-
 
 function truncateText(text: string, settingKey: string): string {
 	const volume = vscode.workspace.getConfiguration('spec.helpDocumentVolume').get(settingKey);
@@ -194,9 +58,7 @@ function getParameterInformation(signature: string): vscode.ParameterInformation
 	}
 	// const selectorName = signature.substring(0, parStart).trim();
 	const argumentList = signature.substring(parStart + 1, parEnd).replace(/[\[\]]/g, '').split(',');
-	return argumentList.map((argStr) => {
-		return new vscode.ParameterInformation(argStr.trim());
-	});
+	return argumentList.map(argStr => new vscode.ParameterInformation(argStr.trim()));
 }
 
 function parseSignatureInEditing(line: string, position: number) {
@@ -206,9 +68,7 @@ function parseSignatureInEditing(line: string, position: number) {
 	// from "parentfunc(sonfunc(a, b, c), daughterFunc(d, e"
 	// to   "parentfunc(sonfunc_________, daughterFunc(d, e"
 	while (1) {
-		const newstr = substr.replace(/\([^()]*\)/g, (substr: string) => {
-			return '_'.repeat(substr.length);
-		});
+		const newstr = substr.replace(/\([^()]*\)/g, substr => '_'.repeat(substr.length));
 		if (newstr === substr) {
 			substr = newstr;
 			break;
@@ -237,31 +97,34 @@ function parseSignatureInEditing(line: string, position: number) {
 /**
  * provider
  */
-export class SpecProvider implements vscode.CompletionItemProvider, vscode.HoverProvider, vscode.SignatureHelpProvider, vscode.DefinitionProvider {
+export class Provider implements vscode.CompletionItemProvider, vscode.HoverProvider, vscode.SignatureHelpProvider, vscode.DefinitionProvider {
 
-	// vscode.Uri objects can not be used as a key for a Map object because 
-	// these objects having the same string representation can be recognize to be different,
+	// vscode.Uri objects can not be used as a key for a Map object because these 
+	// objects having the same string representation can be recognized different,
 	// i.e., uriA.toString() === uriB.toString() but uriA !== uriB.
 	// This is mainly caused by the difference in their minor properties, such as fsPath
-	// (File System Path). Instead the string representation of a Uri object is used as a key.
-	protected storageCollection: Map<string, ReferenceStorage> = new Map();
+	// (File System Path). To avoid this problem, the string representation of a Uri 
+	// object is used as a key.
+
+	protected storageCollection: Map<string, spec.ReferenceStorage> = new Map();
 	protected completionItemCollection: Map<string, vscode.CompletionItem[]> = new Map();
 
 	/**
 	 * generate completion items from the registered storage and cache it in the map using `uri` as the key.
+	 * subclass must invoke it when the storage contents are changed. 
 	 */
 	protected updateCompletionItemsForUriString(uriString: string) {
-		const refStorage = this.storageCollection.get(uriString);
-		if (refStorage) {
+		const storage = this.storageCollection.get(uriString);
+		if (storage) {
 			const completionItems: vscode.CompletionItem[] = [];
-			for (const [refItemKind, refMap] of refStorage.entries()) {
-				const completionItemKind = getCompletionItemKindFromReferenceItemKind(refItemKind);
-				for (const [identifier, refItem] of refMap.entries()) {
+			for (const [itemKind, map] of storage.entries()) {
+				const completionItemKind = spec.getCompletionItemKindFromReferenceItemKind(itemKind);
+				for (const [identifier, item] of map.entries()) {
 					const completionItem = new vscode.CompletionItem(identifier, completionItemKind);
 					// embed `uriString` into `detail` property in order to resolve it later efficiently.
 					completionItem.detail = uriString;
-					if (refItem.snippet) {
-						completionItem.insertText = new vscode.SnippetString(refItem.snippet);
+					if (item.snippet) {
+						completionItem.insertText = new vscode.SnippetString(item.snippet);
 					}
 					completionItems.push(completionItem);
 				}
@@ -294,35 +157,35 @@ export class SpecProvider implements vscode.CompletionItemProvider, vscode.Hover
 	 * optional implementation of vscode.CompletionItemProvider
 	 */
 	public resolveCompletionItem(completionItem: vscode.CompletionItem, token: vscode.CancellationToken): vscode.CompletionItem | undefined {
-		const refItemKind = getReferenceItemKindFromCompletionItemKind(completionItem.kind);
+		const itemKind = spec.getReferenceItemKindFromCompletionItemKind(completionItem.kind);
 
 		// The URI is stored in `detail` property in unresolved completion item.
 		const refUriString = completionItem.detail;
-		let refStorage;
-		if (refUriString && (refStorage = this.storageCollection.get(refUriString)) !== undefined) {
+		let storage;
+		if (refUriString && (storage = this.storageCollection.get(refUriString)) !== undefined) {
 			const activeEditor = vscode.window.activeTextEditor;
 			const documentUriString = (activeEditor) ? activeEditor.document.uri.toString() : '';
-			let refMap = refStorage.get(refItemKind);
-			if (refMap) {
+			let map = storage.get(itemKind);
+			if (map) {
 				// find the symbol information about the symbol.
-				const refItem = refMap.get(completionItem.label);
-				if (refItem) {
+				const item = map.get(completionItem.label);
+				if (item) {
 					// copy completion item.
 					const newCompletionItem = Object.assign({}, completionItem);
 
 					// set the detail of the completion item
-					newCompletionItem.detail = <string>getShortDescription(refItem, refItemKind, refUriString, documentUriString, false);
+					newCompletionItem.detail = <string>getShortDescription(item, itemKind, refUriString, documentUriString, false);
 
 					// set the description of the completion item
 					// if the main description exists, append it.
 					let descriptionMarkdown =
-						refItem.description ?
-							new vscode.MarkdownString(truncateText(refItem.description, 'completionItem')) :
+						item.description ?
+							new vscode.MarkdownString(truncateText(item.description, 'completionItem')) :
 							new vscode.MarkdownString();
 
 					// if overloaded signature exists, append them.
-					if (refItem.overloads) {
-						for (const overload of refItem.overloads) {
+					if (item.overloads) {
+						for (const overload of item.overloads) {
 							// descriptionMarkdown.appendMarkdown('---');
 							descriptionMarkdown.appendCodeblock(overload.signature);
 							if (overload.description) {
@@ -350,16 +213,16 @@ export class SpecProvider implements vscode.CompletionItemProvider, vscode.Hover
 				// start to seek if the selection is a proper identifier.
 				let hover: vscode.Hover | undefined;
 
-				for (const [refUriString, refStorage] of this.storageCollection.entries()) {
-					for (const [refItemKind, refMap] of refStorage.entries()) {
+				for (const [refUriString, storage] of this.storageCollection.entries()) {
+					for (const [itemKind, map] of storage.entries()) {
 						// find the symbol information about the symbol.
-						const refItem = refMap.get(selectorName);
-						if (refItem) {
-							let mainMarkdown = <vscode.MarkdownString>getShortDescription(refItem, refItemKind, refUriString, document.uri.toString(), true);
+						const item = map.get(selectorName);
+						if (item) {
+							let mainMarkdown = <vscode.MarkdownString>getShortDescription(item, itemKind, refUriString, document.uri.toString(), true);
 
 							// prepare the second line: the description (if it exists)
-							if (refItem.description) {
-								mainMarkdown = mainMarkdown.appendMarkdown(truncateText(refItem.description, 'hover'));
+							if (item.description) {
+								mainMarkdown = mainMarkdown.appendMarkdown(truncateText(item.description, 'hover'));
 							}
 
 							if (!hover) {
@@ -369,8 +232,8 @@ export class SpecProvider implements vscode.CompletionItemProvider, vscode.Hover
 							}
 
 							// for overloaded functions, prepare additional markdown blocks
-							if (refItem.overloads) {
-								for (const overload of refItem.overloads) {
+							if (item.overloads) {
+								for (const overload of item.overloads) {
 									let overloadMarkdown = new vscode.MarkdownString().appendCodeblock(overload.signature);
 									if (overload.description) {
 										overloadMarkdown = overloadMarkdown.appendMarkdown(truncateText(overload.description, 'hover'));
@@ -394,11 +257,11 @@ export class SpecProvider implements vscode.CompletionItemProvider, vscode.Hover
 		const signatureHint = parseSignatureInEditing(document.lineAt(position.line).text, position.character);
 		if (signatureHint) {
 
-			for (const [uriString, refStorage] of this.storageCollection.entries()) {
-				let refMap = refStorage.get(ReferenceItemKind.Function);
-				let refItem;
-				if (refMap && (refItem = refMap.get(signatureHint.signature)) !== undefined) {
-					const overloads = (refItem.overloads) ? refItem.overloads : [{ signature: refItem.signature, description: refItem.description }];
+			for (const [uriString, storage] of this.storageCollection.entries()) {
+				let map = storage.get(spec.ReferenceItemKind.Function);
+				let item;
+				if (map && (item = map.get(signatureHint.signature)) !== undefined) {
+					const overloads = (item.overloads) ? item.overloads : [{ signature: item.signature, description: item.description }];
 					const signatureHelp = new vscode.SignatureHelp();
 
 					for (const overload of overloads) {
@@ -443,18 +306,18 @@ export class SpecProvider implements vscode.CompletionItemProvider, vscode.Hover
 				const locations: vscode.Location[] = [];
 
 				// sequentially seek the identifier through all storage aggregates
-				for (const [uriString, refStorage] of this.storageCollection.entries()) {
+				for (const [uriString, storage] of this.storageCollection.entries()) {
 					// skip the storage that does not have physical locations.
 					// unnecessary because the owner of these storage is not registered as the definition provider.
-					if (uriString === BUILTIN_URI || uriString === MOTOR_URI) {
+					if (uriString === spec.BUILTIN_URI || uriString === spec.MOTOR_URI) {
 						continue;
 					}
 
 					// seek through storages for all types of symbols
-					for (const refMap of refStorage.values()) {
-						const refItem = refMap.get(selectorName);
-						if (refItem && refItem.location) {
-							locations.push(new vscode.Location(vscode.Uri.parse(uriString), convertRange(refItem.location)));
+					for (const map of storage.values()) {
+						const item = map.get(selectorName);
+						if (item && item.location) {
+							locations.push(new vscode.Location(vscode.Uri.parse(uriString), spec.convertRange(item.location)));
 						}
 					}
 				}
