@@ -6,7 +6,17 @@ import { Provider } from "./provider";
 import { SyntaxError, parse } from './grammar';
 
 /**
- * check whether the document exists in the workspace and have been parsed
+ * Extention-specific keys for estraverse (not exist in the original Parser AST.)
+ */
+const ADDITIONAL_TRAVERSE_KEYS = {
+    MacroStatement: ['arguments'],
+    InvalidStatement: [],
+    ExitStatement: [],
+    NullExpression: [],
+};
+
+/**
+ * Utility function to check whether the document exists in the workspace and have been parsed
  */
 function isDocumentInScannedWorkspace(document: vscode.TextDocument) {
     const scansWorkspace = vscode.workspace.getConfiguration('spec.parser').get('enableWorkspaceScan', false);
@@ -15,17 +25,19 @@ function isDocumentInScannedWorkspace(document: vscode.TextDocument) {
 }
 
 /**
- * Provider for documents user created.
+ * Provider class for user documents.
  * This class manages opened documents and other documents in the current workspace.
  */
 export class UserProvider extends Provider implements vscode.DocumentSymbolProvider, vscode.WorkspaceSymbolProvider {
 
     public diagnosticCollection: vscode.DiagnosticCollection;
+    private treeCollection: Map<string, any>;
 
     constructor() {
         super();
 
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('spec');
+        this.treeCollection = new Map();
 
         // asynchronously scan files and refresh the collection
         this.refreshCollections();
@@ -34,39 +46,50 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
         vscode.workspace.onDidChangeTextDocument(documentChangeEvent => {
             const document = documentChangeEvent.document;
             if (document.languageId === 'spec') {
-                this.parseDocumentContents(document.getText(), document.uri);
+                this.parseDocumentContents(document.getText(), document.uri, true);
             }
+            // console.log("onDidChangeTextDocument", document.uri);
         });
 
         // register a hander invoked when the document is opened
         // this is also invoked after the user changed the language id
         vscode.workspace.onDidOpenTextDocument(document => {
-            if (document.languageId === 'spec' && !isDocumentInScannedWorkspace(document)) {
-                this.parseDocumentContents(document.getText(), document.uri);
+            if (document.languageId === 'spec') {
+                this.parseDocumentContents(document.getText(), document.uri, true);
             }
+            // console.log("onDidOpenTextDocument", vscode.workspace.asRelativePath(document.uri));
         });
 
         // register a hander invoked when the document is saved
         vscode.workspace.onDidSaveTextDocument(document => {
             if (document.languageId === 'spec') {
-                this.parseDocumentContents(document.getText(), document.uri);
+                this.parseDocumentContents(document.getText(), document.uri, true);
             }
+            // console.log("onDidSaveTextDocument", vscode.workspace.asRelativePath(document.uri));
         });
 
         // register a hander invoked when the document is closed
         // this is also invoked after the user changed the language id
         vscode.workspace.onDidCloseTextDocument(document => {
-            if (document.languageId === 'spec' && !isDocumentInScannedWorkspace(document)) {
+            if (document.languageId === 'spec') {
                 const uriString = document.uri.toString();
-                this.storageCollection.delete(uriString);
-                this.diagnosticCollection.delete(document.uri);
-                this.completionItemCollection.delete(uriString);
+                if (!isDocumentInScannedWorkspace(document)) {
+                    this.storageCollection.delete(uriString);
+                    this.diagnosticCollection.delete(document.uri);
+                    this.completionItemCollection.delete(uriString);
+                }
+                this.treeCollection.delete(uriString);
             }
+            // console.log("onDidCloseTextDocument", vscode.workspace.asRelativePath(document.uri));
         });
 
         // vscode.window.onDidChangeActiveTextEditor(editor => {
         //     if (editor) {
-        //         this.scanDocument(editor.document, 'active editor changed.');
+        //         const document = editor.document;
+        //         // this.parseDocumentContents(editor.document.getText(), document.uri, true);
+        //         console.log("onDidChangeActiveTextEditor", vscode.workspace.asRelativePath(document.uri));
+        //     } else {
+        //         console.log("onDidChangeActiveTextEditor", undefined);
         //     }
         // });
 
@@ -82,7 +105,7 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
         });
     }
 
-    private parseDocumentContents(contents: string, uri: vscode.Uri) {
+    private parseDocumentContents(contents: string, uri: vscode.Uri, isOpenDocument: boolean) {
 
         const uriString = uri.toString();
         const constantRefMap = new spec.ReferenceMap();
@@ -108,22 +131,22 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
         }
         // console.log(JSON.stringify(tree, null, 2));
 
-        const diagnostics = [];
-        for (const item of tree.x_diagnostics) {
-            const diagnostic = new vscode.Diagnostic(spec.convertRange(item.location), item.message, item.severity);
-            diagnostics.push(diagnostic);
-        }
+        const diagnostics = tree.x_diagnostics.map((item: any) => new vscode.Diagnostic(spec.convertRange(item.location), item.message, item.severity));
         this.diagnosticCollection.set(uri, diagnostics);
-        
+
+        if (isOpenDocument) {
+            this.treeCollection.set(uri.toString(), tree);
+        }
+
         estraverse.traverse(tree, {
-            enter: function(currentNode, parentNode) {
+            enter: (currentNode, parentNode) => {
                 // console.log('enter', currentNode.type, parentNode && parentNode.type);
                 // only scan the top-level items
                 if (parentNode && parentNode.type === 'Program') {
                     return estraverse.VisitorOption.Skip;
                 }
             },
-            leave: function(currentNode, parentNode) {
+            leave: (currentNode, parentNode) => {
                 // console.log('leave', currentNode.type, parentNode && parentNode.type);
                 let refItem: spec.ReferenceItem | undefined;
                 if (currentNode.type === 'FunctionDeclaration' && currentNode.id) {
@@ -152,17 +175,13 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
                 if (refItem && currentNode.leadingComments && currentNode.leadingComments.length > 0) {
                     refItem.description = currentNode.leadingComments[currentNode.leadingComments.length - 1].value;
                 }
-        },
-            keys: {
-                MacroStatement: ['arguments'],
-                InvalidStatement: [],
-                ExitStatement: [],
-                NullExpression: [],
-            }
+            },
+            keys: ADDITIONAL_TRAVERSE_KEYS
         });
 
         this.storageCollection.set(uriString, documentStorage);
         this.updateCompletionItemsForUriString(uriString);
+        return true;
     }
 
     /**
@@ -179,7 +198,7 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
         const openedUriStringSet: Set<string> = new Set();
         for (const document of vscode.workspace.textDocuments) {
             if (document.languageId === 'spec') {
-                this.parseDocumentContents(document.getText(), document.uri);
+                this.parseDocumentContents(document.getText(), document.uri, true);
                 openedUriStringSet.add(document.uri.toString());
             }
         }
@@ -193,54 +212,189 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
                 const uris = (await vscode.workspace.findFiles(pattern)).filter(uri => !openedUriStringSet.has(uri.toString()));
                 for (const uri of uris) {
                     const contents = new TextDecoder('utf-8').decode(await vscode.workspace.fs.readFile(uri));
-                    this.parseDocumentContents(contents, uri);
+                    this.parseDocumentContents(contents, uri, false);
                 }
             }
-        }
-    }
-
-	/**
-	 * required implementation of vscode.DocumentSymbolProvider
-	 */
-    provideDocumentSymbols(document: vscode.TextDocument, token: vscode.CancellationToken): vscode.ProviderResult<vscode.SymbolInformation[] | vscode.DocumentSymbol[]> {
-        const storage = this.storageCollection.get(document.uri.toString());
-        if (storage) {
-            const symbols = [];
-            for (const [itemKind, map] of storage.entries()) {
-                const symbolKind = spec.getSymbolKindFromReferenceItemKind(itemKind);
-                for (const [identifier, item] of map.entries()) {
-                    if (item.location) {
-                        const location = new vscode.Location(document.uri, spec.convertRange(item.location));
-                        symbols.push(new vscode.SymbolInformation(identifier, symbolKind, '', location));
-                    }
-                }
-            }
-            return symbols;
         }
     }
 
     /**
-     * required implementation of vscode.WorkspaceSymbolProvider
+     * Traverse the tree and collect local variables accesscible from the position.
      */
-    provideWorkspaceSymbols(query: string, token: vscode.CancellationToken): vscode.ProviderResult<vscode.SymbolInformation[]> {
-        // exit when the query is not empty and contains characters not allowed in an identifier.
-        if (!/^[a-zA-Z0-9_]*$/.test(query)) {
-            return;
+    private collectLocalDeclarations(tree: any, position: vscode.Position) {
+        const variableRefMap = new spec.ReferenceMap();
+        const contexualStorage = new spec.ReferenceStorage(
+            [
+                [spec.ReferenceItemKind.Variable, variableRefMap],
+            ]
+        );
+
+        estraverse.traverse(tree, {
+            enter: (currentNode, parentNode) => {
+                if (currentNode.type === "BlockStatement") {
+                    const statementRange = spec.convertRange(<any>currentNode.loc);
+                    if (statementRange.end.isBefore(position)) {
+                        return estraverse.VisitorOption.Skip;
+                    } else if (statementRange.start.isAfter(position)) {
+                        return estraverse.VisitorOption.Break;
+                    }
+                } else if (currentNode.type === 'VariableDeclaration') {
+                    const statementRange = spec.convertRange(<any>currentNode.loc);
+                    if (statementRange.end.isAfter(position)) {
+                        return estraverse.VisitorOption.Break;
+                    }
+                    if (currentNode.kind !== 'const') {
+                        for (const declarator of currentNode.declarations) {
+                            if (declarator.type === 'VariableDeclarator' && declarator.id.type === 'Identifier') {
+                                const refItem: spec.ReferenceItem = { signature: declarator.id.name, location: <any>currentNode.loc };
+
+                                // add comment
+                                if (currentNode.leadingComments && currentNode.leadingComments.length > 0) {
+                                    refItem.description = currentNode.leadingComments[currentNode.leadingComments.length - 1].value;
+                                }
+
+                                //
+                                variableRefMap.set(declarator.id.name, refItem);
+                                // const cItem = new vscode.CompletionItem(declarator.id.name, vscode.CompletionItemKind.Variable);
+                            }
+                        }
+                    }
+
+                    // console.log(currentNode);
+                    return estraverse.VisitorOption.Skip;
+                }
+            },
+            leave: (currentNode, parentNode) => { },
+            keys: ADDITIONAL_TRAVERSE_KEYS
+        });
+
+        this.storageCollection.set(spec.ACTIVE_FILE_URI, contexualStorage);
+    }
+
+    /**
+	 * Required implementation of vscode.CompletionItemProvider, overriding the super class
+     */
+    public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.CompletionItem[] | undefined {
+        if (token.isCancellationRequested) { return; }
+
+        const tree = this.treeCollection.get(document.uri.toString());
+        if (!tree) { return super.provideCompletionItems(document, position, token, context); }
+
+        this.collectLocalDeclarations(tree, position);
+        this.updateCompletionItemsForUriString(spec.ACTIVE_FILE_URI);
+
+        return super.provideCompletionItems(document, position, token, context);
+    }
+
+	/**
+	 * Required implementation of vscode.HoverProvider, overriding the super class
+	 */
+    public provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.Hover | undefined {
+        if (token.isCancellationRequested) { return; }
+
+        const tree = this.treeCollection.get(document.uri.toString());
+        if (!tree) { return super.provideHover(document, position, token); }
+
+        this.collectLocalDeclarations(tree, position);
+
+        return super.provideHover(document, position, token);
+    }
+
+	/**
+	 * Required implementation of vscode.DefinitionProvider
+	 */
+    public provideDefinition(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.ProviderResult<vscode.Definition | vscode.DefinitionLink[]> {
+        if (token.isCancellationRequested) { return; }
+
+        const range = document.getWordRangeAtPosition(position);
+        if (range === undefined) { return; }
+
+        const selectorName = document.getText(range);
+        if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(selectorName)) { return; }
+
+        // update the storage for local variables for the current cursor position.
+        const tree = this.treeCollection.get(document.uri.toString());
+        if (tree) {
+            this.collectLocalDeclarations(tree, position);
         }
 
-        //  create a regular expression that filters symbols using the query
+        // seek the identifier
+        const locations: vscode.Location[] = [];
+        for (const [uriString, storage] of this.storageCollection.entries()) {
+            let uri;
+            // skip the storage that does not have physical locations.
+            // unnecessary because the owner of these storage is not registered as the definition provider.
+            if (uriString === spec.BUILTIN_URI || uriString === spec.MOTOR_URI) {
+                continue;
+            } else if (uriString === spec.ACTIVE_FILE_URI) {
+                uri = document.uri;
+            } else {
+                uri = vscode.Uri.parse(uriString);
+            }
+
+            // seek through storages for all types of symbols
+            for (const map of storage.values()) {
+                const item = map.get(selectorName);
+                if (item && item.location) {
+                    locations.push(new vscode.Location(uri, spec.convertRange(item.location)));
+                }
+            }
+        }
+        return locations;
+    }
+
+    /**
+	 * Required implementation of vscode.DocumentSymbolProvider
+	 */
+    public provideDocumentSymbols(document: vscode.TextDocument, token: vscode.CancellationToken): vscode.ProviderResult<vscode.SymbolInformation[] | vscode.DocumentSymbol[]> {
+        if (token.isCancellationRequested) { return; }
+
+        const storage = this.storageCollection.get(document.uri.toString());
+        if (!storage) { return; }
+
+        // seek the identifier
+        const symbols = [];
+        for (const [itemKind, map] of storage.entries()) {
+            const symbolKind = spec.getSymbolKindFromReferenceItemKind(itemKind);
+            for (const [identifier, item] of map.entries()) {
+                if (item.location) {
+                    const location = new vscode.Location(document.uri, spec.convertRange(item.location));
+                    symbols.push(new vscode.SymbolInformation(identifier, symbolKind, '', location));
+                }
+            }
+        }
+        return symbols;
+    }
+
+    /**
+     * Required implementation of vscode.WorkspaceSymbolProvider
+     */
+    public provideWorkspaceSymbols(query: string, token: vscode.CancellationToken): vscode.ProviderResult<vscode.SymbolInformation[]> {
+        if (token.isCancellationRequested) { return; }
+
+        // exit when the query is not empty and contains characters not allowed in an identifier.
+        if (!/^[a-zA-Z0-9_]*$/.test(query)) { return; }
+
+        // create a regular expression that filters symbols using the query
         // const regex = new RegExp(query.replace(/(?=[_A-Z])/g, '.*'), 'i');
         const regex = new RegExp(query.split('').join('.*'), 'i'); // e.g., 'abc' => /a.*b.*c/i
 
+        // seek the identifier
         const symbols = [];
         for (const [uriString, storage] of this.storageCollection.entries()) {
+            // skip storage for local variables
+            if (uriString === spec.ACTIVE_FILE_URI) { continue; }
+            
+            const uri = vscode.Uri.parse(uriString);
+
+            // find all items from each storage.
             for (const [itemKind, map] of storage.entries()) {
                 const symbolKind = spec.getSymbolKindFromReferenceItemKind(itemKind);
                 for (const [identifier, item] of map.entries()) {
                     if (query.length === 0 || regex.test(identifier)) {
                         if (item.location) {
                             const name = (itemKind === spec.ReferenceItemKind.Function) ? identifier + '()' : identifier;
-                            const location = new vscode.Location(vscode.Uri.parse(uriString), spec.convertRange(item.location));
+                            const location = new vscode.Location(uri, spec.convertRange(item.location));
                             symbols.push(new vscode.SymbolInformation(name, symbolKind, '', location));
                         }
                     }

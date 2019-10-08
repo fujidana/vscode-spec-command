@@ -18,6 +18,7 @@ export function convertRange(pesRange: PegRange) {
 }
 export const BUILTIN_URI = 'spec://system/built-in.md';
 export const MOTOR_URI = 'spec://system/mnemonic-motor.md';
+export const ACTIVE_FILE_URI = 'spec://user/active-document.md';
 
 export const enum ReferenceItemKind {
 	Undefined = 0,
