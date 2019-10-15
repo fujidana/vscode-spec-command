@@ -6,6 +6,12 @@ All notable changes to the __spec__ extension will be documented in this file.
 
 ## [Unreleased]
 
+## [0.7.0] - 2019-10-15
+
+* expand IntelliSense and code navigation features into local and global variables nested in a block statements
+
+### Add
+
 ## [0.6.0] - 2019-10-04
 
 ### Add
@@ -72,7 +78,8 @@ All notable changes to the __spec__ extension will be documented in this file.
   * syntax highlighting feature
   * code snippets feature
 
-[Unreleased]: https://github.com/fujidana/vscode-spec/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/fujidana/vscode-spec/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/fujidana/vscode-spec/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/fujidana/vscode-spec/compare/v0.5.0...v0.5.2
 [0.5.0]: https://github.com/fujidana/vscode-spec/compare/v0.4.0...v0.5.0

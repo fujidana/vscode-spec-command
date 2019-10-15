@@ -27,9 +27,9 @@ This extension supports the following features:
   * __Show definitions of a symbol__ - symbol definitions in open files, used in: _Go to Definition_ (F12) and _Peek Definition_ (Alt+F12) in right-click menu
 
 These features cover both user-defined symbols and built-in symbols.
-Built-in symbols cover variables, constants, functions, macros and some other keywords.
-User-defined symbols cover constants, functions and macros; currently variables are outside the scope.
-User-defined symbols are scanned from open documents and optionally in files in the workspace.
+Built-in variables, constants, functions, macros and some other keywords are always global.
+User-defined constants (`constant`), functions and macros are global; they are scanned from open documents and optionally in files in the workspace.
+The scope of other variables (`local` and `global`) is controlled by block statements (`{ ... }`).
 
 The help text of built-in symbols can also be shown as an indepedent document; select _spec: Open Reference Manual_ from _Command Palette_ (Ctrl+Shit+P).
 
@@ -72,7 +72,7 @@ This extension is still beta and the identifiers (dot-separated string) of these
 
 ## Known Issues
 
-* Syntax check by this extension has small differences with actual __spec__ interpretters.
+* Syntax check by this extension has small differences with actual __spec__ interpreters.
 * Statement continuation by putting a backslash at the end of the line is not supported in syntax highlight.
 
 Also read [GitHub issues](https://github.com/fujidana/vscode-spec/issues).
