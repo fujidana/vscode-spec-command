@@ -537,7 +537,7 @@ rdef_stmt =
     ) {
       return [id, expr];
     }
-  )? {
+  )? _0_ eos {
     if (!p) {
       pushDiagnostic(location(), `Expected following identifier and expression.`, Severity.Error);
       return INVALID_STATEMENT;
@@ -781,6 +781,8 @@ pattern_w_check =
       raw: text(),
     };
   }
+  /
+  macro_argument
 
 /**
  * <BNF> memstat [;]
@@ -850,12 +852,7 @@ expr_term2 =
 identifier 'identifier' =
   strict_identifier
   /
-  name:$('$' ('#' / '*' / [0-9]+)) {
-    return {
-      type: 'Identifier',
-      name: name,
-    };
-  }
+  macro_argument
   /
   op:'@' _0_ arg:expr_solo? {
     if (!arg) {
@@ -878,6 +875,14 @@ strict_identifier =
     // } else if (name === 'elseif' || name === 'elif') {
     //   pushDiagnostic(location(), `Using ${name} for \"else if\"?`, Severity.Information);
     }
+    return {
+      type: 'Identifier',
+      name: name,
+    };
+  }
+
+macro_argument =
+  name:$('\\'? '$' ('#' / '*' / [0-9]+)) {
     return {
       type: 'Identifier',
       name: name,
