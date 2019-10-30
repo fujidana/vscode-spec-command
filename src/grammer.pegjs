@@ -59,7 +59,7 @@
    * Make array from an array of [identifier | null, separator, location, option?].
    */
   function diagnoseListItems(elements: [any, string, any][], label: string, sepOption: number) {
-    const items = [];
+    const items: any[] = [];
     for (let index = 0; index < elements.length; index++) {
       const [item, sep, locEach] = elements[index];
       if (!item) {
@@ -92,7 +92,7 @@
       addDiagnostic(elements[elements.length - 1][2], `Trailing comma not allowed.`, ERROR);
     }
 
-    const declarators = [];
+    const declarators: any[] = [];
     for (const [identifier, separator, locEach, option] of elements) {
       if (!identifier) {
         addDiagnostic(locEach, `Expected ${label}.`, ERROR);
@@ -299,7 +299,7 @@ if_stmt 'if statement' =
       }
       return test;
     }
-  ) _0_ eol? cons:(
+  ) _0_ (eol / comment)? cons:(
     cons:nonempty_stmt? {
       if (!cons) {
         addDiagnostic(location(), 'The consequent clause of if-statement must not be empty.', ERROR);
@@ -307,7 +307,7 @@ if_stmt 'if statement' =
       return cons;
     }
   ) alt:(
-    _0_ 'else' !word _0_ eol? alt:(
+    _0_ 'else' !word _0_ (eol / comment)? alt:(
       alt:nonempty_stmt? {
         if (!alt) {
           addDiagnostic(location(), 'The altanative clause of if-statement must not be empty.', ERROR);
@@ -329,7 +329,7 @@ if_stmt 'if statement' =
  */
 while_stmt 'while statement' =
   'while' _0_ test:(
-    '(' _0_ test:expr_solo_forced? _0_ closer:')'? _0_ eol? {
+    '(' _0_ test:expr_solo_forced? _0_ closer:')'? _0_ (eol / comment)? {
       if (!test) {
         addDiagnostic(shortenLocation(location(), 1), 'The test expression of while-statement must not be empty.', ERROR);
       } else if (!closer) {
@@ -384,7 +384,7 @@ for_stmt 'for statement' =
       }
       return stmt;
     }
-  ) _0_ eol? body:(
+  ) _0_ (eol / comment)? body:(
     body:nonempty_stmt? {
       if (!body) {
         addDiagnostic(location(), 'The body of for-statement must not be empty.', ERROR);
@@ -664,7 +664,7 @@ constant_def 'constant declaration' =
       addDiagnostic(location(), `Trailing comma not allowed.`, ERROR);
     } else if (!item[1]) {
       addDiagnostic(item[3], `Expected initial value.`, ERROR);
-      item[1] === NULL_LITERAL;
+      item[1] = NULL_LITERAL;
     }
 
     return {
@@ -727,7 +727,7 @@ _assoc_elem_list_item =
  */
 pattern_stmt =
   name:('lscmd' / 'lsdef' / 'prdef' / 'syms') !word _0_ items:_pattern_list_item* _0_ eos {
-    let nodes = [];
+    let nodes: any[] = [];
     if (items && items.length > 0) {
       nodes = diagnoseListItems(items, 'pattern', 2);
     }
@@ -771,7 +771,7 @@ builtin_macro_stmt =
       type: 'MacroStatement',
       callee: { type: 'Identifier', name: name, },
       arguments: [],
-    }
+    };
   }
 
 /**
