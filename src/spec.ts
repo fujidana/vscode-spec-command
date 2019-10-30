@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { interfaces } from 'mocha';
 
 interface PegPosition {
 	offset: number;

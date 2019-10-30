@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { TextDecoder } from 'util';
+import * as estree from "estree";
 import * as estraverse from "estraverse";
 import * as spec from "./spec";
 import { Provider } from "./provider";
@@ -118,10 +119,14 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
                 [spec.ReferenceItemKind.Function, functionRefMap],
             ]
         );
-
-        let tree;
+        
+        interface CustomProgram extends estree.Program {
+            x_diagnostics: any[];
+        }
+        
+        let tree: CustomProgram  | undefined;
         try {
-            tree = parse(contents);
+            tree = <CustomProgram>parse(contents);
         } catch (error) {
             const diagnostic = new vscode.Diagnostic(spec.convertRange(error.location), error.message, vscode.DiagnosticSeverity.Error);
             this.diagnosticCollection.set(uri, [diagnostic]);
@@ -353,7 +358,7 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
         if (!storage) { return; }
 
         // seek the identifier
-        const symbols = [];
+        const symbols: vscode.SymbolInformation[] = [];
         for (const [itemKind, map] of storage.entries()) {
             const symbolKind = spec.getSymbolKindFromReferenceItemKind(itemKind);
             for (const [identifier, item] of map.entries()) {
@@ -376,22 +381,22 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
         if (!/^[a-zA-Z0-9_]*$/.test(query)) { return; }
 
         // create a regular expression that filters symbols using the query
-        // const regex = new RegExp(query.replace(/(?=[_A-Z])/g, '.*'), 'i');
-        const regex = new RegExp(query.split('').join('.*'), 'i'); // e.g., 'abc' => /a.*b.*c/i
+        // const regExp = new RegExp(query.replace(/(?=[_A-Z])/g, '.*'), 'i');
+        const regExp = new RegExp(query.split('').join('.*'), 'i'); // e.g., 'abc' => /a.*b.*c/i
 
         // seek the identifier
-        const symbols = [];
+        const symbols: vscode.SymbolInformation[] = [];
         for (const [uriString, storage] of this.storageCollection.entries()) {
             // skip storage for local variables
             if (uriString === spec.ACTIVE_FILE_URI) { continue; }
-            
+
             const uri = vscode.Uri.parse(uriString);
 
             // find all items from each storage.
             for (const [itemKind, map] of storage.entries()) {
                 const symbolKind = spec.getSymbolKindFromReferenceItemKind(itemKind);
                 for (const [identifier, item] of map.entries()) {
-                    if (query.length === 0 || regex.test(identifier)) {
+                    if (query.length === 0 || regExp.test(identifier)) {
                         if (item.location) {
                             const name = (itemKind === spec.ReferenceItemKind.Function) ? identifier + '()' : identifier;
                             const location = new vscode.Location(uri, spec.convertRange(item.location));
