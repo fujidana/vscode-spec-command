@@ -77,21 +77,17 @@ function parseSignatureInEditing(line: string, position: number) {
 	}
 
 	// find an incomplete function call.
-	// If the function calls are nested, get the latter (i.e., nested) one.
+	// If the function calls are nested, get the last (i.e., the most nested) one.
 	// currently I can not do in one-line regular expression.
-	let match = substr.match(/^(.*?)([a-zA-Z_][a-zA-Z0-9_]*)\(/);
-	if (match === null) {
-		return undefined;
-	} else {
-		substr = substr.substring(match[0].length);
-		let match2;
-		while ((match2 = substr.match(/^(.*?)([a-zA-Z_][a-zA-Z0-9_]*)\(/)) !== null) {
-			match = match2;
-			substr = substr.substring(match[0].length);
-		}
+	const regExp = /^(.*?)([a-zA-Z_][a-zA-Z0-9_]*)\(/;
+	let prevMatch: RegExpMatchArray | null = null;
+	let currMatch: RegExpMatchArray | null;
+	while ((currMatch = substr.match(regExp)) !== null) {
+		substr = substr.substring(currMatch[0].length);
+		prevMatch = currMatch;
 	}
 
-	return { 'signature': match[2], 'argumentIndex': substr.split(',').length - 1 };
+	return prevMatch ? { 'signature': prevMatch[2], 'argumentIndex': substr.split(',').length - 1 } : undefined;
 }
 
 /**
