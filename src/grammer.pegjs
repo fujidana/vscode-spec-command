@@ -18,6 +18,7 @@
   const NULL_LITERAL = { type: 'Literal', value: null, raw: 'null'};
 
   const _diagnostics: any[] = [];
+  const _quoteStack: string[] = [];
 
   const reservedKeywords = new Set(
     ('def|undef|rdef|constant|local|global|unglobal|delete|shared|extern|array'+
@@ -146,31 +147,32 @@
   /**
    *
    */
-  function getEscapeSequence(char: string) {
-    switch (char) {
-      case 'a':
-        return '\x07';
-      case 'b':
-        return '\b';
-      case 'f':
-        return '\f';
-      case 'n':
-        return '\n';
-      case 'r':
-        return '\r';
-      case 't':
-        return '\t';
-      case '\\':
-        return '\\';
-      case '\'':
-        return '\'';
-      case '\"':
-        return '\"';
-      case '$':
-        return '$';
-      default:
-        return '';
+  function testIfQuoteIsAvailable(quote: string): boolean {
+    if (quote === '"' && (_quoteStack.includes('"') || _quoteStack.includes('\\"'))) {
+      return false;
+    } else if (quote === "'" && (_quoteStack.includes("'") || _quoteStack.includes("\\'"))) {
+      return false;
+    } else if (quote === '\\"' && _quoteStack.includes('\\"')) {
+      return false;
+    } else if (quote === "\\'" && _quoteStack.includes("\\'")) {
+      return false;
+    } else {
+      return true;
     }
+  }
+
+  /**
+   *
+   */
+  function testIfEscapedCharIsAvailable(escapedChar: string): boolean {
+    return _quoteStack.every(quote => quote.length !== 2 || quote.substr(1, 1) !== escapedChar);
+  }
+
+  /**
+   *
+   */
+  function testIfUnescapedCharIsAvailable(unescapedChar: string): boolean {
+    return _quoteStack.every(quote => quote.length !== 1 || quote !== unescapedChar);
   }
 }
 
@@ -189,15 +191,19 @@ start =
 
 // # AUXILIARIES
 
-eol         = '\n' / '\r\n'
-eof         = !.
-not_eof     = &[^'}] 
-eos_not_eof = eol { } / comment / ';' eol? { } 
-eos         = eol { } / comment / ';' eol? { }  / eof { }  / &['}] { }
-comment     = '#' p:$(!eol .)* (eol / eof) { return {type: 'Line', value: p }; }
+eol 'EOL' = '\n' / '\r\n'
+eof 'EOF' = !.
+comment 'line comment' = '#' p:$(!eol .)* (eol / eof) { return {type: 'Line', value: p }; }
 
-docstring =
-  '"""' p:$(!'"""' .)* closer:'"""'? {
+quotation_mark 'quotation mark' = $('\\'? ('"' / "'"))
+
+eos_lookahead    = eof { } / & quotation_mark { } / & '}' { }
+eos_no_lookahead = eol { } / comment / ';' eol? { } 
+eos              = eos_no_lookahead  / eos_lookahead
+
+triple_quote = '"""'
+docstring 'block comment' =
+  triple_quote p:$(!triple_quote .)* closer:triple_quote? {
     if (!closer) {
       pushDiagnostic(shortenRange(location(), 3), 'Unterminated docstring.', Severity.Error);
     }
@@ -207,14 +213,12 @@ docstring =
 space = $(' ' / '\t' / '\\' eol / docstring { pushDiagnostic(location(), 'Inline docstring not recommended.', Severity.Information); return text(); })
 _1_ 'whiltespace'         = space+
 _0_ 'optional whitespace' = space*
-eos_space = $(' ' / '\t' / '\\' eol / docstring / eol / comment)
 
 word = [a-zA-Z0-9_]
 list_sep =
   _0_ ',' _0_ { return ','; } / _1_ { return ' '; }
 comma_sep =
   _0_ ',' _0_ { return ','; }
-
 
 // # STATEMENTS
  
@@ -230,7 +234,7 @@ stmt 'statement' =
     return statement;
   }
   /
-  comments:leading_comment+ (eof / &['}]) {
+  comments:leading_comment+ eos_lookahead {
     return { type: 'EmptyStatement', loc: location(), leadingComments:comments };
   }
 
@@ -247,7 +251,7 @@ leading_comment 'empty statement with comment' =
  * Empty statement. It may contains line or block comments.
  */
 empty_stmt 'empty statement' =
-  (_0_ eos_not_eof / _1_ eos) {
+  (_0_ eos_no_lookahead / _1_ eos_lookahead) {
     return { type: 'EmptyStatement', loc: location() };
   }
 
@@ -450,13 +454,30 @@ macro_def 'macro declaration' =
       }
       return params ? diagnoseListItems(params, 'identifier', 1) : [];
     }
-  )? _0_ body:(
-    opener:"'"? _0_ eos? body:stmt* closer:"'"? _0_ eos {
-      if (!opener) {
-        pushDiagnostic(shortenRange(location(), 1), 'Expected macro definition body, which must be embraced by single quotes.', Severity.Error);
-      } else if (!closer) {
-        pushDiagnostic(shortenRange(location(), 1), 'Unterminated macro definition.', Severity.Error);
+  )?
+  _0_ body:(
+    opener:quotation_mark
+    & {
+      const flag = testIfQuoteIsAvailable(opener);
+      if (flag) { _quoteStack.push(opener); }
+      return flag;
+    }
+    _0_ eos? body:stmt*
+    closer:quotation_mark?
+    & {
+      console.log(location(), text());
+      const flag = (!closer || opener === closer);
+      if (flag) { _quoteStack.pop(); }
+      return flag;
+    }
+    _0_ eos {
+      if (!closer) {
+        pushDiagnostic(shortenRange(location(), opener.length), 'Unterminated macro definition.', Severity.Error);
       }
+      return body;
+    }
+    / body:stmt? _0_ eos {
+      pushDiagnostic(shortenRange(location(), 1), 'Expected macro definition body, which must be embraced with quotes.', Severity.Error);
       return body;
     }
   ) {
@@ -833,7 +854,7 @@ identifier 'identifier' =
     };
   }
   /
-  op:'@' _0_ arg:identifier? {
+  op:'@' _0_ arg:expr_solo? {
     if (!arg) {
       pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, Severity.Error);
     }
@@ -935,7 +956,7 @@ invalid_expr =
     return NULL_EXPRESSION;
   }
   /
-  value:$[^#,'"(){}[\];: \t\r\n]+ {
+  value:$[^#,'"(){}[\];: \t\r\n\\]+ {
     pushDiagnostic(location(), 'Invalid expression. It should be quoted if it is a string.', Severity.Warning);
     return {
       type: 'Literal',
@@ -951,52 +972,58 @@ invalid_expr =
  * e.g., "foo,\"bar\"\n123", \'foo\'
  */
 string_literal 'string literal' =
-  '"' chars:(
-    '\\' q:(
-      p:[abfnrt'"\\$] { return getEscapeSequence(p); }
-      /
-      p:$([0-7][0-7]?[0-7]?) { return String.fromCharCode(parseInt(p, 8)); }
-      /
-      p:. {
-        const loc = location();
-        loc.start.offset -= 1;
-        loc.start.column -= 1;
-        pushDiagnostic(loc, 'Unknown escape sequence.', Severity.Warning);
-        return p;
-      }
-    ) { return q; }
-    /
-    [^"]
-  )* closer:'"'? {
-    if (!closer) {
-      pushDiagnostic(shortenRange(location(), 1), 'Unterminated string literal.', Severity.Error);
-    }
-    return {
-      type: 'Literal',
-      value: chars.join(''),
-      raw: text(),
-    };
+  opener:quotation_mark
+  & {
+    const flag = testIfQuoteIsAvailable(opener);
+    if (flag) { _quoteStack.push(opener); }
+    return flag;
   }
-  / "\\'" chars:(
+  chars:(
     '\\' q:(
-      p:[abfnrt"\\$] { return getEscapeSequence(p); }
+      p:[abfnrt'"\\$\n]
+      & { return testIfEscapedCharIsAvailable(p); }
+        {
+          switch (p) {
+            case 'a': return '\x07';
+            case 'b': return '\b';
+            case 'f': return '\f';
+            case 'n': return '\n';
+            case 'r': return '\r';
+            case 't': return '\t';
+            case '\\': return '\\';
+            case '\'': return '\'';
+            case '\"': return '\"';
+            case '$': return '$';
+            case '\n': return '';
+            default: return '';
+          }
+        }
       /
       p:$([0-7][0-7]?[0-7]?) { return String.fromCharCode(parseInt(p, 8)); }
       /
-      p:[^'] {
-        const loc = location();
-        loc.start.offset -= 1;
-        loc.start.column -= 1;
-        pushDiagnostic(loc, 'Unknown escape sequence.', Severity.Warning);
-        return p;
-      }
+      p:.
+      & { return testIfEscapedCharIsAvailable(p); }
+        {
+          let loc = location();
+          loc.start.offset -= 1;
+          loc.start.column -= 1;
+          pushDiagnostic(loc, 'Unknown escape sequence.', Severity.Warning);
+          return p;
+        }
     ) { return q; }
     /
-    $(!"\\'" .)
-  )* closer:"\\'"? {
-    if (!closer) {
-      pushDiagnostic(shortenRange(location(), 2), 'Unterminated string literal.', Severity.Error);
-    }
+    r:[^\\]
+    & { return testIfUnescapedCharIsAvailable(r); }
+      {
+        if (!testIfEscapedCharIsAvailable(r)) {
+          pushDiagnostic(location(), 'Quotation symbol not allowed here.', Severity.Error);
+        }
+        return r;
+      }
+  )*
+  closer:quotation_mark? {
+    if (!closer) { pushDiagnostic(shortenRange(location(), opener.length), 'Unterminated string literal.', Severity.Error); }
+    _quoteStack.pop();
     return {
       type: 'Literal',
       value: chars.join(''),
