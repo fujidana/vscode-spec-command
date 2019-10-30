@@ -6,14 +6,14 @@ Use [GitHub issues](https://github.com/fujidana/vscode-spec/issues) for bug repo
 
 ## IMPORTANT NOTICE
 
-During migration of my PCs, I deleted my MarketPlace publisher account by mistake (I entered a command with intension of removing locally stored information but it was for an online account).
-I recreated a new publisher account with the same name (`fujidana`) but the extensions tied with the respective accounts were treated differently.
-__Users of version 0.6 or earlier need to manually uninstall their version and install the latest version.__
+During migration of my PCs, I deleted my Visual Studio Marketplace publisher account by mistake.
+I recreated a new account with the same name (`fujidana`) but it was not treated identically in the Marketplace.
+__Users of version 0.6 or earlier need to manually uninstall their version and install this version in order to receive future updates.__
 Sorry for inconvenience.
 
 ## What's **spec**?
 
-> **spec** is internationally recognized as the leading software for instrument control and data acquisition in X-ray diffraction experiments.
+> __spec__ is internationally recognized as the leading software for instrument control and data acquisition in X-ray diffraction experiments.
 > It is used at more than 200 synchrotrons, industrial laboratories, universities and research facilities around the globe.
 
 *cited from [CSS - Certified Scientific Software](https://www.certif.com) homepage.*
