@@ -1215,7 +1215,7 @@ functions:
       - `"colors[numb]"` — Returns the current color assignments, where `numb` is a number between zero and 67.
         Numbers zero through three return the colors assigned to the `bgnd`, `win`, `text` and `axis` elements respectively.
         Numbers from 4 through 67 return the colors assigned to the symbols for data elements zero through 63.
-      - `"filternumb"` — Selects filter number `numb`, where `numb` can be any of the numerals from 1 through 5. All plotting commands are directed to this filter. The default filter is filter 1. Each filter is associated with a sepa- rate process. On an X windows display, each filter is associated with a separate window.
+      - `"filternumb"` — Selects filter number `numb`, where `numb` can be any of the numerals from 1 through 5. All plotting commands are directed to this filter. The default filter is filter 1. Each filter is associated with a separate process. On an X windows display, each filter is associated with a separate window.
       - `"title=string"` — On an X windows display, the title given by string is used in the *XSetWMName()* and *XSetWMIconName()* calls to set the window and icon labels.
         With most X11 window managers, that means the title will appear in the window’s title bar.
       - `"geometry=widthxheight+xoff+yoff"` — With the *x11* high-resolution plot windows, sets the size and position of the window.
@@ -1570,15 +1570,15 @@ functions:
       - `"config_acceleration"` — returns the acceleration parameter contained in the *config* file.
       - `"config_velocity"` — returns the steady-state velocity parameter contained in the *config* file.
       - `"config_base_rate"` — returns the base-rate parameter contained in the *config* file.
-      - `"config_backlash"` - returns the backlash parameter contained in the *config* file.
-      - `"controller"` - returns a string containing the controller name of the specified motor.
+      - `"config_backlash"` — returns the backlash parameter contained in the *config* file.
+      - `"controller"` — returns a string containing the controller name of the specified motor.
         The controller names are those used in **spec**’s *config* files.
-      - `"unit"` - returns the unit number of the specified motor.
+      - `"unit"` — returns the unit number of the specified motor.
         Each motor controller unit may contain more than one motor channel.
-      - `"channel"` - returns the channel number of the specified motor.
-      - `"responsive"` - returns a nonzero value if the motor responded to an initial presence test or appears otherwise to be working.
-      - `"active"` - returns a nonzero value if the motor is currently moving.
-      - `"disable"` - returns a nonzero value if the motor has been disabled by software.
+      - `"channel"` — returns the channel number of the specified motor.
+      - `"responsive"` — returns a nonzero value if the motor responded to an initial presence test or appears otherwise to be working.
+      - `"active"` — returns a nonzero value if the motor is currently moving.
+      - `"disable"` — returns a nonzero value if the motor has been disabled by software.
         If `val` is given and is nonzero, then the motor is disabled.
         If val is given and is zero, the motor becomes no longer disabled.
         A disabled motor channel will not be accessed by any of **spec**’s commands, and, of course, cannot be moved.

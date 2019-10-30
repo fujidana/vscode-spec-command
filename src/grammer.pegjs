@@ -20,14 +20,17 @@
   const _diagnostics: any[] = [];
   const _quoteStack: string[] = [];
 
-  const reservedKeywords = new Set(
-    ('def|undef|rdef|constant|local|global|unglobal|delete|shared|extern|array'+
-    + '|float|double|string|byte|short|long|long64|ubyte|ushort|ulong|ulong64'
+  const _reservedKeywordRegExp = new RegExp(
+    '^('
+    + 'def|rdef|constant|local|global|un(?:def|global)|delete|shared|extern|array'
+    + '|float|double|string|byte|short|long(?:64)?|u(byte|short|long(?:64)?)'
     + '|if|else|while|for|in|break|continue|exit|return|quit'
-    + '|memstat|savstate|reconfig|getcounts|move_all|move_cnt|sync'
+    + '|memstat|savstate|reconfig|getcounts|move_(all|cnt)|sync'
     + '|lscmd|lsdef|prdef|syms'
-    ).split('|')
+    + ')$'
   );
+
+  const _ttyCommandRegExp = /^(c(?:d|e)|do|ho|le|m(?:b|d|e|h|r)|nd|se|u(?:e|p|s))$/;
 
   /** 
    * create diagnostic object and store it.
@@ -868,7 +871,7 @@ identifier 'identifier' =
 
 strict_identifier =
   name:$([a-zA-Z_][a-zA-Z0-9_]*) {
-    if (reservedKeywords.has(name)) {
+    if (_reservedKeywordRegExp.test(name)) {
       pushDiagnostic(location(), `${name} is a reserved keyword.`, Severity.Error);
     // } else if (name === 'const') {
     //   pushDiagnostic(location(), `Using ${name} for \"constant\"?`, Severity.Information);
@@ -1000,6 +1003,13 @@ string_literal 'string literal' =
         }
       /
       p:$([0-7][0-7]?[0-7]?) { return String.fromCharCode(parseInt(p, 8)); }
+      /
+      p:'[' cmd:$word+ ']' {
+        if (!_ttyCommandRegExp.test(cmd)) {
+          pushDiagnostic(location(), `${cmd} is not a TTY command.`, Severity.Error);
+        }
+        return text();
+      }
       /
       p:.
       & { return testIfEscapedCharIsAvailable(p); }
