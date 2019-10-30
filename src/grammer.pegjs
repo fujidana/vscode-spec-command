@@ -6,16 +6,18 @@
  */
 
 {
-  const ERROR = 0;
-  const WARNING = 1;
-  const INFORMATION = 2;
-  const HINT = 3;
+  const enum Severity {
+    Error = 0,
+    Warning,
+    Information,
+    Hint,
+  }
 
   const INVALID_STATEMENT = { type: 'InvalidStatement' };
   const NULL_EXPRESSION = { type: 'NullExpression' };
   const NULL_LITERAL = { type: 'Literal', value: null, raw: 'null'};
 
-  const diagnostics: any = [];
+  const _diagnostics: any[] = [];
 
   const reservedKeywords = new Set(
     ('def|undef|rdef|constant|local|global|unglobal|delete|shared|extern|array'+
@@ -29,27 +31,27 @@
   /** 
    * create diagnostic object and store it.
    */
-  function addDiagnostic(location: any, message: string, severity: number) {
-    const obj = { location: location, message: message, severity };
-    diagnostics.push(obj);
+  function pushDiagnostic(location: IFileRange, message: string, severity: Severity) {
+    const obj = { location: location, message: message, severity: severity };
+    _diagnostics.push(obj);
   }
 
   /**
-   * Return a new range object whose 'start' is identical to 'loc' and the length is equal to 'length'.
+   * Return a new range object whose 'start' is identical to 'range' and the length is equal to 'length'.
    */
-  function shortenLocation(loc: any, length: number) {
-    loc.end.line = loc.start.line;
-    loc.end.offset = loc.start.offset + length;
-    loc.end.column = loc.start.column + length;
-    return loc;
+  function shortenRange(range: IFileRange, length: number): IFileRange {
+    range.end.line = range.start.line;
+    range.end.offset = range.start.offset + length;
+    range.end.column = range.start.column + length;
+    return range;
   }
 
   /**
    *
    */
-  function diagnoseEmptyArray(elements: any[] | null, loc: any, label: string, severity: number) {
+  function diagnoseEmptyArray<T>(elements: T[] | null, loc: IFileRange, label: string, severity: Severity) {
     if (!elements || elements.length === 0) {
-      addDiagnostic(loc, `Expected at least one ${label}.`, severity);
+      pushDiagnostic(loc, `Expected at least one ${label}.`, severity);
       return [];
     }
     return elements;
@@ -58,24 +60,24 @@
   /**
    * Make array from an array of [identifier | null, separator, location, option?].
    */
-  function diagnoseListItems(elements: [any, string, any][], label: string, sepOption: number) {
-    const items: any[] = [];
+  function diagnoseListItems<T>(elements: [T, string, IFileRange][], label: string, sepOption: number) {
+    const items: T[] = [];
     for (let index = 0; index < elements.length; index++) {
       const [item, sep, locEach] = elements[index];
       if (!item) {
-        addDiagnostic(locEach, `Expected ${label}.`, ERROR);
+        pushDiagnostic(locEach, `Expected ${label}.`, Severity.Error);
         continue;
       }
       items.push(item);
 
       if (index === elements.length - 1) {
         if (sep === ',') {
-          addDiagnostic(locEach, `Trailing comma not allowed.`, ERROR);
+          pushDiagnostic(locEach, `Trailing comma not allowed.`, Severity.Error);
         }
       } else if (sepOption === 1 && sep !== ',') {
-        addDiagnostic(locEach, 'Seprator must be a comma.', ERROR);
+        pushDiagnostic(locEach, 'Seprator must be a comma.', Severity.Error);
       } else if (sepOption === 2 && sep !== ' ') {
-        addDiagnostic(locEach, 'Seprator must be a whitespace.', ERROR);
+        pushDiagnostic(locEach, 'Seprator must be a whitespace.', Severity.Error);
       }
     }
     return items;
@@ -84,18 +86,18 @@
   /**
    * Make Variable Declarators from an array of [identifier | null, separator, location, option?].
    */
-  function makeDeclarators(elements: [any, string, any, any][] | null, locAll: any, label: string) {
+  function makeDeclarators(elements: [any, string, IFileRange, any][] | null, locAll: IFileRange, label: string) {
     if (!elements || elements.length === 0) {
-      addDiagnostic(locAll, `Expected at least one ${label}.`, ERROR);
+      pushDiagnostic(locAll, `Expected at least one ${label}.`, Severity.Error);
       return [];
     } else if (elements[elements.length - 1][1] === ',') {
-      addDiagnostic(elements[elements.length - 1][2], `Trailing comma not allowed.`, ERROR);
+      pushDiagnostic(elements[elements.length - 1][2], `Trailing comma not allowed.`, Severity.Error);
     }
 
     const declarators: any[] = [];
     for (const [identifier, separator, locEach, option] of elements) {
       if (!identifier) {
-        addDiagnostic(locEach, `Expected ${label}.`, ERROR);
+        pushDiagnostic(locEach, `Expected ${label}.`, Severity.Error);
         continue;
       }
       let obj = { type: 'VariableDeclarator', id: identifier};
@@ -180,7 +182,7 @@ start =
     return {
       type: 'Program',
       body: body,
-      x_diagnostics: diagnostics,
+      x_diagnostics: _diagnostics,
     };
   }
 
@@ -197,12 +199,12 @@ comment     = '#' p:$(!eol .)* (eol / eof) { return {type: 'Line', value: p }; }
 docstring =
   '"""' p:$(!'"""' .)* closer:'"""'? {
     if (!closer) {
-      addDiagnostic(shortenLocation(location(), 3), 'Unterminated docstring.', ERROR);
+      pushDiagnostic(shortenRange(location(), 3), 'Unterminated docstring.', Severity.Error);
     }
     return { type: 'Block', value: p };
   }
 
-space = $(' ' / '\t' / '\\' eol / docstring { addDiagnostic(location(), 'Inline docstring not recommended.', INFORMATION); return text(); })
+space = $(' ' / '\t' / '\\' eol / docstring { pushDiagnostic(location(), 'Inline docstring not recommended.', Severity.Information); return text(); })
 _1_ 'whiltespace'         = space+
 _0_ 'optional whitespace' = space*
 eos_space = $(' ' / '\t' / '\\' eol / docstring / eol / comment)
@@ -270,7 +272,7 @@ nonempty_stmt 'nonempty statement' =
 block_stmt 'block statement' =
   '{' _0_ eos? stmts:stmt* _0_ closer:'}'? tail:(_0_ p:eos { return p; })? {
     if (!closer) {
-      addDiagnostic(shortenLocation(location(), 1), 'Unterminated block statement.', ERROR);
+      pushDiagnostic(shortenRange(location(), 1), 'Unterminated block statement.', Severity.Error);
     }
     const obj: any = {
       type: 'BlockStatement',
@@ -293,16 +295,16 @@ if_stmt 'if statement' =
   'if' _0_ test:(
     '(' _0_ test:expr_solo_forced? _0_ closer:')'? {
       if (!test) {
-        addDiagnostic(location(), 'The test expression of if-statement must not be empty.', ERROR);
+        pushDiagnostic(location(), 'The test expression of if-statement must not be empty.', Severity.Error);
       } else if (!closer) {
-        addDiagnostic(shortenLocation(location(), 1), 'Unterminated parenthesis.', ERROR);
+        pushDiagnostic(shortenRange(location(), 1), 'Unterminated parenthesis.', Severity.Error);
       }
       return test;
     }
   ) _0_ (eol / comment)? cons:(
     cons:nonempty_stmt? {
       if (!cons) {
-        addDiagnostic(location(), 'The consequent clause of if-statement must not be empty.', ERROR);
+        pushDiagnostic(location(), 'The consequent clause of if-statement must not be empty.', Severity.Error);
       }
       return cons;
     }
@@ -310,7 +312,7 @@ if_stmt 'if statement' =
     _0_ 'else' !word _0_ (eol / comment)? alt:(
       alt:nonempty_stmt? {
         if (!alt) {
-          addDiagnostic(location(), 'The altanative clause of if-statement must not be empty.', ERROR);
+          pushDiagnostic(location(), 'The altanative clause of if-statement must not be empty.', Severity.Error);
         }
         return alt;
       }
@@ -331,16 +333,16 @@ while_stmt 'while statement' =
   'while' _0_ test:(
     '(' _0_ test:expr_solo_forced? _0_ closer:')'? _0_ (eol / comment)? {
       if (!test) {
-        addDiagnostic(shortenLocation(location(), 1), 'The test expression of while-statement must not be empty.', ERROR);
+        pushDiagnostic(shortenRange(location(), 1), 'The test expression of while-statement must not be empty.', Severity.Error);
       } else if (!closer) {
-        addDiagnostic(shortenLocation(location(), 1), 'Unterminated parenthesis.', ERROR);
+        pushDiagnostic(shortenRange(location(), 1), 'Unterminated parenthesis.', Severity.Error);
       }
       return test;
     }
   ) body:(
     body:nonempty_stmt? {
       if (!body) {
-        addDiagnostic(location(), 'The body of while-statement must not be empty.', ERROR);
+        pushDiagnostic(location(), 'The body of while-statement must not be empty.', Severity.Error);
       }
       return body;
     }
@@ -380,14 +382,14 @@ for_stmt 'for statement' =
       }
     ) _0_ closer:')'? {
       if (!closer) {
-        addDiagnostic(shortenLocation(location(), 1), 'Unterminated parenthesis.', ERROR);
+        pushDiagnostic(shortenRange(location(), 1), 'Unterminated parenthesis.', Severity.Error);
       }
       return stmt;
     }
   ) _0_ (eol / comment)? body:(
     body:nonempty_stmt? {
       if (!body) {
-        addDiagnostic(location(), 'The body of for-statement must not be empty.', ERROR);
+        pushDiagnostic(location(), 'The body of for-statement must not be empty.', Severity.Error);
       }
       return body;
     }
@@ -444,16 +446,16 @@ macro_def 'macro declaration' =
   'def' _1_ identifier:identifier_w_check _0_ params:(
     '(' _0_ params:_identifier_list_item* _0_ closer:')'? _0_ {
       if (!closer) {
-        addDiagnostic(shortenLocation(location(), 1), 'Unterminated parenthesis.', ERROR);
+        pushDiagnostic(shortenRange(location(), 1), 'Unterminated parenthesis.', Severity.Error);
       }
       return params ? diagnoseListItems(params, 'identifier', 1) : [];
     }
   )? _0_ body:(
     opener:"'"? _0_ eos? body:stmt* closer:"'"? _0_ eos {
       if (!opener) {
-        addDiagnostic(shortenLocation(location(), 1), 'Expected macro definition body, which must be embraced by single quotes.', ERROR);
+        pushDiagnostic(shortenRange(location(), 1), 'Expected macro definition body, which must be embraced by single quotes.', Severity.Error);
       } else if (!closer) {
-        addDiagnostic(shortenLocation(location(), 1), 'Unterminated macro definition.', ERROR);
+        pushDiagnostic(shortenRange(location(), 1), 'Unterminated macro definition.', Severity.Error);
       }
       return body;
     }
@@ -484,7 +486,7 @@ _identifier_list_item =
 undef_stmt =
   'undef' _1_ items:(
     items:_identifier_list_item* {
-      diagnoseEmptyArray(items, location(), 'identifier', ERROR);
+      diagnoseEmptyArray(items, location(), 'identifier', Severity.Error);
       return items;
     }
   ) _0_ eos {
@@ -504,7 +506,7 @@ rdef_stmt =
     id:identifier_w_check !word _0_ expr:(
       expr:expr_multi? {
         if (!expr) {
-          addDiagnostic(location(), `Expected an expression.`, ERROR);
+          pushDiagnostic(location(), `Expected an expression.`, Severity.Error);
         }
         return expr;
       }
@@ -513,7 +515,7 @@ rdef_stmt =
     }
   )? {
     if (!p) {
-      addDiagnostic(location(), `Expected following identifier and expression.`, ERROR);
+      pushDiagnostic(location(), `Expected following identifier and expression.`, Severity.Error);
       return INVALID_STATEMENT;
     }
     return {
@@ -562,9 +564,9 @@ _data_array_list_item =
     _0_ p:(
       '[' _0_ expr:expr_solo_forced? _0_ closer:']'? {
         if (!closer) {
-          addDiagnostic(shortenLocation(location(), 1), 'Unterminated bracket.', ERROR);
+          pushDiagnostic(shortenRange(location(), 1), 'Unterminated bracket.', Severity.Error);
         } else if (!expr) {
-          addDiagnostic(location(), 'Array size must be sepcified.', ERROR);
+          pushDiagnostic(location(), 'Array size must be sepcified.', Severity.Error);
           expr = NULL_LITERAL;
         }
         return expr;
@@ -572,7 +574,7 @@ _data_array_list_item =
     ) { return p; }
   )* sep:list_sep? {
     if (!sizes || sizes.length === 0) {
-      addDiagnostic(location(), 'Array size must be sepcified.', ERROR);
+      pushDiagnostic(location(), 'Array size must be sepcified.', Severity.Error);
     }
     return [ id, sep, location(), { x_sizes: sizes } ];
   }
@@ -628,7 +630,7 @@ _variable_list_item =
     _0_ p:(
       '[' _0_ closer:']'? {
         if (!closer) {
-          addDiagnostic(shortenLocation(location(), 1), 'Unterminated bracket.', ERROR);
+          pushDiagnostic(shortenRange(location(), 1), 'Unterminated bracket.', Severity.Error);
         }
         return true;
       }
@@ -652,18 +654,18 @@ constant_def 'constant declaration' =
     }
   )* _0_ eos {
     if (!items || items.length === 0) {
-      addDiagnostic(location(), `Expected following identifier and initial value.`, ERROR);
+      pushDiagnostic(location(), `Expected following identifier and initial value.`, Severity.Error);
       return INVALID_STATEMENT;
     }
 
     const item = items[0];
 
     if (items.length > 1) {
-      addDiagnostic(location(), `Only single constant can be decleared per statement.`, ERROR);
+      pushDiagnostic(location(), `Only single constant can be decleared per statement.`, Severity.Error);
     } else if (item[2]) {
-      addDiagnostic(location(), `Trailing comma not allowed.`, ERROR);
+      pushDiagnostic(location(), `Trailing comma not allowed.`, Severity.Error);
     } else if (!item[1]) {
-      addDiagnostic(item[3], `Expected initial value.`, ERROR);
+      pushDiagnostic(item[3], `Expected initial value.`, Severity.Error);
       item[1] = NULL_LITERAL;
     }
 
@@ -697,7 +699,7 @@ constant_def 'constant declaration' =
 delete_stmt =
   'delete' _1_ items:(
     items:_assoc_elem_list_item* {
-      diagnoseEmptyArray(items, location(), 'associative array', ERROR);
+      diagnoseEmptyArray(items, location(), 'associative array', Severity.Error);
       return items;
     }
    ) _0_ eos {
@@ -833,7 +835,7 @@ identifier 'identifier' =
   /
   op:'@' _0_ arg:identifier? {
     if (!arg) {
-      addDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, ERROR);
+      pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, Severity.Error);
     }
     return {
       type: 'UnaryExpression',
@@ -846,11 +848,11 @@ identifier 'identifier' =
 strict_identifier =
   name:$([a-zA-Z_][a-zA-Z0-9_]*) {
     if (reservedKeywords.has(name)) {
-      addDiagnostic(location(), `${name} is a reserved keyword.`, ERROR);
+      pushDiagnostic(location(), `${name} is a reserved keyword.`, Severity.Error);
     // } else if (name === 'const') {
-    //   addDiagnostic(location(), `Using ${name} for \"constant\"?`, INFORMATION);
+    //   pushDiagnostic(location(), `Using ${name} for \"constant\"?`, Severity.Information);
     // } else if (name === 'elseif' || name === 'elif') {
-    //   addDiagnostic(location(), `Using ${name} for \"else if\"?`, INFORMATION);
+    //   pushDiagnostic(location(), `Using ${name} for \"else if\"?`, Severity.Information);
     }
     return {
       type: 'Identifier',
@@ -862,7 +864,7 @@ strict_identifier =
 identifier_w_check =
   identifier / invalid_expr
   // / [a-zA-Z0-9_.+\-*/%!?^~\\]+ {
-  //   addDiagnostic(location(), 'invalid as an identifier', ERROR);
+  //   pushDiagnostic(location(), 'invalid as an identifier', Severity.Error);
   //   return {
   //     type: 'Identifier',
   //     name: text(),
@@ -895,7 +897,7 @@ array_element =
     sep:comma_sep item:slicable_index? { return item ? item : NULL_LITERAL; }
   )* _0_ closer:']'? {
     if (!closer) {
-      addDiagnostic(shortenLocation(location(), 1), 'Unterminated bracket.', ERROR);
+      pushDiagnostic(shortenRange(location(), 1), 'Unterminated bracket.', Severity.Error);
     }
     item_0 = item_0 ? item_0 : NULL_LITERAL;
     if (items_1_n && items_1_n.length > 0) {
@@ -929,12 +931,12 @@ assoc_array = lvalue
 
 invalid_expr =
   '{' eos? _0_ stmts:expr_multi_list? _0_ '}'? eos? {
-    addDiagnostic(location(), 'Braces are to bundle statements. Use parentheses "()" for expressions.', ERROR);
+    pushDiagnostic(location(), 'Braces are to bundle statements. Use parentheses "()" for expressions.', Severity.Error);
     return NULL_EXPRESSION;
   }
   /
   value:$[^#,'"(){}[\];: \t\r\n]+ {
-    addDiagnostic(location(), 'Invalid expression. It should be quoted if it is a string.', WARNING);
+    pushDiagnostic(location(), 'Invalid expression. It should be quoted if it is a string.', Severity.Warning);
     return {
       type: 'Literal',
       value: text(),
@@ -959,7 +961,7 @@ string_literal 'string literal' =
         const loc = location();
         loc.start.offset -= 1;
         loc.start.column -= 1;
-        addDiagnostic(loc, 'Unknown escape sequence.', WARNING);
+        pushDiagnostic(loc, 'Unknown escape sequence.', Severity.Warning);
         return p;
       }
     ) { return q; }
@@ -967,7 +969,7 @@ string_literal 'string literal' =
     [^"]
   )* closer:'"'? {
     if (!closer) {
-      addDiagnostic(shortenLocation(location(), 1), 'Unterminated string literal.', ERROR);
+      pushDiagnostic(shortenRange(location(), 1), 'Unterminated string literal.', Severity.Error);
     }
     return {
       type: 'Literal',
@@ -985,7 +987,7 @@ string_literal 'string literal' =
         const loc = location();
         loc.start.offset -= 1;
         loc.start.column -= 1;
-        addDiagnostic(loc, 'Unknown escape sequence.', WARNING);
+        pushDiagnostic(loc, 'Unknown escape sequence.', Severity.Warning);
         return p;
       }
     ) { return q; }
@@ -993,7 +995,7 @@ string_literal 'string literal' =
     $(!"\\'" .)
   )* closer:"\\'"? {
     if (!closer) {
-      addDiagnostic(shortenLocation(location(), 2), 'Unterminated string literal.', ERROR);
+      pushDiagnostic(shortenRange(location(), 2), 'Unterminated string literal.', Severity.Error);
     }
     return {
       type: 'Literal',
@@ -1048,7 +1050,7 @@ array_literal 'array literal' =
   '[' _0_ item_0:(
     item:array_item? {
       if (!item) {
-        addDiagnostic(location(), 'Expected an array element.', ERROR);
+        pushDiagnostic(location(), 'Expected an array element.', Severity.Error);
         return NULL_LITERAL;
       }
       return item;
@@ -1056,14 +1058,14 @@ array_literal 'array literal' =
   ) items_1_n:(
     sep:comma_sep item:array_item? {
       if (!item) {
-        addDiagnostic(location(), 'Expected an array element.', ERROR);
+        pushDiagnostic(location(), 'Expected an array element.', Severity.Error);
         return NULL_LITERAL;
       }
       return item;
     }
   )* _0_ closer:']'? {
     if (!closer) {
-      addDiagnostic(shortenLocation(location(), 1), 'Unterminated bracket.', ERROR);
+      pushDiagnostic(shortenRange(location(), 1), 'Unterminated bracket.', Severity.Error);
     }
     const items = [item_0].concat(items_1_n);
     
@@ -1082,7 +1084,7 @@ array_literal 'array literal' =
         elements: items,
       };
     } else {
-        addDiagnostic(location(), 'Mixture of associate-array and data-array literals not allowed.', ERROR);
+        pushDiagnostic(location(), 'Mixture of associate-array and data-array literals not allowed.', Severity.Error);
         return NULL_EXPRESSION;
     }
   }
@@ -1095,9 +1097,9 @@ array_literal 'array literal' =
 array_item =
   key:expr_multi? _0_ ':' _0_ value:expr_multi? {
     if (!key) {
-      addDiagnostic(location(), `Expected a key expression.`, ERROR);
+      pushDiagnostic(location(), `Expected a key expression.`, Severity.Error);
     } else if (!value) {
-      addDiagnostic(location(), `Expected a value expression.`, ERROR);
+      pushDiagnostic(location(), `Expected a value expression.`, Severity.Error);
     }
     return {
       type: 'Property',
@@ -1116,10 +1118,10 @@ array_item =
 expr_block 'parentheses that enclose expression' =
   '(' _0_ expr:expr_multi? _0_ closer:')'? {
     if (!expr) {
-      addDiagnostic(location(), `Expected an expression in the parentheses.`, ERROR);
+      pushDiagnostic(location(), `Expected an expression in the parentheses.`, Severity.Error);
       return NULL_EXPRESSION;
     } else if (!closer) {
-      addDiagnostic(shortenLocation(location(), 1), 'Unterminated parenthesis.', ERROR);
+      pushDiagnostic(shortenRange(location(), 1), 'Unterminated parenthesis.', Severity.Error);
     }
     return expr;
   }
@@ -1134,7 +1136,7 @@ function_call 'function call' =
   expr:strict_identifier _0_ args:(
     '(' _0_ args:expr_solo_list? _0_ closer:')'? {
       if (!closer) {
-        addDiagnostic(shortenLocation(location(), 1), 'Unterminated parenthesis.', ERROR);
+        pushDiagnostic(shortenRange(location(), 1), 'Unterminated parenthesis.', Severity.Error);
       }
       return args;
     }
@@ -1156,7 +1158,7 @@ function_call 'function call' =
 unary_expr 'unary expression' =
   op:('+' / '-' / '!' / '~') _0_ arg:expr_solo? {
     if (!arg) {
-      addDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, ERROR);
+      pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, Severity.Error);
     }
     return {
       type: 'UnaryExpression',
@@ -1175,7 +1177,7 @@ unary_expr 'unary expression' =
 update_expr 'update expression' =
   op:update_op _0_ arg:lvalue? {
     if (!arg) {
-      addDiagnostic(location(), `Expected an lvalue following \"${op}\" operator.`, ERROR);
+      pushDiagnostic(location(), `Expected an lvalue following \"${op}\" operator.`, Severity.Error);
     }
     return {
       type: 'UpdateExpression',
@@ -1203,7 +1205,7 @@ expr_term3 =
   head:expr_term2 tails:(
     _0_ op:$(('*' / '/' / '%') !'=') _0_ term:expr_term2? {
       if (!term) {
-        addDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, ERROR);
+        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, Severity.Error);
         term = NULL_LITERAL;
       }
       return [op, term];
@@ -1220,7 +1222,7 @@ expr_term4 =
   head:expr_term3 tails:(
     _0_ op:$(('+' / '-') !'=') _0_ term:expr_term3? {
       if (!term) {
-        addDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, ERROR);
+        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, Severity.Error);
         term = NULL_LITERAL;
       }
       return [op, term];
@@ -1237,7 +1239,7 @@ expr_term5 =
   head:expr_term4 tails:(
     _0_ op:$(('<<' / '>>') !'=') _0_ term:expr_term4? {
       if (!term) {
-        addDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, ERROR);
+        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, Severity.Error);
         term = NULL_LITERAL;
       }
       return [op, term];
@@ -1254,7 +1256,7 @@ expr_term6 =
   head:expr_term5 tails:(
     _0_ op:($('<' !'<' '='?) / $('>' !'>' '='?)) _0_ term:expr_term5? {
       if (!term) {
-        addDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, ERROR);
+        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, Severity.Error);
         term = NULL_LITERAL;
       }
       return [op, term];
@@ -1271,7 +1273,7 @@ expr_term7 =
   head:expr_term6 tails:(
     _0_ op:('==' / '!=') _0_ term:expr_term6? {
       if (!term) {
-        addDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, ERROR);
+        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, Severity.Error);
         term = NULL_LITERAL;
       }
       return [op, term];
@@ -1288,7 +1290,7 @@ expr_term8 =
   head:expr_term7 tails:(
     _0_ op:$('&' ![&=]) _0_ term:expr_term7? {
       if (!term) {
-        addDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, ERROR);
+        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, Severity.Error);
         term = NULL_LITERAL;
       }
       return [op, term];
@@ -1305,7 +1307,7 @@ expr_term9 =
   head:expr_term8 tails:(
     _0_ op:$('^' !'=') _0_ term:expr_term8? {
       if (!term) {
-        addDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, ERROR);
+        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, Severity.Error);
         term = NULL_LITERAL;
       }
       return [op, term];
@@ -1322,7 +1324,7 @@ expr_term10 =
   head:expr_term9 tails:(
     _0_ op:$('|' ![|=]) _0_ term:expr_term9? {
       if (!term) {
-        addDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, ERROR);
+        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, Severity.Error);
         term = NULL_LITERAL;
       }
       return [op, term];
@@ -1339,7 +1341,7 @@ expr_term11 =
   head:expr_term10 tails:(
     _0_ op:'&&' _0_ term:expr_term10? {
       if (!term) {
-        addDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, ERROR);
+        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, Severity.Error);
         term = NULL_LITERAL;
       }
       return [op, term];
@@ -1356,7 +1358,7 @@ expr_term12 =
   head:expr_term11 tails:(
     _0_ op:'||' _0_ term:expr_term11? {
       if (!term) {
-        addDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, ERROR);
+        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, Severity.Error);
         term = NULL_LITERAL;
       }
       return [op, term];
@@ -1377,10 +1379,10 @@ expr_term13 =
       }
     )? {
       if (!alt) {
-        addDiagnostic(location(), 'Expected an altenative expression following \":\" opearator.', ERROR);
+        pushDiagnostic(location(), 'Expected an altenative expression following \":\" opearator.', Severity.Error);
         alt = NULL_LITERAL;
       } else if (!cons) {
-        addDiagnostic(location(), 'Expected a consequent expression following \"?\" opearator.', ERROR);
+        pushDiagnostic(location(), 'Expected a consequent expression following \"?\" opearator.', Severity.Error);
         cons = NULL_LITERAL;
       }
       return [cons, alt];
@@ -1406,7 +1408,7 @@ expr_term14 =
   head:expr_term13 tail:(
     _0_ op:assignment_op _0_ term:expr_multi? {
       if (!term) {
-        addDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, ERROR);
+        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, Severity.Error);
         term = NULL_LITERAL;
       }
       return [op, term];
@@ -1416,7 +1418,7 @@ expr_term14 =
       return head;
     } else {
       if (head.type !== 'Identifier' && head.type !== 'MemberExpression') {
-        addDiagnostic(location(), 'Left-side value must be assignable.', ERROR);
+        pushDiagnostic(location(), 'Left-side value must be assignable.', Severity.Error);
       }
       const op = tail[0];
       const term = tail[1];
@@ -1445,7 +1447,7 @@ expr_term15 =
   head:expr_term14 tails:(
     _0_ op:'in' !word _0_ term:assoc_array? {
       if (!term) {
-        addDiagnostic(location(), `Expected an associative array following \"${op}\" operator.`, ERROR);
+        pushDiagnostic(location(), `Expected an associative array following \"${op}\" operator.`, Severity.Error);
       }
       return [op, term];
     }
@@ -1465,7 +1467,7 @@ expr_multi =
   head:expr_solo tails:(
     spaces:_0_ term:expr_solo {
       if (!spaces || spaces.length === 0) {
-        addDiagnostic(location(), 'Expressions should be separated with whitespace.', INFORMATION);
+        pushDiagnostic(location(), 'Expressions should be separated with whitespace.', Severity.Information);
       }
       return [' ', term];
     }
@@ -1480,7 +1482,7 @@ expr_multi =
 expr_solo_forced =
   head:expr_solo tails:(
     _0_ tail:expr_solo {
-      addDiagnostic(location(), 'Expression concatenation not allowed.', ERROR);
+      pushDiagnostic(location(), 'Expression concatenation not allowed.', Severity.Error);
       return [' ', tail];
     }
   )* {
@@ -1504,14 +1506,14 @@ expr_solo_list 'comma-separated expression list' =
   }
   /
   items_1_n:_expr_solo_list_item+ {
-    addDiagnostic(shortenLocation(location(), 0), 'Expected an expression.', ERROR);
+    pushDiagnostic(shortenRange(location(), 0), 'Expected an expression.', Severity.Error);
     return [NULL_LITERAL].concat(items_1_n);
   }
 
 _expr_solo_list_item =
   comma_sep item:expr_solo_forced? {
     if (!item) {
-      addDiagnostic(location(), 'Expected an expression.', ERROR);
+      pushDiagnostic(location(), 'Expected an expression.', Severity.Error);
       return NULL_LITERAL;
     }
     return item;
@@ -1526,14 +1528,14 @@ expr_multi_list 'comma-separated expression list' =
   }
   /
   items_1_n:_expr_multi_list_item+ {
-    addDiagnostic(shortenLocation(location(), 0), 'Expected an expression.', ERROR);
+    pushDiagnostic(shortenRange(location(), 0), 'Expected an expression.', Severity.Error);
     return [NULL_LITERAL].concat(items_1_n);
   }
 
 _expr_multi_list_item =
   comma_sep item:expr_multi? {
     if (!item) {
-      addDiagnostic(location(), 'Expected an expression.', ERROR);
+      pushDiagnostic(location(), 'Expected an expression.', Severity.Error);
       return NULL_LITERAL;
     }
     return item;
