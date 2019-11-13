@@ -4,7 +4,7 @@ import * as estree from "estree";
 import * as estraverse from "estraverse";
 import * as spec from "./spec";
 import { Provider } from "./provider";
-import { SyntaxError, parse } from './grammar';
+import { SyntaxError, parse, IFileRange } from './grammar';
 
 /**
  * Extention-specific keys for estraverse (not exist in the original Parser AST.)
@@ -32,7 +32,7 @@ function isDocumentInScannedWorkspace(document: vscode.TextDocument) {
 export class UserProvider extends Provider implements vscode.DocumentSymbolProvider, vscode.WorkspaceSymbolProvider {
 
     public diagnosticCollection: vscode.DiagnosticCollection;
-    private treeCollection: Map<string, any>;
+    private treeCollection: Map<string, estree.Program>;
 
     constructor() {
         super();
@@ -158,10 +158,10 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
                     if (currentNode.params) {
                         let signatureStr = currentNode.id.name + '(';
                         signatureStr += currentNode.params.map(param => (param.type === 'Identifier') ? param.name : '').join(', ') + ')';
-                        refItem = { signature: signatureStr, location: <any>currentNode.loc };
+                        refItem = { signature: signatureStr, location: <IFileRange>currentNode.loc };
                         functionRefMap.set(currentNode.id.name, refItem);
                     } else {
-                        refItem = { signature: currentNode.id.name, location: <any>currentNode.loc };
+                        refItem = { signature: currentNode.id.name, location: <IFileRange>currentNode.loc };
                         macroRefMap.set(currentNode.id.name, refItem);
                     }
                 } else if (currentNode.type === 'VariableDeclaration' && currentNode.kind === 'const') {
@@ -171,7 +171,7 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
                             if (declarator.init && declarator.init.type === 'Literal') {
                                 signatureStr += ' = ' + declarator.init.raw;
                             }
-                            refItem = { signature: signatureStr, location: <any>currentNode.loc };
+                            refItem = { signature: signatureStr, location: <IFileRange>currentNode.loc };
                             constantRefMap.set(declarator.id.name, refItem);
                         }
                         break;
@@ -226,7 +226,7 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
     /**
      * Traverse the tree and collect local variables accesscible from the position.
      */
-    private collectLocalDeclarations(tree: any, position: vscode.Position) {
+    private collectLocalDeclarations(tree: estree.Program, position: vscode.Position) {
         const variableRefMap = new spec.ReferenceMap();
         const contexualStorage = new spec.ReferenceStorage(
             [
@@ -237,21 +237,21 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
         estraverse.traverse(tree, {
             enter: (currentNode, parentNode) => {
                 if (currentNode.type === "BlockStatement") {
-                    const statementRange = spec.convertRange(<any>currentNode.loc);
+                    const statementRange = spec.convertRange(<IFileRange>currentNode.loc);
                     if (statementRange.end.isBefore(position)) {
                         return estraverse.VisitorOption.Skip;
                     } else if (statementRange.start.isAfter(position)) {
                         return estraverse.VisitorOption.Break;
                     }
                 } else if (currentNode.type === 'VariableDeclaration') {
-                    const statementRange = spec.convertRange(<any>currentNode.loc);
+                    const statementRange = spec.convertRange(<IFileRange>currentNode.loc);
                     if (statementRange.end.isAfter(position)) {
                         return estraverse.VisitorOption.Break;
                     }
                     if (currentNode.kind !== 'const') {
                         for (const declarator of currentNode.declarations) {
                             if (declarator.type === 'VariableDeclarator' && declarator.id.type === 'Identifier') {
-                                const refItem: spec.ReferenceItem = { signature: declarator.id.name, location: <any>currentNode.loc };
+                                const refItem: spec.ReferenceItem = { signature: declarator.id.name, location: <IFileRange>currentNode.loc };
 
                                 // add comment
                                 if (currentNode.leadingComments && currentNode.leadingComments.length > 0) {

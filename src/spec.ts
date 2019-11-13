@@ -1,19 +1,11 @@
 import * as vscode from 'vscode';
+import {IFileRange, IFilePosition} from './grammar';
 
-interface PegPosition {
-	offset: number;
-	line: number;
-	column: number;
+export function convertPosition(position: IFilePosition) {
+	return new vscode.Position(position.line - 1, position.column - 1);
 }
-interface PegRange {
-	start: PegPosition;
-	end: PegPosition;
-}
-export function convertPosition(pesPosition: PegPosition) {
-	return new vscode.Position(pesPosition.line - 1, pesPosition.column - 1);
-}
-export function convertRange(pesRange: PegRange) {
-	return new vscode.Range(convertPosition(pesRange.start), convertPosition(pesRange.end));
+export function convertRange(range: IFileRange) {
+	return new vscode.Range(convertPosition(range.start), convertPosition(range.end));
 }
 export const BUILTIN_URI = 'spec://system/built-in.md';
 export const MOTOR_URI = 'spec://system/mnemonic-motor.md';
@@ -120,7 +112,7 @@ export interface ReferenceItem {
 	signature: string;
 	description?: string;
 	snippet?: string;
-	location?: PegRange;
+	location?: IFileRange;
 	overloads?: Overload[];
 }
 
