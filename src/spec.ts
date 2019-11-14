@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import {IFileRange, IFilePosition} from './grammar';
+import { IFileRange, IFilePosition } from './grammar';
 
 export function convertPosition(position: IFilePosition) {
 	return new vscode.Position(position.line - 1, position.column - 1);
