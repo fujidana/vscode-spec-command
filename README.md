@@ -11,19 +11,19 @@ I recreated a new account with the same name (`fujidana`) but it was not treated
 __Users of version 0.6 or earlier need to manually uninstall their version and install this version in order to receive future updates.__
 Sorry for inconvenience.
 
-## What's **spec**?
+## What's __spec__?
 
 > __spec__ is internationally recognized as the leading software for instrument control and data acquisition in X-ray diffraction experiments.
 > It is used at more than 200 synchrotrons, industrial laboratories, universities and research facilities around the globe.
 
-*cited from [CSS - Certified Scientific Software](https://www.certif.com) homepage.*
+_cited from [CSS - Certified Scientific Software](https://www.certif.com) homepage._
 
 ## Features
 
 This extension supports the following features:
 
 * __Diagnostics__ - syntax check
-* __Syntax highlight__ - colorizing symbols using a grammer
+* __Syntax highlighting__ - colorizing symbols using a grammer
 * __IntelliSense__ - code completion and hinting
   * __Hovers__
   * __Code completion proposals__ - autocompletion that works during a user types a symbol
@@ -34,9 +34,9 @@ This extension supports the following features:
   * __Show definitions of a symbol__ - symbol definitions in open files, used in: _Go to Definition_ (F12) and _Peek Definition_ (Alt+F12) in right-click menu
 
 These features cover both user-defined symbols and built-in symbols.
-Built-in variables, constants, functions, macros and some other keywords are always global.
-User-defined constants (`constant`), functions and macros are global; they are scanned from open documents and optionally in files in the workspace.
-The scope of other variables (`local` and `global`) is controlled by block statements (`{ ... }`).
+Built-in symbols and always global.
+User-defined symbols declared at the top level (i.e., not in a code block, curly brackets) are global; they are scanned from open documents and optionally in files in the workspace.
+User-defined symbols in code blocks are local; they are listed only when they are accessible from the current cursor position.
 
 The help text of built-in symbols can also be shown as an indepedent document; select _spec: Open Reference Manual_ from _Command Palette_ (Ctrl+Shit+P).
 
@@ -80,6 +80,6 @@ This extension is still beta and the identifiers (dot-separated string) of these
 ## Known Issues
 
 * Syntax check by this extension has small differences with actual __spec__ interpreters.
-* Statement continuation by putting a backslash at the end of the line is not supported in syntax highlight.
+* Statement continuation by putting a backslash at the end of the line is not supported in syntax highlighting.
 
 Also read [GitHub issues](https://github.com/fujidana/vscode-spec/issues).
