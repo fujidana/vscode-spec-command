@@ -26,6 +26,127 @@ function isDocumentInScannedWorkspace(document: vscode.TextDocument) {
 }
 
 /**
+ * @param tree Parser AST object
+ * @param position the current cursor position. If not given, top-level symbols (global variables, constant, macro and functions) are picked up.
+ */
+function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position): spec.ReferenceStorage {
+
+    const constantRefMap = new spec.ReferenceMap();
+    const variableRefMap = new spec.ReferenceMap();
+    const macroRefMap = new spec.ReferenceMap();
+    const functionRefMap = new spec.ReferenceMap();
+
+    // console.log('<<<Scan start>>>', JSON.stringify(position, undefined, ""));
+
+    estraverse.traverse(tree, {
+        enter: (currentNode, parentNode) => {
+            // console.log('enter', currentNode.type, parentNode && parentNode.type);
+
+            // This traverser only traverses statements.
+            if (parentNode === null && currentNode.type === 'Program') {
+                // if it is a top-level, dig in.
+                return;
+            } else if (!currentNode.type.endsWith('Statement') && !currentNode.type.endsWith('Declaration')) {
+                // if not any type of statements, skip.
+                return estraverse.VisitorOption.Skip;
+            }
+            
+            const nodeRange = currentNode.loc ? spec.convertRange(<IFileRange>currentNode.loc) : undefined;
+            let refItem: spec.ReferenceItem | undefined;
+
+            if (!nodeRange) {
+                console.log('Statement should have location. This may be a bug in the parser.');
+                return;
+            }
+
+            if (position) {
+                // in case of active document
+
+                if (currentNode.type === 'BlockStatement' && nodeRange.end.isBefore(position)) {
+                    // skip the code block that ends before the cursor.
+                    return estraverse.VisitorOption.Skip;
+                    
+                } else if (currentNode.type === 'FunctionDeclaration' && currentNode.params && nodeRange.contains(position)) {
+                    // register arguments of function as variables if the cursor is in the function block.
+                    for (const param of currentNode.params) {
+                        if (param.type === 'Identifier') {
+                            refItem = { signature: param.name, location: <any>currentNode.loc };
+                            variableRefMap.set(param.name, refItem);
+                        }
+                    }
+                } else if (nodeRange.start.isAfter(position)) {
+                    return estraverse.VisitorOption.Break;
+                }
+            }
+            
+            if (currentNode.type === 'FunctionDeclaration' && currentNode.id) {
+                if (currentNode.params) {
+                    // register the id as a function if parameter is not null.
+                    if (!position || (parentNode && parentNode.type !== 'Program')) {
+                        let signatureStr = currentNode.id.name + '(';
+                        signatureStr += currentNode.params.map(param => (param.type === 'Identifier') ? param.name : '').join(', ') + ')';
+                        refItem = { signature: signatureStr, location: <IFileRange>currentNode.loc };
+                        functionRefMap.set(currentNode.id.name, refItem);
+                    }
+
+                } else {
+                    // register the id as a traditional macro if parameter is null.
+                    if (!position || (parentNode && parentNode.type !== 'Program')) {
+                        refItem = { signature: currentNode.id.name, location: <IFileRange>currentNode.loc };
+                        macroRefMap.set(currentNode.id.name, refItem);
+                    }
+                }
+
+            } else if (currentNode.type === 'VariableDeclaration') {
+                if (!position || (parentNode && parentNode.type !== 'Program')) {
+                    for (const declarator of currentNode.declarations) {
+                        if (declarator.type === "VariableDeclarator" && declarator.id.type === 'Identifier') {
+                            let signatureStr = declarator.id.name;
+                            if (declarator.init && declarator.init.type === 'Literal') {
+                                signatureStr += ' = ' + declarator.init.raw;
+                            }
+                            refItem = { signature: signatureStr, location: <IFileRange>currentNode.loc };
+                            if (currentNode.kind === 'const') {
+                                constantRefMap.set(declarator.id.name, refItem);
+                            } else {
+                                variableRefMap.set(declarator.id.name, refItem);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // add docstrings            
+            if (refItem && currentNode.leadingComments && currentNode.leadingComments.length > 0) {
+                refItem.description = currentNode.leadingComments[currentNode.leadingComments.length - 1].value;
+            }
+
+            if (!position) {
+                // in case of inactive document
+                // only scan the top-level items
+                if (parentNode && parentNode.type === 'Program') {
+                    return estraverse.VisitorOption.Skip;
+                }
+            }
+        },
+        leave: (currentNode, parentNode) => {
+            // console.log('leave', currentNode.type, parentNode && parentNode.type);
+        },
+        keys: ADDITIONAL_TRAVERSE_KEYS,
+    });
+
+    return new spec.ReferenceStorage(
+        [
+            [spec.ReferenceItemKind.Constant, constantRefMap],
+            [spec.ReferenceItemKind.Variable, variableRefMap],
+            [spec.ReferenceItemKind.Macro, macroRefMap],
+            [spec.ReferenceItemKind.Function, functionRefMap],
+        ]
+    );
+}
+
+
+/**
  * Provider class for user documents.
  * This class manages opened documents and other documents in the current workspace.
  */
@@ -49,7 +170,6 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
             if (document.languageId === 'spec') {
                 this.parseDocumentContents(document.getText(), document.uri, true);
             }
-            // console.log("onDidChangeTextDocument", document.uri);
         });
 
         // register a hander invoked when the document is opened
@@ -58,7 +178,6 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
             if (document.languageId === 'spec') {
                 this.parseDocumentContents(document.getText(), document.uri, true);
             }
-            // console.log("onDidOpenTextDocument", vscode.workspace.asRelativePath(document.uri));
         });
 
         // register a hander invoked when the document is saved
@@ -66,7 +185,6 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
             if (document.languageId === 'spec') {
                 this.parseDocumentContents(document.getText(), document.uri, true);
             }
-            // console.log("onDidSaveTextDocument", vscode.workspace.asRelativePath(document.uri));
         });
 
         // register a hander invoked when the document is closed
@@ -81,16 +199,13 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
                 }
                 this.treeCollection.delete(uriString);
             }
-            // console.log("onDidCloseTextDocument", vscode.workspace.asRelativePath(document.uri));
         });
 
         // vscode.window.onDidChangeActiveTextEditor(editor => {
         //     if (editor) {
         //         const document = editor.document;
         //         // this.parseDocumentContents(editor.document.getText(), document.uri, true);
-        //         console.log("onDidChangeActiveTextEditor", vscode.workspace.asRelativePath(document.uri));
         //     } else {
-        //         console.log("onDidChangeActiveTextEditor", undefined);
         //     }
         // });
 
@@ -109,22 +224,12 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
     private parseDocumentContents(contents: string, uri: vscode.Uri, isOpenDocument: boolean) {
 
         const uriString = uri.toString();
-        const constantRefMap = new spec.ReferenceMap();
-        const macroRefMap = new spec.ReferenceMap();
-        const functionRefMap = new spec.ReferenceMap();
-        const documentStorage = new spec.ReferenceStorage(
-            [
-                [spec.ReferenceItemKind.Constant, constantRefMap],
-                [spec.ReferenceItemKind.Macro, macroRefMap],
-                [spec.ReferenceItemKind.Function, functionRefMap],
-            ]
-        );
-        
+
         interface CustomProgram extends estree.Program {
             x_diagnostics: any[];
         }
-        
-        let tree: CustomProgram  | undefined;
+
+        let tree: CustomProgram | undefined;
         try {
             tree = <CustomProgram>parse(contents);
         } catch (error) {
@@ -148,48 +253,7 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
             this.treeCollection.set(uri.toString(), tree);
         }
 
-        estraverse.traverse(tree, {
-            enter: (currentNode, parentNode) => {
-                // console.log('enter', currentNode.type, parentNode && parentNode.type);
-                // only scan the top-level items
-                if (parentNode && parentNode.type === 'Program') {
-                    return estraverse.VisitorOption.Skip;
-                }
-            },
-            leave: (currentNode, parentNode) => {
-                // console.log('leave', currentNode.type, parentNode && parentNode.type);
-                let refItem: spec.ReferenceItem | undefined;
-                if (currentNode.type === 'FunctionDeclaration' && currentNode.id) {
-                    if (currentNode.params) {
-                        let signatureStr = currentNode.id.name + '(';
-                        signatureStr += currentNode.params.map(param => (param.type === 'Identifier') ? param.name : '').join(', ') + ')';
-                        refItem = { signature: signatureStr, location: <IFileRange>currentNode.loc };
-                        functionRefMap.set(currentNode.id.name, refItem);
-                    } else {
-                        refItem = { signature: currentNode.id.name, location: <IFileRange>currentNode.loc };
-                        macroRefMap.set(currentNode.id.name, refItem);
-                    }
-                } else if (currentNode.type === 'VariableDeclaration' && currentNode.kind === 'const') {
-                    for (const declarator of currentNode.declarations) {
-                        if (declarator.type === "VariableDeclarator" && declarator.id.type === 'Identifier') {
-                            let signatureStr = declarator.id.name;
-                            if (declarator.init && declarator.init.type === 'Literal') {
-                                signatureStr += ' = ' + declarator.init.raw;
-                            }
-                            refItem = { signature: signatureStr, location: <IFileRange>currentNode.loc };
-                            constantRefMap.set(declarator.id.name, refItem);
-                        }
-                        break;
-                    }
-                }
-                if (refItem && currentNode.leadingComments && currentNode.leadingComments.length > 0) {
-                    refItem.description = currentNode.leadingComments[currentNode.leadingComments.length - 1].value;
-                }
-            },
-            keys: ADDITIONAL_TRAVERSE_KEYS
-        });
-
-        this.storageCollection.set(uriString, documentStorage);
+        this.storageCollection.set(uriString, collectSymbolsFromTree(tree));
         this.updateCompletionItemsForUriString(uriString);
         return true;
     }
@@ -229,70 +293,16 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
     }
 
     /**
-     * Traverse the tree and collect local variables accesscible from the position.
-     */
-    private collectLocalDeclarations(tree: estree.Program, position: vscode.Position) {
-        const variableRefMap = new spec.ReferenceMap();
-        const contexualStorage = new spec.ReferenceStorage(
-            [
-                [spec.ReferenceItemKind.Variable, variableRefMap],
-            ]
-        );
-
-        estraverse.traverse(tree, {
-            enter: (currentNode, parentNode) => {
-                if (currentNode.type === "BlockStatement") {
-                    const statementRange = spec.convertRange(<IFileRange>currentNode.loc);
-                    if (statementRange.end.isBefore(position)) {
-                        return estraverse.VisitorOption.Skip;
-                    } else if (statementRange.start.isAfter(position)) {
-                        return estraverse.VisitorOption.Break;
-                    }
-                } else if (currentNode.type === 'VariableDeclaration') {
-                    const statementRange = spec.convertRange(<IFileRange>currentNode.loc);
-                    if (statementRange.end.isAfter(position)) {
-                        return estraverse.VisitorOption.Break;
-                    }
-                    if (currentNode.kind !== 'const') {
-                        for (const declarator of currentNode.declarations) {
-                            if (declarator.type === 'VariableDeclarator' && declarator.id.type === 'Identifier') {
-                                const refItem: spec.ReferenceItem = { signature: declarator.id.name, location: <IFileRange>currentNode.loc };
-
-                                // add comment
-                                if (currentNode.leadingComments && currentNode.leadingComments.length > 0) {
-                                    refItem.description = currentNode.leadingComments[currentNode.leadingComments.length - 1].value;
-                                }
-
-                                //
-                                variableRefMap.set(declarator.id.name, refItem);
-                                // const cItem = new vscode.CompletionItem(declarator.id.name, vscode.CompletionItemKind.Variable);
-                            }
-                        }
-                    }
-
-                    // console.log(currentNode);
-                    return estraverse.VisitorOption.Skip;
-                }
-            },
-            leave: (currentNode, parentNode) => { },
-            keys: ADDITIONAL_TRAVERSE_KEYS
-        });
-
-        this.storageCollection.set(spec.ACTIVE_FILE_URI, contexualStorage);
-    }
-
-    /**
 	 * Required implementation of vscode.CompletionItemProvider, overriding the super class
      */
     public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.CompletionItem[] | undefined {
         if (token.isCancellationRequested) { return; }
 
         const tree = this.treeCollection.get(document.uri.toString());
-        if (!tree) { return super.provideCompletionItems(document, position, token, context); }
-
-        this.collectLocalDeclarations(tree, position);
-        this.updateCompletionItemsForUriString(spec.ACTIVE_FILE_URI);
-
+        if (tree) {
+            this.storageCollection.set(spec.ACTIVE_FILE_URI, collectSymbolsFromTree(tree, position));
+            this.updateCompletionItemsForUriString(spec.ACTIVE_FILE_URI);
+        }
         return super.provideCompletionItems(document, position, token, context);
     }
 
@@ -303,10 +313,9 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
         if (token.isCancellationRequested) { return; }
 
         const tree = this.treeCollection.get(document.uri.toString());
-        if (!tree) { return super.provideHover(document, position, token); }
-
-        this.collectLocalDeclarations(tree, position);
-
+        if (tree) {
+            this.storageCollection.set(spec.ACTIVE_FILE_URI, collectSymbolsFromTree(tree, position));
+        }
         return super.provideHover(document, position, token);
     }
 
@@ -325,22 +334,19 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
         // update the storage for local variables for the current cursor position.
         const tree = this.treeCollection.get(document.uri.toString());
         if (tree) {
-            this.collectLocalDeclarations(tree, position);
+            this.storageCollection.set(spec.ACTIVE_FILE_URI, collectSymbolsFromTree(tree, position));
         }
 
         // seek the identifier
         const locations: vscode.Location[] = [];
         for (const [uriString, storage] of this.storageCollection.entries()) {
-            let uri;
             // skip the storage that does not have physical locations.
             // unnecessary because the owner of these storage is not registered as the definition provider.
             if (uriString === spec.BUILTIN_URI || uriString === spec.MOTOR_URI) {
                 continue;
-            } else if (uriString === spec.ACTIVE_FILE_URI) {
-                uri = document.uri;
-            } else {
-                uri = vscode.Uri.parse(uriString);
             }
+
+            const uri = (uriString === spec.ACTIVE_FILE_URI) ? document.uri : vscode.Uri.parse(uriString);
 
             // seek through storages for all types of symbols
             for (const map of storage.values()) {
