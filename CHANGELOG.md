@@ -6,11 +6,20 @@ All notable changes to the __spec__ extension will be documented in this file.
 
 ## [Unreleased]
 
+## [0.7.2] - 2019-11-14
+
+### Changed
+
+* improve behavior to handle symbols in IntelliSense and code navigation features
+  * Variables, constants and macro and function (`local`, `global`, `constant`, and `def`) declared at the top-level (i.e., not in the code block) are treated globally; IntelliSense feature lists these symbols in other editors (and optionally in workgroup files).
+  * Variables, constants and macro and function (`local`, `global`, `constant`, and `def`) declared in code blocks are treated locally; IntelliSense feature lists these symbols only when they are visible from the current cursor position.
+  * IntelliSense feature now lists function arguments as local variables.
+
 ## [0.7.1] - 2019-10-30
 
 ### Changed
 
-* improvement of syntax parser, including
+* improve syntax parser, including
   * support of variant quatations of a string literal (`"`, `'`, `\"`, `\'`) (syntax parser only; code highligting engine assumes `"` as a string literal and `\'` as the body of a macro and function)
   * support of escape sequense of TTY command such as `\[md]`
 
@@ -86,7 +95,8 @@ All notable changes to the __spec__ extension will be documented in this file.
   * syntax highlighting feature
   * code snippets feature
 
-[Unreleased]: https://github.com/fujidana/vscode-spec/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec/compare/v0.7.2...HEAD
+[0.7.2]: https://github.com/fujidana/vscode-spec/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/fujidana/vscode-spec/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/fujidana/vscode-spec/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/fujidana/vscode-spec/compare/v0.5.2...v0.6.0
