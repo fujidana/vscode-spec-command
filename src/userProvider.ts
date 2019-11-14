@@ -128,11 +128,16 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
         try {
             tree = <CustomProgram>parse(contents);
         } catch (error) {
-            const diagnostic = new vscode.Diagnostic(spec.convertRange(error.location), error.message, vscode.DiagnosticSeverity.Error);
-            this.diagnosticCollection.set(uri, [diagnostic]);
-            this.storageCollection.delete(uriString);
-            // this.updateCompletionItemsForUriString(uriString);
-            return false;
+            if (error instanceof SyntaxError) {
+                const diagnostic = new vscode.Diagnostic(spec.convertRange(error.location), error.message, vscode.DiagnosticSeverity.Error);
+                this.diagnosticCollection.set(uri, [diagnostic]);
+                this.storageCollection.delete(uriString);
+                // this.updateCompletionItemsForUriString(uriString);
+                return false;
+            } else {
+                console.log('Unknown Error in sytax parsing', error);
+                return false;
+            }
         }
         // console.log(JSON.stringify(tree, null, 2));
 
