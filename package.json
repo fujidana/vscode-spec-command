@@ -53,14 +53,14 @@
 		],
 		"commands": [
 			{
-				"command": "spec.open-document.built-in",
+				"command": "vscode-spec.openDocument.builtIn",
 				"title": "spec: Open Reference Manual"
 			}
 		],
 		"menus": {
 			"commandPalette": [
 				{
-					"command": "spec.open-document.built-in",
+					"command": "vscode-spec.openDocument.builtIn",
 					"when": "resourceLangId == spec"
 				}
 			]
@@ -68,7 +68,7 @@
 		"configuration": {
 			"title": "spec",
 			"properties": {
-				"spec.helpDocumentVolume.hover": {
+				"vscode-spec.helpDocumentVolume.hover": {
 					"type": "string",
 					"default": "full",
 					"description": "Controls the volume of explanatory text in hovers, which is shown when the mouse cursor is on the symbol",
@@ -78,7 +78,7 @@
 						"full"
 					]
 				},
-				"spec.helpDocumentVolume.completionItem": {
+				"vscode-spec.helpDocumentVolume.completionItem": {
 					"type": "string",
 					"default": "sentence",
 					"description": "Controls the volume of explanatory text in auto-complete items, which is shown when the user types a symbol",
@@ -88,7 +88,7 @@
 						"full"
 					]
 				},
-				"spec.helpDocumentVolume.signatureHelp": {
+				"vscode-spec.helpDocumentVolume.signatureHelp": {
 					"type": "string",
 					"default": "sentence",
 					"description": "Controls the volume of explanatory text in signature help, which is shown when the user enters a function",
@@ -98,7 +98,7 @@
 						"full"
 					]
 				},
-				"spec.mnemonic.motor.labels": {
+				"vscode-spec.mnemonic.motor.labels": {
 					"type": "array",
 					"default": [],
 					"description": "Specifies a string list of motor mnemonics",
@@ -107,7 +107,7 @@
 						"pattern": "^[a-zA-Z_][a-zA-Z0-9_]{0,6}$"
 					}
 				},
-				"spec.mnemonic.motor.descriptions": {
+				"vscode-spec.mnemonic.motor.descriptions": {
 					"type": "array",
 					"default": [],
 					"description": "Specifies a string list of descriptions corresponding to motor mnemonics",
@@ -115,7 +115,7 @@
 						"type": "string"
 					}
 				},
-				"spec.mnemonic.counter.labels": {
+				"vscode-spec.mnemonic.counter.labels": {
 					"type": "array",
 					"default": [],
 					"description": "Specifies a string list of counter mnemonics",
@@ -124,7 +124,7 @@
 						"pattern": "^[a-zA-Z_][a-zA-Z0-9_]{0,6}$"
 					}
 				},
-				"spec.mnemonic.counter.descriptions": {
+				"vscode-spec.mnemonic.counter.descriptions": {
 					"type": "array",
 					"default": [],
 					"description": "Specifies a string list of descriptions corresponding to counter mnemonics",
@@ -132,7 +132,7 @@
 						"type": "string"
 					}
 				},
-				"spec.parser.enableWorkspaceScan": {
+				"vscode-spec.parser.enableWorkspaceScan": {
 					"type": "boolean",
 					"default": false,
 					"description": "Specifies whether syntax check and code navigation range over all files in the workspace"

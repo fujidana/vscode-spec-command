@@ -38,7 +38,7 @@ function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceI
 }
 
 function truncateText(text: string, settingKey: string): string {
-	const volume = vscode.workspace.getConfiguration('spec.helpDocumentVolume').get(settingKey);
+	const volume = vscode.workspace.getConfiguration('vscode-spec.helpDocumentVolume').get(settingKey);
 	if (volume === 'full') {
 		return text;
 	} else if (volume === 'paragraph') {

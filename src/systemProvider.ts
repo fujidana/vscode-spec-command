@@ -75,16 +75,16 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
 
 		// observe the change in configuration
 		vscode.workspace.onDidChangeConfiguration(event => {
-			if (event.affectsConfiguration('spec.mnemonic.motor')) {
+			if (event.affectsConfiguration('vscode-spec.mnemonic.motor')) {
 				this.updateMotorMnemonicStorage();
 			}
-			if (event.affectsConfiguration('spec.mnemonic.counter')) {
+			if (event.affectsConfiguration('vscode-spec.mnemonic.counter')) {
 				this.updateCounterMnemonicStorage();
 			}
 		});
 
 		// register command to show reference manual as a virtual document
-		vscode.commands.registerCommand('spec.open-document.built-in', async () => {
+		vscode.commands.registerCommand('vscode-spec.openDocument.builtIn', async () => {
 			const storage = this.storageCollection.get(spec.BUILTIN_URI);
 			if (storage) {
 				let quickPickLabels = ['all'];
@@ -111,7 +111,7 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
 		const storage = this.storageCollection.get(spec.COUNTER_URI);
 		if (!storage) { return; }
 
-		const config = vscode.workspace.getConfiguration('spec.mnemonic.counter');
+		const config = vscode.workspace.getConfiguration('vscode-spec.mnemonic.counter');
 		const mneLabels: string[] = config.get('labels', []);
 		const mneDescriptions: string[] = config.get('descriptions', []);
 
@@ -139,7 +139,7 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
 		const storage = this.storageCollection.get(spec.MOTOR_URI);
 		if (!storage) { return; }
 
-		const config = vscode.workspace.getConfiguration('spec.mnemonic.motor');
+		const config = vscode.workspace.getConfiguration('vscode-spec.mnemonic.motor');
 		const mneLabels: string[] = config.get('labels', []);
 		const mneDescriptions: string[] = config.get('descriptions', []);
 
