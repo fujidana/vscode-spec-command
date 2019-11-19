@@ -14,6 +14,8 @@ interface APIReference {
 const SNIPPET_TEMPLATES: string[] = [
 	'mv ${1|%s|} ${2:pos}',
 	'mvr ${1|%s|} ${2:pos}',
+	'umv ${1|%s|} ${2:pos}',
+	'umvr ${1|%s|} ${2:pos}',
 	'ascan ${1|%s|} ${2:begin} ${3:end} ${4:steps} ${5:sec}',
 	'dscan ${1|%s|} ${2:begin} ${3:end} ${4:steps} ${5:sec}',
 	'a2scan ${1|%s|} ${2:begin1} ${3:end1} ${4|%s|} ${5:begin2} ${6:end2} ${7:steps} ${8:sec}',
@@ -21,11 +23,15 @@ const SNIPPET_TEMPLATES: string[] = [
 	'mesh ${1|%s|} ${2:begin1} ${3:end1} ${4:step1} ${5|%s|} ${6:begin2} ${7:end2} ${8:steps2} ${9:sec}',
 	'a3scan ${1|%s|} ${2:begin1} ${3:end1} ${4|%s|} ${5:begin2} ${6:end2} ${7|%s|} ${8:begin3} ${9:end3} ${10:steps} ${11:sec}',
 	'd3scan ${1|%s|} ${2:begin1} ${3:end1} ${4|%s|} ${5:begin2} ${6:end2} ${7|%s|} ${8:begin3} ${9:end3} ${10:steps} ${11:sec}',
+	'a4scan ${1|%s|} ${2:begin1} ${3:end1} ${4|%s|} ${5:begin2} ${6:end2} ${7|%s|} ${8:begin3} ${9:end3} ${10|%s|} ${11:begin4} ${12:end4} ${13:steps} ${14:sec}',
+	'd4scan ${1|%s|} ${2:begin1} ${3:end1} ${4|%s|} ${5:begin2} ${6:end2} ${7|%s|} ${8:begin3} ${9:end3} ${10|%s|} ${11:begin4} ${12:end4} ${13:steps} ${14:sec}',
 ];
 
 const SNIPPET_DESCRIPTIONS: string[] = [
 	'absolute-position motor move',
 	'relative-position motor move',
+	'absolute-position motor move (live update)',
+	'relative-position motor move (live update)',
 	'single-motor absolute-position scan',
 	'single-motor relative-position scan',
 	'two-motor absolute-position scan',
@@ -33,6 +39,8 @@ const SNIPPET_DESCRIPTIONS: string[] = [
 	'nested two-motor scan that scanned over a grid of points',
 	'three-motor absolute-position scan',
 	'three-motor relative-position scan',
+	'four-motor absolute-position scan',
+	'four-motor relative-position scan',
 ];
 
 /**
