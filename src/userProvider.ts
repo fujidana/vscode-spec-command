@@ -20,7 +20,7 @@ const ADDITIONAL_TRAVERSE_KEYS = {
  * Utility function to check whether the document exists in the workspace and have been parsed
  */
 function isDocumentInScannedWorkspace(document: vscode.TextDocument) {
-    const scansWorkspace = vscode.workspace.getConfiguration('spec.parser').get('enableWorkspaceScan', false);
+    const scansWorkspace = vscode.workspace.getConfiguration('vscode-spec.parser').get('enableWorkspaceScan', false);
 
     return (scansWorkspace && document.uri.scheme === 'file' && vscode.workspace.asRelativePath(document.uri.path) !== document.uri.path);
 }
@@ -211,7 +211,7 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
 
         // register a hander invoked when the configuration is changed
         vscode.workspace.onDidChangeConfiguration(event => {
-            if (event.affectsConfiguration('spec.parser.enableWorkspaceScan')) {
+            if (event.affectsConfiguration('vscode-spec.parser.enableWorkspaceScan')) {
                 this.refreshCollections();
             }
         });
@@ -278,7 +278,7 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
         }
 
         // if workspace scan is enabled, parse the other files in the workspace folders.
-        const scansWorkspace = vscode.workspace.getConfiguration('spec.parser').get('enableWorkspaceScan', false);
+        const scansWorkspace = vscode.workspace.getConfiguration('vscode-spec.parser').get('enableWorkspaceScan', false);
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (scansWorkspace && workspaceFolders) {
             for (const workspaceFolder of workspaceFolders) {
