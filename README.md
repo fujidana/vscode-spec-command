@@ -66,8 +66,8 @@ This extention contributes the follwing settings:
 
 1. controls the volume of explanatory text shown by IntelliSense features.
 2. registers information about the motor mnemonics, which enables IntelliSense features for `mv`, `mvr`, `ascan`, `dscan`, etc.
-    * `spec.mnemonics.motor.labels`: a string array of the motor mnemonic, for example, `["th", "tth", "phi"]`
-    * `spec.mnemonics.motor.descriptions`: a string array of the descripive text of the motor mnemonic, for example, `["theta", "2 theta"]`. This property is optional; its array length needs not be equal to that of `spec.mnemonics.motor.labels`.
+    * `spec.mnemonic.motor.labels`: a string array of the motor mnemonic, for example, `["th", "tth", "phi"]`
+    * `spec.mnemonic.motor.descriptions`: a string array of the descripive text of the motor mnemonic, for example, `["theta", "2 theta"]`. This property is optional; its array length needs not be equal to that of `spec.mnemonics.motor.labels`.
 3. enable/disable scanning and diagnostics of files in workspace.
 
 One can find the settings in _Extension / spec_ in the _Settings_ window.

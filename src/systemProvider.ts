@@ -40,9 +40,6 @@ const SNIPPET_DESCRIPTIONS: string[] = [
  * This class manages built-in symbols and motor mnemonics user added in VS Code configuraion.
  */
 export class SystemProvider extends Provider implements vscode.TextDocumentContentProvider {
-	private mnemonicEnumRefMap = new spec.ReferenceMap();
-	private mnemonicSnippetRefMap = new spec.ReferenceMap();
-
 	constructor(apiReferencePath: string) {
 		super();
 
@@ -63,16 +60,18 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
 		});
 
 		// register motor-mnemonic storage
-		const motorStorage = new spec.ReferenceStorage();
-		motorStorage.set(spec.ReferenceItemKind.Enum, this.mnemonicEnumRefMap);
-		motorStorage.set(spec.ReferenceItemKind.Snippet, this.mnemonicSnippetRefMap);
-		this.storageCollection.set(spec.MOTOR_URI, motorStorage);
-		this.updateMotorMnemonicsStorage();
+		this.storageCollection.set(spec.MOTOR_URI, new spec.ReferenceStorage());
+		this.storageCollection.set(spec.COUNTER_URI, new spec.ReferenceStorage());
+		this.updateMotorMnemonicStorage();
+		this.updateCounterMnemonicStorage();
 
 		// observe the change in configuration
 		vscode.workspace.onDidChangeConfiguration(event => {
-			if (event.affectsConfiguration('spec.mnemonics.motor')) {
-				this.updateMotorMnemonicsStorage();
+			if (event.affectsConfiguration('spec.mnemonic.motor')) {
+				this.updateMotorMnemonicStorage();
+			}
+			if (event.affectsConfiguration('spec.mnemonic.counter')) {
+				this.updateCounterMnemonicStorage();
 			}
 		});
 
@@ -100,24 +99,57 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
 	 * Update the contents of motor-mnemonic storage.
 	 * Invoked when initialization completed or configuration modified. 
 	 */
-	private updateMotorMnemonicsStorage() {
-		const motorConfig = vscode.workspace.getConfiguration('spec.mnemonics.motor');
-		const mneLabels: string[] = motorConfig.get('labels', []);
-		const mneDescriptions: string[] = motorConfig.get('descriptions', []);
+	private updateCounterMnemonicStorage() {
+		const storage = this.storageCollection.get(spec.COUNTER_URI);
+		if (!storage) { return; }
+
+		const config = vscode.workspace.getConfiguration('spec.mnemonic.counter');
+		const mneLabels: string[] = config.get('labels', []);
+		const mneDescriptions: string[] = config.get('descriptions', []);
 
 		// refresh storages related to motor mnemonic, which is configured in the settings.
-		this.mnemonicEnumRefMap.clear();
-		this.mnemonicSnippetRefMap.clear();
-
+		storage.clear();
+		
 		if (mneLabels.length > 0) {
 			// refresh storage for motor mnemonic label
+			const enumRefMap = new spec.ReferenceMap();
 			for (let index = 0; index < mneLabels.length; index++) {
 				const mneLabel = mneLabels[index];
 				const mneDescription = (mneDescriptions.length > index) ? mneDescriptions[index] : undefined;
-				this.mnemonicEnumRefMap.set(mneLabel, { signature: mneLabel, description: mneDescription });
+				enumRefMap.set(mneLabel, { signature: mneLabel, description: mneDescription });
 			}
+			storage.set(spec.ReferenceItemKind.Enum, enumRefMap);
+		}
+		this.updateCompletionItemsForUriString(spec.COUNTER_URI);
+	}
+
+	/**
+	 * Update the contents of motor-mnemonic storage.
+	 * Invoked when initialization completed or configuration modified. 
+	 */
+	private updateMotorMnemonicStorage() {
+		const storage = this.storageCollection.get(spec.MOTOR_URI);
+		if (!storage) { return; }
+
+		const config = vscode.workspace.getConfiguration('spec.mnemonic.motor');
+		const mneLabels: string[] = config.get('labels', []);
+		const mneDescriptions: string[] = config.get('descriptions', []);
+
+		// refresh storages related to motor mnemonic, which is configured in the settings.
+		storage.clear();
+		
+		if (mneLabels.length > 0) {
+			// refresh storage for motor mnemonic label
+			const enumRefMap = new spec.ReferenceMap();
+			for (let index = 0; index < mneLabels.length; index++) {
+				const mneLabel = mneLabels[index];
+				const mneDescription = (mneDescriptions.length > index) ? mneDescriptions[index] : undefined;
+				enumRefMap.set(mneLabel, { signature: mneLabel, description: mneDescription });
+			}
+			storage.set(spec.ReferenceItemKind.Enum, enumRefMap);
 
 			// refresh storage for motor mnemonic macro (snippet)
+			const snippetRefMap = new spec.ReferenceMap();
 			for (let index = 0; index < SNIPPET_TEMPLATES.length; index++) {
 				const snippetTemplate = SNIPPET_TEMPLATES[index];
 				const snippetDesription = (SNIPPET_DESCRIPTIONS.length > index) ? SNIPPET_DESCRIPTIONS[index] : undefined;
@@ -144,8 +176,9 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
 				const snippetSignature = snippetTemplate.replace(/\$\{\d+:([^}]*)\}/g, '$1').replace(/\$\{\d+\|%s\|\}/g, mneLabels[0]);
 				const snippetCode = snippetTemplate.replace(/%s/g, mneLabels.join(','));
 
-				this.mnemonicSnippetRefMap.set(snippetKey, { signature: snippetSignature, description: snippetDesription, snippet: snippetCode });
+				snippetRefMap.set(snippetKey, { signature: snippetSignature, description: snippetDesription, snippet: snippetCode });
 			}
+			storage.set(spec.ReferenceItemKind.Snippet, snippetRefMap);
 		}
 
 		this.updateCompletionItemsForUriString(spec.MOTOR_URI);

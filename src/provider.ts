@@ -11,7 +11,9 @@ function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceI
 	if (itemUriString === spec.BUILTIN_URI) {
 		symbolLabel = 'built-in ' + symbolLabel;
 	} else if (itemUriString === spec.MOTOR_URI) {
-		symbolLabel = 'user-configured ' + symbolLabel;
+		symbolLabel = 'motor mnemonic ' + symbolLabel;
+	} else if (itemUriString === spec.COUNTER_URI) {
+		symbolLabel = 'counter mnemonic ' + symbolLabel;
 	} else if (itemUriString === spec.ACTIVE_FILE_URI || itemUriString === documentUriString) {
 		symbolLabel = symbolLabel + ' defined in this file';
 	} else {
