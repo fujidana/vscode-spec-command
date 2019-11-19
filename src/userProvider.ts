@@ -340,12 +340,6 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
         // seek the identifier
         const locations: vscode.Location[] = [];
         for (const [uriString, storage] of this.storageCollection.entries()) {
-            // skip the storage that does not have physical locations.
-            // unnecessary because the owner of these storage is not registered as the definition provider.
-            if (uriString === spec.BUILTIN_URI || uriString === spec.MOTOR_URI) {
-                continue;
-            }
-
             const uri = (uriString === spec.ACTIVE_FILE_URI) ? document.uri : vscode.Uri.parse(uriString);
 
             // seek through storages for all types of symbols
