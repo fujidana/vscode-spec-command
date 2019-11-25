@@ -71,7 +71,7 @@
 				"vscode-spec.helpDocumentVolume.hover": {
 					"type": "string",
 					"default": "full",
-					"description": "Controls the volume of explanatory text in hovers, which is shown when the mouse cursor is on the symbol",
+					"description": "Controls the volume of explanatory text in hovers, which is shown when the mouse cursor is on a symbol",
 					"enum": [
 						"sentence",
 						"paragraph",
@@ -81,7 +81,7 @@
 				"vscode-spec.helpDocumentVolume.completionItem": {
 					"type": "string",
 					"default": "sentence",
-					"description": "Controls the volume of explanatory text in auto-complete items, which is shown when the user types a symbol",
+					"description": "Controls the volume of explanatory text in auto completion, which is shown when the user types a symbol",
 					"enum": [
 						"sentence",
 						"paragraph",
@@ -132,10 +132,20 @@
 						"type": "string"
 					}
 				},
-				"vscode-spec.parser.enableWorkspaceScan": {
+				"vscode-spec.workspace.inclusiveFilePattern": {
+					"type": "string",
+					"default": "**/*.mac",
+					"markdownDescription": "Specifies a glob pattern used to find files in a workspace. Symbols in pattern-matched files becomes available in code navigation. See [VS Code API](https://code.visualstudio.com/api/references/vscode-api#GlobPattern) for the syntax."
+				},
+				"vscode-spec.workspace.exclusiveFilePattern": {
+					"type": "string",
+					"default": "",
+					"markdownDescription": "Specifies a glob pattern used to exclude files in a workspace from being parsed. See [VS Code API](https://code.visualstudio.com/api/references/vscode-api#GlobPattern) for the syntax."
+				},
+				"vscode-spec.workspace.diagnoseProblems": {
 					"type": "boolean",
 					"default": false,
-					"description": "Specifies whether syntax check and code navigation range over all files in the workspace"
+					"description": "Controls whether diagnostic results of files in a workspace are listed in 'Problems' view. If disabled, only syntax problems of files opened by editors are listed."
 				}
 			}
 		}
