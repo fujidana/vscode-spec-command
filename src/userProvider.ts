@@ -17,15 +17,6 @@ const ADDITIONAL_TRAVERSE_KEYS = {
 };
 
 /**
- * Utility function to check whether the document exists in the workspace and have been parsed
- */
-function isDocumentInScannedWorkspace(document: vscode.TextDocument) {
-    const scansWorkspace = vscode.workspace.getConfiguration('vscode-spec.parser').get('enableWorkspaceScan', false);
-
-    return (scansWorkspace && document.uri.scheme === 'file' && vscode.workspace.asRelativePath(document.uri.path) !== document.uri.path);
-}
-
-/**
  * @param tree Parser AST object
  * @param position the current cursor position. If not given, top-level symbols (global variables, constant, macro and functions) are picked up.
  */
@@ -145,6 +136,26 @@ function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position
     );
 }
 
+async function findFilesInWorkspaces() {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    const uriSet = new Set<vscode.Uri>();
+    
+    if (workspaceFolders) {
+        const config = vscode.workspace.getConfiguration('vscode-spec.workspace');
+        const inclusivePatternStr = config.get<string>('inclusiveFilePattern', '**/*.mac');
+        const exclusivePatternStr = config.get<string>('exclusiveFilePattern', '');
+        
+        for (const workspaceFolder of workspaceFolders) {
+            const inclusivePattern = new vscode.RelativePattern(workspaceFolder, inclusivePatternStr);
+            const exclusivePattern = (exclusivePatternStr.length > 0) ? new vscode.RelativePattern(workspaceFolder, exclusivePatternStr) : undefined;
+            const uris = await vscode.workspace.findFiles(inclusivePattern, exclusivePattern);
+            for (const uri of uris) {
+                uriSet.add(uri);
+            }
+        }
+    }
+    return uriSet;
+}
 
 /**
  * Provider class for user documents.
@@ -168,36 +179,45 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
         vscode.workspace.onDidChangeTextDocument(documentChangeEvent => {
             const document = documentChangeEvent.document;
             if (document.languageId === 'spec') {
-                this.parseDocumentContents(document.getText(), document.uri, true);
+                this.parseDocumentContents(document.getText(), document.uri, true, true);
             }
         });
 
         // register a hander invoked when the document is opened
-        // this is also invoked after the user changed the language id
+        // this is also invoked after the user manually changed the language id
         vscode.workspace.onDidOpenTextDocument(document => {
             if (document.languageId === 'spec') {
-                this.parseDocumentContents(document.getText(), document.uri, true);
+                this.parseDocumentContents(document.getText(), document.uri, true, true);
             }
         });
 
         // register a hander invoked when the document is saved
         vscode.workspace.onDidSaveTextDocument(document => {
             if (document.languageId === 'spec') {
-                this.parseDocumentContents(document.getText(), document.uri, true);
+                this.parseDocumentContents(document.getText(), document.uri, true, true);
             }
         });
 
         // register a hander invoked when the document is closed
-        // this is also invoked after the user changed the language id
-        vscode.workspace.onDidCloseTextDocument(document => {
+        // this is also invoked after the user manually changed the language id
+        vscode.workspace.onDidCloseTextDocument(async document => {
             if (document.languageId === 'spec') {
                 const uriString = document.uri.toString();
-                if (!isDocumentInScannedWorkspace(document)) {
+                
+                this.treeCollection.delete(uriString);
+
+                // check whether the file is in a workspace folder. If not in a folder, delete from the database.
+                const uriSet = await findFilesInWorkspaces();
+                const uriStringSet = new Set<string>();
+                for (const uri of uriSet) {
+                    uriStringSet.add(uri.toString());
+                }
+                if (!uriStringSet.has(document.uri.toString())) {
+                // if (!this.workspaceFileUriStringSet.has(uriString)) {
                     this.storageCollection.delete(uriString);
                     this.diagnosticCollection.delete(document.uri);
                     this.completionItemCollection.delete(uriString);
                 }
-                this.treeCollection.delete(uriString);
             }
         });
 
@@ -211,7 +231,7 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
 
         // register a hander invoked when the configuration is changed
         vscode.workspace.onDidChangeConfiguration(event => {
-            if (event.affectsConfiguration('vscode-spec.parser.enableWorkspaceScan')) {
+            if (event.affectsConfiguration('vscode-spec.workspace')) {
                 this.refreshCollections();
             }
         });
@@ -221,8 +241,7 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
         });
     }
 
-    private parseDocumentContents(contents: string, uri: vscode.Uri, isOpenDocument: boolean) {
-
+    private parseDocumentContents(contents: string, uri: vscode.Uri, isOpenDocument: boolean, diagnoseProblems: boolean) {
         const uriString = uri.toString();
 
         interface CustomProgram extends estree.Program {
@@ -234,23 +253,26 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
             tree = <CustomProgram>parse(contents);
         } catch (error) {
             if (error instanceof SyntaxError) {
-                const diagnostic = new vscode.Diagnostic(spec.convertRange(error.location), error.message, vscode.DiagnosticSeverity.Error);
-                this.diagnosticCollection.set(uri, [diagnostic]);
-                this.storageCollection.delete(uriString);
-                // this.updateCompletionItemsForUriString(uriString);
-                return false;
+                if (diagnoseProblems) {
+                    const diagnostic = new vscode.Diagnostic(spec.convertRange(error.location), error.message, vscode.DiagnosticSeverity.Error);
+                    this.diagnosticCollection.set(uri, [diagnostic]);
+                    // this.updateCompletionItemsForUriString(uriString);
+                }
             } else {
                 console.log('Unknown Error in sytax parsing', error);
-                return false;
             }
+            this.storageCollection.delete(uriString);
+            return false;
         }
         // console.log(JSON.stringify(tree, null, 2));
 
-        const diagnostics = tree.x_diagnostics.map((item: any) => new vscode.Diagnostic(spec.convertRange(item.location), item.message, item.severity));
-        this.diagnosticCollection.set(uri, diagnostics);
+        if (diagnoseProblems) {
+            const diagnostics = tree.x_diagnostics.map((item: any) => new vscode.Diagnostic(spec.convertRange(item.location), item.message, item.severity));
+            this.diagnosticCollection.set(uri, diagnostics);
+        }
 
         if (isOpenDocument) {
-            this.treeCollection.set(uri.toString(), tree);
+            this.treeCollection.set(uriString, tree);
         }
 
         this.storageCollection.set(uriString, collectSymbolsFromTree(tree));
@@ -268,26 +290,24 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
         this.diagnosticCollection.clear();
         this.completionItemCollection.clear();
 
-        // parse opened documents
-        const openedUriStringSet: Set<string> = new Set();
+        // parse documents opened by editors
+        const openedUriStringSet = new Set<string>();
         for (const document of vscode.workspace.textDocuments) {
             if (document.languageId === 'spec') {
-                this.parseDocumentContents(document.getText(), document.uri, true);
+                this.parseDocumentContents(document.getText(), document.uri, true, true);
                 openedUriStringSet.add(document.uri.toString());
             }
         }
+        
+        // parse the other files in workspace folders.
+        const uriSet = await findFilesInWorkspaces();
+        const config = vscode.workspace.getConfiguration('vscode-spec.workspace');
+        const diagnoseProblems = config.get<boolean>('diagnoseProblems', false);
 
-        // if workspace scan is enabled, parse the other files in the workspace folders.
-        const scansWorkspace = vscode.workspace.getConfiguration('vscode-spec.parser').get('enableWorkspaceScan', false);
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (scansWorkspace && workspaceFolders) {
-            for (const workspaceFolder of workspaceFolders) {
-                const pattern = new vscode.RelativePattern(workspaceFolder, '**/*.mac');
-                const uris = (await vscode.workspace.findFiles(pattern)).filter(uri => !openedUriStringSet.has(uri.toString()));
-                for (const uri of uris) {
-                    const contents = new TextDecoder('utf-8').decode(await vscode.workspace.fs.readFile(uri));
-                    this.parseDocumentContents(contents, uri, false);
-                }
+        for (const uri of uriSet) {
+            if (!openedUriStringSet.has(uri.toString())) {
+                const contents = new TextDecoder('utf-8').decode(await vscode.workspace.fs.readFile(uri));
+                this.parseDocumentContents(contents, uri, false, diagnoseProblems);
             }
         }
     }
