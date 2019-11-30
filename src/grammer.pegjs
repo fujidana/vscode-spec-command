@@ -19,11 +19,12 @@
     + '|float|double|string|byte|short|long(?:64)?|u(?:byte|short|long(?:64)?)'
     + '|if|else|while|for|in|break|continue|exit|return|quit'
     + '|memstat|savstate|reconfig|getcounts|move_(?:all|cnt)|sync'
-    + '|lscmd|lsdef|prdef|syms'
+    + '|ls(?:cmd|def)|prdef|syms'
     + ')$'
   );
 
   const _ttyCommandRegExp = /^(c(?:d|e)|do|ho|le|m(?:b|d|e|h|r)|nd|se|u(?:e|p|s))$/;
+  const _patternRegExp = /^[a-zA-Z0-9_*?]+$/;
 
   /** 
    * create diagnostic object and store it.
@@ -767,15 +768,23 @@ _pattern_list_item =
   }
 
 pattern_w_check =
-  $[a-zA-Z0-9_*?] {
+  macro_argument
+  /
+  p:string_literal {
+    pushDiagnostic(location(), 'Expected a pattern.', vscode.DiagnosticSeverity.Error);      
+    return p;
+  }
+  /
+  (!space !eos .)+ {
+    if (!_patternRegExp.test(text())) {
+      pushDiagnostic(location(), 'Expected a pattern.', vscode.DiagnosticSeverity.Error);      
+    }
     return {
       type: 'literal',
       value: text(),
       raw: text(),
     };
   }
-  /
-  macro_argument
 
 /**
  * <BNF> memstat [;]
@@ -1004,7 +1013,7 @@ string_literal 'string literal' =
       /
       p:'[' cmd:$word+ ']' {
         if (!_ttyCommandRegExp.test(cmd)) {
-          pushDiagnostic(location(), `${cmd} is not a TTY command.`, vscode.DiagnosticSeverity.Error);
+          pushDiagnostic(location(), `${cmd} is not a TTY command.`, vscode.DiagnosticSeverity.Warning);
         }
         return text();
       }
