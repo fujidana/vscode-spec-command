@@ -29,9 +29,9 @@ export function getReferenceItemKindFromCompletionItemKind(completionItemKind?: 
 			return ReferenceItemKind.Constant;
 		case vscode.CompletionItemKind.Variable:
 			return ReferenceItemKind.Variable;
-		case vscode.CompletionItemKind.Function:
+		case vscode.CompletionItemKind.Module:
 			return ReferenceItemKind.Macro;
-		case vscode.CompletionItemKind.Method:
+		case vscode.CompletionItemKind.Function:
 			return ReferenceItemKind.Function;
 		case vscode.CompletionItemKind.Keyword:
 			return ReferenceItemKind.Keyword;
@@ -50,9 +50,9 @@ export function getCompletionItemKindFromReferenceItemKind(refItemKind: Referenc
 		case ReferenceItemKind.Variable:
 			return vscode.CompletionItemKind.Variable;
 		case ReferenceItemKind.Macro:
-			return vscode.CompletionItemKind.Function;
+			return vscode.CompletionItemKind.Module;
 		case ReferenceItemKind.Function:
-			return vscode.CompletionItemKind.Method;
+			return vscode.CompletionItemKind.Function;
 		case ReferenceItemKind.Keyword:
 			return vscode.CompletionItemKind.Keyword;
 		case ReferenceItemKind.Snippet:
@@ -73,9 +73,9 @@ export function getSymbolKindFromReferenceItemKind(refItemKind: ReferenceItemKin
 		case ReferenceItemKind.Variable:
 			return vscode.SymbolKind.Variable;
 		case ReferenceItemKind.Macro:
-			return vscode.SymbolKind.Function;
+			return vscode.SymbolKind.Module;
 		case ReferenceItemKind.Function:
-			return vscode.SymbolKind.Method;
+			return vscode.SymbolKind.Function;
 		// case ReferenceItemKind.Keyword:
 		// case ReferenceItemKind.Snippet:
 		case ReferenceItemKind.Enum:
