@@ -16,7 +16,8 @@
 		"X-ray diffraction",
 		"synchrotron",
 		"instrument control",
-		"data acquisition"
+		"data acquisition",
+		"multi-root ready"
 	],
 	"activationEvents": [
 		"onLanguage:spec"
@@ -53,18 +54,75 @@
 		],
 		"commands": [
 			{
-				"command": "vscode-spec.openDocument.builtIn",
-				"title": "spec: Open Reference Manual"
-			}
+				"command": "vscode-spec.openReferenceManual",
+				"title": "Open Reference Manual",
+				"category": "spec"
+			},
+			{
+				"command": "vscode-spec.execSelectionInTerminal",
+				"title": "Run Selction/Line in Active Terminal",
+				"category": "spec"
+			},
+			{
+				"command": "vscode-spec.execFileInTerminal",
+				"title": "Run File in Active Terminal",
+				"category": "spec",
+				"icon": {
+					"light": "./resources/light/play.svg",
+					"dark": "./resources/dark/play.svg"
+				  }
+					  }
 		],
 		"menus": {
 			"commandPalette": [
 				{
-					"command": "vscode-spec.openDocument.builtIn",
-					"when": "resourceLangId == spec"
+					"command": "vscode-spec.openReferenceManual",
+					"when": "resourceLangId == 'spec'"
+				},
+				{
+					"command": "vscode-spec.execSelectionInTerminal",
+					"when": "editorLangId == 'spec'"
+				},
+				{
+					"command": "vscode-spec.execFileInTerminal",
+					"when": "editorLangId == 'spec'"
+				}
+			],
+			"explorer/context": [
+				{
+					"command": "vscode-spec.execFileInTerminal",
+					"when": "resourceLangId == 'spec'",
+					"group": "spec"
+				}
+			],
+			"editor/title": [
+				{
+					"command": "vscode-spec.execFileInTerminal",
+					"when": "editorLangId == 'spec'",
+					"group": "navigation"
+				}
+			],
+			"editor/context": [
+				{
+					"command": "vscode-spec.execSelectionInTerminal",
+					"when": "editorTextFocus && editorLangId == 'spec'",
+					"group": "spec"
+					
+				},
+				{
+					"command": "vscode-spec.execFileInTerminal",
+					"when": "editorTextFocus && editorLangId == 'spec'",
+					"group": "spec"
 				}
 			]
 		},
+		"keybindings": [
+			{
+			  "command": "vscode-spec.execSelectionInTerminal",
+			  "key": "shift+enter",
+			  "when": "editorTextFocus && editorLangId == 'spec'"
+			}
+		],
 		"configuration": {
 			"title": "spec",
 			"properties": {
@@ -146,6 +204,12 @@
 					"type": "boolean",
 					"default": false,
 					"description": "Controls whether diagnostic results of files in a workspace are listed in 'Problems' view. If disabled, only syntax problems of files opened by editors are listed."
+				},
+				"vscode-spec.command.filePathPrefixInTerminal": {
+					"type": "string",
+					"default": "",
+					"scope": "resource",
+					"description": "File path prefix used in \"Run File in Active Terminal\" command"
 				}
 			}
 		}
