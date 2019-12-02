@@ -84,7 +84,7 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
 		});
 
 		// register command to show reference manual as a virtual document
-		vscode.commands.registerCommand('vscode-spec.openDocument.builtIn', async () => {
+		vscode.commands.registerCommand('vscode-spec.openReferenceManual', async () => {
 			const storage = this.storageCollection.get(spec.BUILTIN_URI);
 			if (storage) {
 				let quickPickLabels = ['all'];

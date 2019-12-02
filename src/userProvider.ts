@@ -41,7 +41,7 @@ function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position
                 // if not any type of statements, skip.
                 return estraverse.VisitorOption.Skip;
             }
-            
+
             const nodeRange = currentNode.loc ? spec.convertRange(<IFileRange>currentNode.loc) : undefined;
             let refItem: spec.ReferenceItem | undefined;
 
@@ -56,7 +56,7 @@ function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position
                 if (currentNode.type === 'BlockStatement' && nodeRange.end.isBefore(position)) {
                     // skip the code block that ends before the cursor.
                     return estraverse.VisitorOption.Skip;
-                    
+
                 } else if (currentNode.type === 'FunctionDeclaration' && currentNode.params && nodeRange.contains(position)) {
                     // register arguments of function as variables if the cursor is in the function block.
                     for (const param of currentNode.params) {
@@ -171,6 +171,42 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
 
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('spec');
         this.treeCollection = new Map();
+
+        // register command to show reference manual as a virtual document
+        vscode.commands.registerCommand('vscode-spec.execSelectionInTerminal', () => {
+            const terminal = vscode.window.activeTerminal;
+            if (!terminal) {
+                vscode.window.showErrorMessage('Terminal is not opened.');
+                return;
+            }
+            vscode.commands.executeCommand('workbench.action.terminal.runSelectedText');
+        });
+
+        vscode.commands.registerCommand('vscode-spec.execFileInTerminal', arg => {
+            const terminal = vscode.window.activeTerminal;
+            if (!terminal) {
+                vscode.window.showErrorMessage('Active terminal is not found.');
+                return;
+            }
+
+            let uri: vscode.Uri;
+            if (arg && arg instanceof vscode.Uri) {
+                uri = arg;
+            } else {
+                const editor = vscode.window.activeTextEditor;
+                if (!editor) {
+                    vscode.window.showErrorMessage('Active editor is not found.');
+                    return;
+                }
+                uri = editor.document.uri;
+            }
+            const workspace = vscode.workspace.getWorkspaceFolder(uri);
+            const config = vscode.workspace.getConfiguration('vscode-spec.command', uri);
+            const prefix = config.get<string>('filePathPrefixInTerminal', '');
+            const path = workspace ? prefix + vscode.workspace.asRelativePath(uri, false) : uri.path;
+            terminal.show(true);
+            terminal.sendText(`qdofile(\"${path}\")`);
+        });
 
         // asynchronously scan files and refresh the collection
         this.refreshCollections();
