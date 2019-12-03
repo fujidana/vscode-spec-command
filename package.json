@@ -193,16 +193,19 @@
 				"vscode-spec.workspace.inclusiveFilePattern": {
 					"type": "string",
 					"default": "**/*.mac",
+					"scope": "resource",
 					"markdownDescription": "Specifies a glob pattern used to find files in a workspace. Symbols in pattern-matched files becomes available in code navigation. See [VS Code API](https://code.visualstudio.com/api/references/vscode-api#GlobPattern) for the syntax."
 				},
 				"vscode-spec.workspace.exclusiveFilePattern": {
 					"type": "string",
 					"default": "",
+					"scope": "resource",
 					"markdownDescription": "Specifies a glob pattern used to exclude files in a workspace from being parsed. See [VS Code API](https://code.visualstudio.com/api/references/vscode-api#GlobPattern) for the syntax."
 				},
 				"vscode-spec.workspace.diagnoseProblems": {
 					"type": "boolean",
 					"default": false,
+					"scope": "resource",
 					"description": "Controls whether diagnostic results of files in a workspace are listed in 'Problems' view. If disabled, only syntax problems of files opened by editors are listed."
 				},
 				"vscode-spec.command.filePathPrefixInTerminal": {

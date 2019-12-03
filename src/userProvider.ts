@@ -69,7 +69,7 @@ function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position
                     return estraverse.VisitorOption.Break;
                 }
             }
-            
+
             if (currentNode.type === 'FunctionDeclaration' && currentNode.id) {
                 if (currentNode.params) {
                     // register the id as a function if parameter is not null.
@@ -138,23 +138,23 @@ function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position
 
 async function findFilesInWorkspaces() {
     const workspaceFolders = vscode.workspace.workspaceFolders;
-    const uriSet = new Set<vscode.Uri>();
+    const map = new Map<string, { diagnoseProblems: boolean }>();
     
     if (workspaceFolders) {
-        const config = vscode.workspace.getConfiguration('vscode-spec.workspace');
-        const inclusivePatternStr = config.get<string>('inclusiveFilePattern', '**/*.mac');
-        const exclusivePatternStr = config.get<string>('exclusiveFilePattern', '');
-        
         for (const workspaceFolder of workspaceFolders) {
+            const config = vscode.workspace.getConfiguration('vscode-spec.workspace', workspaceFolder.uri);
+            const inclusivePatternStr = config.get<string>('inclusiveFilePattern', '**/*.mac');
+            const exclusivePatternStr = config.get<string>('exclusiveFilePattern', '');
+            const diagnoseProblems = config.get<boolean>('diagnoseProblems', false);
             const inclusivePattern = new vscode.RelativePattern(workspaceFolder, inclusivePatternStr);
             const exclusivePattern = (exclusivePatternStr.length > 0) ? new vscode.RelativePattern(workspaceFolder, exclusivePatternStr) : undefined;
             const uris = await vscode.workspace.findFiles(inclusivePattern, exclusivePattern);
             for (const uri of uris) {
-                uriSet.add(uri);
+                map.set(uri.toString(), { diagnoseProblems });
             }
         }
     }
-    return uriSet;
+    return map;
 }
 
 /**
@@ -200,10 +200,16 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
                 }
                 uri = editor.document.uri;
             }
-            const workspace = vscode.workspace.getWorkspaceFolder(uri);
-            const config = vscode.workspace.getConfiguration('vscode-spec.command', uri);
-            const prefix = config.get<string>('filePathPrefixInTerminal', '');
-            const path = workspace ? prefix + vscode.workspace.asRelativePath(uri, false) : uri.path;
+
+            const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+            let path: string;
+            if (workspaceFolder) {
+                const config = vscode.workspace.getConfiguration('vscode-spec.command', workspaceFolder.uri);
+                const prefix = config.get<string>('filePathPrefixInTerminal', '');
+                path = prefix + vscode.workspace.asRelativePath(uri, false);
+            } else {
+                path = uri.path;
+            }
             terminal.show(true);
             terminal.sendText(`qdofile(\"${path}\")`);
         });
@@ -243,13 +249,16 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
                 this.treeCollection.delete(uriString);
 
                 // check whether the file is in a workspace folder. If not in a folder, delete from the database.
-                const uriSet = await findFilesInWorkspaces();
-                const uriStringSet = new Set<string>();
-                for (const uri of uriSet) {
-                    uriStringSet.add(uri.toString());
-                }
-                if (!uriStringSet.has(document.uri.toString())) {
-                // if (!this.workspaceFileUriStringSet.has(uriString)) {
+                const filesInWorkspaces = await findFilesInWorkspaces();
+                const fileInfo = filesInWorkspaces.get(uriString);
+                if (fileInfo) {
+                    // if file also exists in a workspace folder,
+                    // clear diagnostics if setting for workspace.diagnoseProblem is false. 
+                    if (!fileInfo.diagnoseProblems) {
+                        this.diagnosticCollection.delete(document.uri);
+                    }
+                } else {
+                    // if file does not exist in a workspace folder, clear all
                     this.storageCollection.delete(uriString);
                     this.diagnosticCollection.delete(document.uri);
                     this.completionItemCollection.delete(uriString);
@@ -336,14 +345,13 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
         }
         
         // parse the other files in workspace folders.
-        const uriSet = await findFilesInWorkspaces();
-        const config = vscode.workspace.getConfiguration('vscode-spec.workspace');
-        const diagnoseProblems = config.get<boolean>('diagnoseProblems', false);
+        const filesInWorkspaces = await findFilesInWorkspaces();
 
-        for (const uri of uriSet) {
-            if (!openedUriStringSet.has(uri.toString())) {
+        for (const [uriString, fileInfo] of filesInWorkspaces) {
+            if (!openedUriStringSet.has(uriString)) {
+                const uri = vscode.Uri.parse(uriString);
                 const contents = new TextDecoder('utf-8').decode(await vscode.workspace.fs.readFile(uri));
-                this.parseDocumentContents(contents, uri, false, diagnoseProblems);
+                this.parseDocumentContents(contents, uri, false, fileInfo.diagnoseProblems);
             }
         }
     }
