@@ -126,7 +126,7 @@
 		"configuration": {
 			"title": "spec",
 			"properties": {
-				"vscode-spec.helpDocumentVolume.hover": {
+				"vscode-spec.editor.hintVolume.hover": {
 					"type": "string",
 					"default": "full",
 					"description": "Controls the volume of explanatory text in hovers, which is shown when the mouse cursor is on a symbol",
@@ -136,7 +136,7 @@
 						"full"
 					]
 				},
-				"vscode-spec.helpDocumentVolume.completionItem": {
+				"vscode-spec.editor.hintVolume.completionItem": {
 					"type": "string",
 					"default": "sentence",
 					"description": "Controls the volume of explanatory text in auto completion, which is shown when the user types a symbol",
@@ -146,7 +146,7 @@
 						"full"
 					]
 				},
-				"vscode-spec.helpDocumentVolume.signatureHelp": {
+				"vscode-spec.editor.hintVolume.signatureHelp": {
 					"type": "string",
 					"default": "sentence",
 					"description": "Controls the volume of explanatory text in signature help, which is shown when the user enters a function",
