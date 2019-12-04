@@ -105,8 +105,17 @@ export class Provider implements vscode.CompletionItemProvider, vscode.HoverProv
 	// (File System Path). To avoid this problem, the string representation of a Uri 
 	// object is used as a key.
 
-	protected storageCollection: Map<string, spec.ReferenceStorage> = new Map();
-	protected completionItemCollection: Map<string, vscode.CompletionItem[]> = new Map();
+	protected storageCollection = new Map<string, spec.ReferenceStorage>();
+	protected completionItemCollection = new Map<string, vscode.CompletionItem[]>();
+
+    constructor(context: vscode.ExtensionContext) {
+        // register providers
+        context.subscriptions.push(
+            vscode.languages.registerCompletionItemProvider(spec.SELECTOR, this),
+            vscode.languages.registerSignatureHelpProvider(spec.SELECTOR, this, '(', ')', ','),
+            vscode.languages.registerHoverProvider(spec.SELECTOR, this),
+        );
+    }
 
 	/**
 	 * Generate completion items from the registered storage and cache it in the map using `uri` as the key.

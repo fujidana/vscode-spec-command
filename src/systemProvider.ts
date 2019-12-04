@@ -48,10 +48,11 @@ const SNIPPET_DESCRIPTIONS: string[] = [
  * This class manages built-in symbols and motor mnemonics user added in VS Code configuraion.
  */
 export class SystemProvider extends Provider implements vscode.TextDocumentContentProvider {
-	constructor(apiReferencePath: string) {
-		super();
+	constructor(context: vscode.ExtensionContext) {
+		super(context);
 
 		// load the API reference file
+		const apiReferencePath = context.asAbsolutePath('./syntaxes/spec.apiReference.json');
 		vscode.workspace.fs.readFile(vscode.Uri.file(apiReferencePath)).then(uint8Array => {
 			// convert JSON-formatted file contents to a javascript object.
 			const apiReference: APIReference = JSON.parse(new TextDecoder('utf-8').decode(uint8Array));
@@ -73,18 +74,19 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
 		this.updateMotorMnemonicStorage();
 		this.updateCounterMnemonicStorage();
 
+		
 		// observe the change in configuration
-		vscode.workspace.onDidChangeConfiguration(event => {
+		const onDidChangeConfigurationListener = (event: vscode.ConfigurationChangeEvent) => {
 			if (event.affectsConfiguration('vscode-spec.mnemonic.motor')) {
 				this.updateMotorMnemonicStorage();
 			}
 			if (event.affectsConfiguration('vscode-spec.mnemonic.counter')) {
 				this.updateCounterMnemonicStorage();
 			}
-		});
+		};
 
 		// register command to show reference manual as a virtual document
-		vscode.commands.registerCommand('vscode-spec.openReferenceManual', async () => {
+		const openReferenceManualCommandCallback = async () => {
 			const storage = this.storageCollection.get(spec.BUILTIN_URI);
 			if (storage) {
 				let quickPickLabels = ['all'];
@@ -100,7 +102,15 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
 					await vscode.window.showTextDocument(uri, { preview: false });
 				}
 			}
-		});
+		};
+
+		context.subscriptions.push(
+			// register command handlers
+			vscode.commands.registerCommand('vscode-spec.openReferenceManual', openReferenceManualCommandCallback),
+			vscode.workspace.registerTextDocumentContentProvider('spec', this),
+			// register event handlers
+			vscode.workspace.onDidChangeConfiguration(onDidChangeConfigurationListener),
+		);
 	}
 
 	/**
@@ -222,7 +232,7 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
 						if (item.overloads) {
 							for (const overload of item.overloads) {
 								mdText += `\`${overload.signature}\``;
-								mdText += (overload.description) ? `\n${overload.description}\n\n` : '\n\n';
+								mdText += (overload.description) ? ` \u2014 ${overload.description}\n\n` : '\n\n';
 							}
 						}
 					}
