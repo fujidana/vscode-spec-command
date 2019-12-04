@@ -139,7 +139,7 @@ function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position
 async function findFilesInWorkspaces() {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     const map = new Map<string, { diagnoseProblems: boolean }>();
-    
+
     if (workspaceFolders) {
         for (const workspaceFolder of workspaceFolders) {
             const config = vscode.workspace.getConfiguration('vscode-spec.workspace', workspaceFolder.uri);
@@ -161,28 +161,29 @@ async function findFilesInWorkspaces() {
  * Provider class for user documents.
  * This class manages opened documents and other documents in the current workspace.
  */
-export class UserProvider extends Provider implements vscode.DocumentSymbolProvider, vscode.WorkspaceSymbolProvider {
+export class UserProvider extends Provider implements vscode.DefinitionProvider, vscode.DocumentSymbolProvider, vscode.WorkspaceSymbolProvider {
 
-    public diagnosticCollection: vscode.DiagnosticCollection;
+    private diagnosticCollection: vscode.DiagnosticCollection;
     private treeCollection: Map<string, estree.Program>;
 
-    constructor() {
-        super();
-
-        this.diagnosticCollection = vscode.languages.createDiagnosticCollection('spec');
+    constructor(context: vscode.ExtensionContext) {
+        super(context);
+        
+        this.diagnosticCollection = vscode.languages.createDiagnosticCollection('vscode-spec');
         this.treeCollection = new Map();
 
-        // register command to show reference manual as a virtual document
-        vscode.commands.registerCommand('vscode-spec.execSelectionInTerminal', () => {
+        // command to run selection in terminal
+        const execSelectionInTerminalCommandCallback = () => {
             const terminal = vscode.window.activeTerminal;
             if (!terminal) {
                 vscode.window.showErrorMessage('Terminal is not opened.');
                 return;
             }
             vscode.commands.executeCommand('workbench.action.terminal.runSelectedText');
-        });
+        };
 
-        vscode.commands.registerCommand('vscode-spec.execFileInTerminal', arg => {
+        // command to run file in terminal
+        const execFileInTerminalCommandCallback = (...args: any[]) => {
             const terminal = vscode.window.activeTerminal;
             if (!terminal) {
                 vscode.window.showErrorMessage('Active terminal is not found.');
@@ -190,8 +191,8 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
             }
 
             let uri: vscode.Uri;
-            if (arg && arg instanceof vscode.Uri) {
-                uri = arg;
+            if (args && args.length > 0 && args[0] instanceof vscode.Uri) {
+                uri = args[0];
             } else {
                 const editor = vscode.window.activeTextEditor;
                 if (!editor) {
@@ -212,40 +213,37 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
             }
             terminal.show(true);
             terminal.sendText(`qdofile(\"${path}\")`);
-        });
+        };
 
-        // asynchronously scan files and refresh the collection
-        this.refreshCollections();
-
-        // register a hander invoked when the document is changed
-        vscode.workspace.onDidChangeTextDocument(documentChangeEvent => {
-            const document = documentChangeEvent.document;
+        // a hander invoked when the document is changed
+        const onDidChangeTextDocumentListener = (event: vscode.TextDocumentChangeEvent) => {
+            const document = event.document;
             if (document.languageId === 'spec') {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
             }
-        });
+        };
 
-        // register a hander invoked when the document is opened
+        // a hander invoked when the document is opened
         // this is also invoked after the user manually changed the language id
-        vscode.workspace.onDidOpenTextDocument(document => {
+        const onDidOpenTextDocumentListener = (document: vscode.TextDocument) => {
             if (document.languageId === 'spec') {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
             }
-        });
+        };
 
-        // register a hander invoked when the document is saved
-        vscode.workspace.onDidSaveTextDocument(document => {
+        // a hander invoked when the document is saved
+        const onDidSaveTextDocumentListener = (document: vscode.TextDocument) => {
             if (document.languageId === 'spec') {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
             }
-        });
+        };
 
         // register a hander invoked when the document is closed
         // this is also invoked after the user manually changed the language id
-        vscode.workspace.onDidCloseTextDocument(async document => {
+        const onDidCloseTextDocumentListener = async (document: vscode.TextDocument) => {
             if (document.languageId === 'spec') {
                 const uriString = document.uri.toString();
-                
+
                 this.treeCollection.delete(uriString);
 
                 // check whether the file is in a workspace folder. If not in a folder, delete from the database.
@@ -264,26 +262,48 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
                     this.completionItemCollection.delete(uriString);
                 }
             }
-        });
+        };
 
-        // vscode.window.onDidChangeActiveTextEditor(editor => {
+        // const onDidChangeActiveTextEditorListener = (editor: vscode.TextEditor | undefined) => {
         //     if (editor) {
         //         const document = editor.document;
-        //         // this.parseDocumentContents(editor.document.getText(), document.uri, true);
-        //     } else {
+        //         this.parseDocumentContents(document.getText(), document.uri, true, true);
         //     }
-        // });
+        // };
 
-        // register a hander invoked when the configuration is changed
-        vscode.workspace.onDidChangeConfiguration(event => {
+        // a hander invoked when the configuration is changed
+        const onDidChangeConfigurationListener = (event: vscode.ConfigurationChangeEvent) => {
             if (event.affectsConfiguration('vscode-spec.workspace')) {
                 this.refreshCollections();
             }
-        });
+        };
 
-        vscode.workspace.onDidChangeWorkspaceFolders(event => {
+        const onDidChangeWorkspaceFoldersListener = (event: vscode.WorkspaceFoldersChangeEvent) => {
             this.refreshCollections();
-        });
+        };
+
+        context.subscriptions.push(
+            // register command handlers
+            vscode.commands.registerCommand('vscode-spec.execSelectionInTerminal', execSelectionInTerminalCommandCallback),
+            vscode.commands.registerCommand('vscode-spec.execFileInTerminal', execFileInTerminalCommandCallback),
+            // register event liasteners
+            vscode.workspace.onDidChangeTextDocument(onDidChangeTextDocumentListener),
+            vscode.workspace.onDidOpenTextDocument(onDidOpenTextDocumentListener),
+            vscode.workspace.onDidSaveTextDocument(onDidSaveTextDocumentListener),
+            vscode.workspace.onDidCloseTextDocument(onDidCloseTextDocumentListener),
+            // vscode.window.onDidChangeActiveTextEditor(onDidChangeActiveTextEditorListener),
+            vscode.workspace.onDidChangeConfiguration(onDidChangeConfigurationListener),
+            vscode.workspace.onDidChangeWorkspaceFolders(onDidChangeWorkspaceFoldersListener),
+            // register providers
+            vscode.languages.registerDefinitionProvider(spec.SELECTOR, this),
+            vscode.languages.registerDocumentSymbolProvider(spec.SELECTOR, this),
+            vscode.languages.registerWorkspaceSymbolProvider(this),
+            // register diagnostic collection
+            this.diagnosticCollection,
+        );
+
+        // asynchronously scan files and refresh the collection
+        this.refreshCollections();
     }
 
     private parseDocumentContents(contents: string, uri: vscode.Uri, isOpenDocument: boolean, diagnoseProblems: boolean) {
@@ -343,7 +363,7 @@ export class UserProvider extends Provider implements vscode.DocumentSymbolProvi
                 openedUriStringSet.add(document.uri.toString());
             }
         }
-        
+
         // parse the other files in workspace folders.
         const filesInWorkspaces = await findFilesInWorkspaces();
 
