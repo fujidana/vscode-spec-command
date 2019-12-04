@@ -6,18 +6,27 @@ All notable changes to the __spec__ extension will be documented in this file.
 
 ## [Unreleased]
 
-## [0.7.2] - 2019-11-14
+## [1.0.0] - 2019-12-04
 
-### Changed
+* add "Run Seclection/Line in Terminal" and "Run File in Terminal" commands. These commands expect __spec__ interactive shell has been ready in the active terminal view.
+* redesign configuration settings
+  * change the identifier prefix from `spec` to `vscode-spec` (so as to match the extension ID)
+  * improve support for multi-root workspaces.
+  * contribute settings to filter files in workspaces. Now `*.mac` files in workspaces are scanned to pick up global symbols but are not diagnosed by default.
+  * contribute a path prefix setting for "Run File in Terminal" command
+  * contribute counter mnemonic registration
+* add some motor snippets
+* fix syntax parser bugs on glob-like pattern (used in `lsdef`, etc.)
+* make icon for macro different from function (Because VS Code does not provide `Macro` as a symbol kind, the extension uses `Module` instead.)
+
+## [0.7.2] - 2019-11-14
 
 * improve behavior to handle symbols in IntelliSense and code navigation features
   * Variables, constants and macro and function (`local`, `global`, `constant`, and `def`) declared at the top-level (i.e., not in the code block) are treated globally; IntelliSense feature lists these symbols in other editors (and optionally in workgroup files).
   * Variables, constants and macro and function (`local`, `global`, `constant`, and `def`) declared in code blocks are treated locally; IntelliSense feature lists these symbols only when they are visible from the current cursor position.
-  * IntelliSense feature now lists function arguments as local variables.
+  * IntelliSense feature now lists function parameters as local variables.
 
 ## [0.7.1] - 2019-10-30
-
-### Changed
 
 * improve syntax parser, including
   * support of variant quatations of a string literal (`"`, `'`, `\"`, `\'`) (syntax parser only; code highligting engine assumes `"` as a string literal and `\'` as the body of a macro and function)
@@ -25,13 +34,9 @@ All notable changes to the __spec__ extension will be documented in this file.
 
 ## [0.7.0] - 2019-10-15
 
-### Add
-
 * expand IntelliSense and code navigation features into local and global variables nested in a block statements
 
 ## [0.6.0] - 2019-10-04
-
-### Add
 
 * equip totally rewritten syntax parser, which covers most grammar
 * expand IntelliSense and code navigation features into constants
@@ -39,26 +44,17 @@ All notable changes to the __spec__ extension will be documented in this file.
 
 ## [0.5.2] - 2019-09-28
 
-### Changed
-
 * categorize PI as a built-in constant (formerly a variable)
 * register several undocumented built-in functions in the IntelliSense database
 * fix incomplete syntax highlighting on external shared array declaration
 
 ## [0.5.0] - 2019-09-20
 
-### Added
-
 * expand IntelliSense and code navigation features into workspace files (disabled by default; use the settings to enable it)
-
-### Changed
-
 * add a string literal using backslash-escaped single quotes (`\' ... \'`) in the syntaxes (both disgnostics and highlighting)
 * fix inappropriate syntax highlighting on a multi-line string (including a sting whose closing quote is missing) in some statements
 
 ## [0.4.0] - 2019-09-13
-
-### Added
 
 * add new features:
   * syntax diagnostics (primitive; only some parts of statements are validated but most expressions are not)
@@ -67,20 +63,14 @@ All notable changes to the __spec__ extension will be documented in this file.
 
 ## [0.3.1] - 2019-09-11
 
-### Changed
-
 * fix corrupted rule for motor mnemonics
 * overhaul syntax highlighting
 
 ## [0.3.0] - 2019-09-07
 
-### Added
-
 * expand IntelliSence features into common macros related to motor actions, such as `mv` and `ascan`
 
 ## [0.2.0] - 2019-09-04
-
-### Added
 
 * add new features covering built-in functions, macros, variables and several other keywords:
   * hovers
@@ -89,13 +79,12 @@ All notable changes to the __spec__ extension will be documented in this file.
 
 ## [0.1.1] - 2019-08-29
 
-### Added
-
 * add new features:
   * syntax highlighting feature
   * code snippets feature
 
-[Unreleased]: https://github.com/fujidana/vscode-spec/compare/v0.7.2...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/fujidana/vscode-spec/compare/v0.7.2...v1.0.0
 [0.7.2]: https://github.com/fujidana/vscode-spec/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/fujidana/vscode-spec/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/fujidana/vscode-spec/compare/v0.6.0...v0.7.0
