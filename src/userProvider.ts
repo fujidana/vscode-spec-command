@@ -168,7 +168,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
 
     constructor(context: vscode.ExtensionContext) {
         super(context);
-        
+
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('vscode-spec');
         this.treeCollection = new Map();
 
