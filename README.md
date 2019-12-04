@@ -32,13 +32,12 @@ This extension supports the following features:
 * __Code navigation__
   * __Show all symbol definitions within a document__ - symbol definitions in a file, used in: _Go to Symbol in File_ (Ctrl+Shift+O) and the navigation bar below the editor tabs
   * __Show definitions of a symbol__ - symbol definitions in open files, used in: _Go to Definition_ (F12) and _Peek Definition_ (Alt+F12) in right-click menu
+* __Commands__ - the following commands can be invoked from the command pallate (Ctrl+Shit+P):
+  * "Run Seclection/Line in Terminal" and "Run File in Terminal" commands. These commands expect __spec__ interactive shell has been ready in the active terminal view.
+  * "Open Reference Manuall" command.
 
-These features cover both user-defined symbols and built-in symbols.
-Built-in symbols and always global.
-User-defined symbols declared at the top level (i.e., not in a code block, curly brackets) are global; they are scanned from open documents and optionally in files in the workspace.
-User-defined symbols in code blocks are local; they are listed only when they are accessible from the current cursor position.
-
-The help text of built-in symbols can also be shown as an indepedent document; select _spec: Open Reference Manual_ from _Command Palette_ (Ctrl+Shit+P).
+This extention treats user-defined symbols declared at the top level (i.e., not in a code block, curly brackets) as global and those in code blocks as local.
+Global symbols are visible beyond a file where the symbol is defined; local symbols are visible only when the cursor is in the same block.
 
 This extension was developed with reference to the recent official PDF document about __spec__ release 6 (version 3 of the spec documentation, printed 16 July 2017).
 The help text of built-in symbols are cited from this document.
@@ -60,20 +59,26 @@ qdo "/home/myuser/mymacro.mac"
 
 but this extension shows an alert or error on the first line ("/" is the division operator and "." is not for any literal, symbols or operators.) because it expects explicit quotation marks for a string literal.
 
+Also, inline-macro, as shown below, is not supported. The macro definition must consist of one or more sentenses.
+
+```
+def ifd 'if (DATAFILE != "" && DATAFILE != "/dev/null")'
+ifd do_something; else do_otherthing;
+```
+
 ## Extension Settings
 
 This extention contributes the follwing settings:
 
-1. controls the volume of explanatory text shown by IntelliSense features.
-2. registers information about the motor mnemonics, which enables IntelliSense features for `mv`, `mvr`, `ascan`, `dscan`, etc.
-    * `spec.mnemonic.motor.labels`: a string array of the motor mnemonic, for example, `["th", "tth", "phi"]`
-    * `spec.mnemonic.motor.descriptions`: a string array of the descripive text of the motor mnemonic, for example, `["theta", "2 theta"]`. This property is optional; its array length needs not be equal to that of `spec.mnemonics.motor.labels`.
-3. enable/disable scanning and diagnostics of files in workspace.
+* `vscode-spec.editor.hintVolume.*` - controls the volume of explanatory text shown by IntelliSense features.
+* `vscode-spec.mnemonic.*` - registers information about the motor and counter mnemonics. IntelliSense feature treats them as defined symbols; motor mneomonics are also used in code snippents for `mv`, `mvr`, `ascan`, `dscan`, etc.
+* `vscode-spec.workspace.*` - controls the rule to scan files in workspace.
+* `vscode-spec.command.filePathPrefixInTerminal` - specifies file path prefix used in "Run File in Active Terminal" command.
 
 One can find the settings in _Extension / spec_ in the _Settings_ window.
 Read [Visual Studio Code User and Workspace Settings](https://code.visualstudio.com/docs/getstarted/settings) if one has difficulty in setting them.
 
-This extension is still beta and the identifiers (dot-separated string) of these settings may be changed in future releases.
+The identifiers (dot-separated string) of these settings have been changed in v1.0.0.
 
 <!-- Include if your extension adds any VS Code settings through the `contributes.configuration` extension point . -->
 
