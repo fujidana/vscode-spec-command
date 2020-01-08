@@ -163,8 +163,8 @@ async function findFilesInWorkspaces() {
  */
 export class UserProvider extends Provider implements vscode.DefinitionProvider, vscode.DocumentSymbolProvider, vscode.WorkspaceSymbolProvider {
 
-    private diagnosticCollection: vscode.DiagnosticCollection;
-    private treeCollection: Map<string, estree.Program>;
+    private readonly diagnosticCollection: vscode.DiagnosticCollection;
+    private readonly treeCollection: Map<string, estree.Program>;
 
     constructor(context: vscode.ExtensionContext) {
         super(context);

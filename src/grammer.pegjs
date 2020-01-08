@@ -1,7 +1,7 @@
 /** 
- * This is a spec grammer file written in PEG.js (https://pegjs.org) format.
+ * This is a spec parser file written in PEG.js (https://pegjs.org) syntax.
  * The parser generated from this file using PEG.js parses a spec script and outputs a 
- * javascript object that resembles the Parser AST (abstract syntax tree) described blow:
+ * JavaScript object that resembles the Parser AST (abstract syntax tree) described blow:
  * https://developer.mozilla.org/en-US/docs/Mozilla/Projects/SpiderMonkey/Parser_API.
  */
 
@@ -30,8 +30,7 @@
    * create diagnostic object and store it.
    */
   function pushDiagnostic(location: IFileRange, message: string, severity: vscode.DiagnosticSeverity) {
-    const obj = { location: location, message: message, severity: severity };
-    _diagnostics.push(obj);
+    _diagnostics.push({ location, message, severity });
   }
 
   /**
@@ -70,7 +69,7 @@
 
       if (index === elements.length - 1) {
         if (sep === ',') {
-          pushDiagnostic(locEach, `Trailing comma not allowed.`, vscode.DiagnosticSeverity.Error);
+          pushDiagnostic(locEach, 'Trailing comma not allowed.', vscode.DiagnosticSeverity.Error);
         }
       } else if (sepOption === 1 && sep !== ',') {
         pushDiagnostic(locEach, 'Seprator must be a comma.', vscode.DiagnosticSeverity.Error);
