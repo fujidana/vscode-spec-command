@@ -105,8 +105,8 @@ export class Provider implements vscode.CompletionItemProvider, vscode.HoverProv
     // (File System Path). To avoid this problem, the string representation of a Uri 
     // object is used as a key.
 
-    protected storageCollection = new Map<string, spec.ReferenceStorage>();
-    protected completionItemCollection = new Map<string, vscode.CompletionItem[]>();
+    protected readonly storageCollection = new Map<string, spec.ReferenceStorage>();
+    protected readonly completionItemCollection = new Map<string, vscode.CompletionItem[]>();
 
     constructor(context: vscode.ExtensionContext) {
         // register providers
@@ -275,7 +275,7 @@ export class Provider implements vscode.CompletionItemProvider, vscode.HoverProv
 
         for (const [uriString, storage] of this.storageCollection.entries()) {
             const map = storage.get(spec.ReferenceItemKind.Function);
-            let item;
+            let item: spec.ReferenceItem | undefined;
             if (map && (item = map.get(signatureHint.signature)) !== undefined) {
                 const overloads = (item.overloads) ? item.overloads : [{ signature: item.signature, description: item.description }];
                 const signatureHelp = new vscode.SignatureHelp();
@@ -286,7 +286,7 @@ export class Provider implements vscode.CompletionItemProvider, vscode.HoverProv
                     if (overload.description) {
                         signatureInformation.documentation = new vscode.MarkdownString(truncateText(overload.description, 'signatureHelp'));
                     }
-                    let parameters;
+                    let parameters: vscode.ParameterInformation[] | undefined;
                     if ((parameters = getParameterInformation(overload.signature)) !== undefined) {
                         signatureInformation.parameters = parameters;
                     }
