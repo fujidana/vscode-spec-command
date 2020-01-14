@@ -138,7 +138,7 @@ function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position
 
 async function findFilesInWorkspaces() {
     const workspaceFolders = vscode.workspace.workspaceFolders;
-    const map = new Map<string, { diagnoseProblems: boolean }>();
+    const map: Map<string, { diagnoseProblems: boolean }> = new Map();
 
     if (workspaceFolders) {
         for (const workspaceFolder of workspaceFolders) {
@@ -150,7 +150,7 @@ async function findFilesInWorkspaces() {
             const exclusivePattern = (exclusivePatternStr.length > 0) ? new vscode.RelativePattern(workspaceFolder, exclusivePatternStr) : undefined;
             const uris = await vscode.workspace.findFiles(inclusivePattern, exclusivePattern);
             for (const uri of uris) {
-                map.set(uri.toString(), { diagnoseProblems });
+                map.set(uri.path, { diagnoseProblems });
             }
         }
     }
@@ -184,12 +184,15 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
 
         // command to run file in terminal
         const execFileInTerminalCommandCallback = (...args: any[]) => {
+            // find active terminal.
             const terminal = vscode.window.activeTerminal;
             if (!terminal) {
                 vscode.window.showErrorMessage('Active terminal is not found.');
                 return;
             }
 
+            // find a file uri.
+            // If uri is given as an argument, use it. Else, use uri of the active editor.
             let uri: vscode.Uri;
             if (args && args.length > 0 && args[0] instanceof vscode.Uri) {
                 uri = args[0];
@@ -202,6 +205,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                 uri = editor.document.uri;
             }
 
+            // adjust path. Append prefix in the configuration for relative path.
             const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
             let path: string;
             if (workspaceFolder) {
@@ -211,6 +215,8 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
             } else {
                 path = uri.path;
             }
+
+            // send a command to the active terminal.
             terminal.show(true);
             terminal.sendText(`qdofile(\"${path}\")`);
         };
@@ -238,7 +244,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
             }
         };
 
-        // register a hander invoked when the document is closed
+        // a hander invoked when the document is closed
         // this is also invoked after the user manually changed the language id
         const onDidCloseTextDocumentListener = async (document: vscode.TextDocument) => {
             if (document.languageId === 'spec') {
@@ -248,7 +254,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
 
                 // check whether the file is in a workspace folder. If not in a folder, delete from the database.
                 const filesInWorkspaces = await findFilesInWorkspaces();
-                const fileInfo = filesInWorkspaces.get(uriString);
+                const fileInfo = filesInWorkspaces.get(document.uri.path);
                 if (fileInfo) {
                     // if file also exists in a workspace folder,
                     // clear diagnostics if setting for workspace.diagnoseProblem is false. 
@@ -256,11 +262,78 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                         this.diagnosticCollection.delete(document.uri);
                     }
                 } else {
-                    // if file does not exist in a workspace folder, clear all
+                    // if file does not exist in a workspace folder, clear all.
                     this.storageCollection.delete(uriString);
                     this.diagnosticCollection.delete(document.uri);
                     this.completionItemCollection.delete(uriString);
                 }
+            }
+        };
+
+        // // a hander invoked after files are created
+        // const onDidCreateFilesListener = async (event: vscode.FileCreateEvent) => {
+        //     const filesInWorkspaces = await findFilesInWorkspaces();
+
+        //     const newFiles: Map<string, { diagnoseProblems: boolean }> = new Map();
+        //     for (const newFileUri of event.files) {
+        //     }
+        // };
+
+        // a hander invoked after files are renamed
+        const onDidRenameFilesListener = async (event: vscode.FileRenameEvent) => {
+            const filesInWorkspaces = await findFilesInWorkspaces();
+            const oldFiles: Set<string> = new Set();
+            const newFiles: Map<string, { diagnoseProblems: boolean }> = new Map();
+
+            for (const { oldUri, newUri } of event.files) {
+                const stat = await vscode.workspace.fs.stat(newUri);
+
+                if (stat.type === vscode.FileType.File) {
+                    oldFiles.add(oldUri.path);
+                    const newFileInfo = filesInWorkspaces.get(newUri.path);
+                    if (newFileInfo) {
+                        newFiles.set(newUri.path, newFileInfo);
+                    }
+                } else if (stat.type === vscode.FileType.Directory) {
+                    const directoryUriString = oldUri.toString() + "/";
+
+                    for (const fileUriString of this.storageCollection.keys()) {
+                        if (fileUriString.startsWith(directoryUriString)) {
+                            oldFiles.add(vscode.Uri.parse(fileUriString).path);
+                        }
+                    }
+
+                    const dirPath = newUri.path + "/";
+                    for (const [filePath, fileInfo] of filesInWorkspaces) {
+                        if (filePath.startsWith(dirPath)) {
+                            newFiles.set(filePath, fileInfo);
+                        }
+                    }
+                }
+            }
+        };
+
+        // a hander invoked before files are deleted
+        const onWillDeleteFilesListener = async (event: vscode.FileWillDeleteEvent) => {
+            for (const oldUri of event.files) {
+                const promise = vscode.workspace.fs.stat(oldUri).then(
+                    stat => {
+                        const oldFilePaths: Set<string> = new Set();
+                        if (stat.type === vscode.FileType.File) {
+                            oldFilePaths.add(oldUri.path);
+                        } else if (stat.type === vscode.FileType.Directory) {
+                            const directoryUriString = oldUri.toString() + "/";
+
+                            for (const fileUriString of this.storageCollection.keys()) {
+                                if (fileUriString.startsWith(directoryUriString)) {
+                                    oldFilePaths.add(vscode.Uri.parse(fileUriString).path);
+                                }
+                            }
+                        }
+                        this.applyFileOperation(oldFilePaths);
+                    }
+                );
+                event.waitUntil(promise);
             }
         };
 
@@ -282,16 +355,23 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
             this.refreshCollections();
         };
 
+
+
         context.subscriptions.push(
             // register command handlers
             vscode.commands.registerCommand('vscode-spec.execSelectionInTerminal', execSelectionInTerminalCommandCallback),
             vscode.commands.registerCommand('vscode-spec.execFileInTerminal', execFileInTerminalCommandCallback),
-            // register event liasteners
+            // register document-event liasteners
             vscode.workspace.onDidChangeTextDocument(onDidChangeTextDocumentListener),
             vscode.workspace.onDidOpenTextDocument(onDidOpenTextDocumentListener),
             vscode.workspace.onDidSaveTextDocument(onDidSaveTextDocumentListener),
             vscode.workspace.onDidCloseTextDocument(onDidCloseTextDocumentListener),
             // vscode.window.onDidChangeActiveTextEditor(onDidChangeActiveTextEditorListener),
+            // register file-event listeners
+            // vscode.workspace.onDidCreateFiles(onDidCreateFilesListener),
+            vscode.workspace.onDidRenameFiles(onDidRenameFilesListener),
+            vscode.workspace.onWillDeleteFiles(onWillDeleteFilesListener),
+            // register other event listeners
             vscode.workspace.onDidChangeConfiguration(onDidChangeConfigurationListener),
             vscode.workspace.onDidChangeWorkspaceFolders(onDidChangeWorkspaceFoldersListener),
             // register providers
@@ -306,11 +386,49 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         this.refreshCollections();
     }
 
+    // update the metadata database.
+    // All metadata for files in oldFiles are removed. Mismatched files are just ignored.
+    // All metadata for newFiles are created thus the file paths should be filtered beforehand
+    // based on the configuration settings.
+    private async applyFileOperation(oldFiles?: Set<string>, newFiles?: Map<string, { diagnoseProblems: boolean }>) {
+        // unregister metadata for old URIs.
+        if (oldFiles) {
+            for (const oldFilePath of oldFiles) {
+                const oldFileUri = vscode.Uri.file(oldFilePath);
+                this.storageCollection.delete(oldFileUri.toString());
+                this.diagnosticCollection.delete(oldFileUri);
+                this.completionItemCollection.delete(oldFileUri.toString());
+            }
+        }
+        
+        // register metadata for new URIs.
+        if (newFiles) {
+            // list opened document.
+            // Do nothing for the files opened by editor because 
+            // they are handled by onDidOpenTextDocument and onDidCloseTextDocument events.
+            const openedFilePaths = new Set<string>();
+            for (const document of vscode.workspace.textDocuments) {
+                if (document.languageId === 'spec') {
+                    openedFilePaths.add(document.uri.path);
+                }
+            }
+
+            for (const [newFilePath, newFileInfo] of newFiles) {
+                if (!openedFilePaths.has(newFilePath)) {
+                    const newFileUri = vscode.Uri.file(newFilePath);
+                    const contents = new TextDecoder('utf-8').decode(await vscode.workspace.fs.readFile(newFileUri));
+                    this.parseDocumentContents(contents, newFileUri, false, newFileInfo.diagnoseProblems);
+                }
+            }
+        }
+    }
+
+    // 
     private parseDocumentContents(contents: string, uri: vscode.Uri, isOpenDocument: boolean, diagnoseProblems: boolean) {
         const uriString = uri.toString();
 
         interface CustomProgram extends estree.Program {
-            x_diagnostics: any[];
+            x_diagnostics: { location: IFileRange, message: string, severity: vscode.DiagnosticSeverity }[];
         }
 
         let tree: CustomProgram | undefined;
@@ -324,15 +442,21 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                     // this.updateCompletionItemsForUriString(uriString);
                 }
             } else {
-                console.log('Unknown Error in sytax parsing', error);
+                console.log('Unknown error in sytax parsing', error);
+                if (diagnoseProblems) {
+                    const diagnostic = new vscode.Diagnostic(new vscode.Range(0, 0, 0, 0), 'Unknown error in sytax parsing', vscode.DiagnosticSeverity.Error);
+                    this.diagnosticCollection.set(uri, [diagnostic]);
+                }
+
             }
-            this.storageCollection.delete(uriString);
+            // update with an empty map object.
+            this.storageCollection.set(uriString, new spec.ReferenceStorage());
             return false;
         }
         // console.log(JSON.stringify(tree, null, 2));
 
         if (diagnoseProblems) {
-            const diagnostics = tree.x_diagnostics.map((item: any) => new vscode.Diagnostic(spec.convertRange(item.location), item.message, item.severity));
+            const diagnostics = tree.x_diagnostics.map(item => new vscode.Diagnostic(spec.convertRange(item.location), item.message, item.severity));
             this.diagnosticCollection.set(uri, diagnostics);
         }
 
@@ -356,20 +480,20 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         this.completionItemCollection.clear();
 
         // parse documents opened by editors
-        const openedUriStringSet = new Set<string>();
+        const openedFilePaths = new Set<string>();
         for (const document of vscode.workspace.textDocuments) {
             if (document.languageId === 'spec') {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
-                openedUriStringSet.add(document.uri.toString());
+                openedFilePaths.add(document.uri.path);
             }
         }
 
         // parse the other files in workspace folders.
         const filesInWorkspaces = await findFilesInWorkspaces();
 
-        for (const [uriString, fileInfo] of filesInWorkspaces) {
-            if (!openedUriStringSet.has(uriString)) {
-                const uri = vscode.Uri.parse(uriString);
+        for (const [filePath, fileInfo] of filesInWorkspaces) {
+            if (!openedFilePaths.has(filePath)) {
+                const uri = vscode.Uri.file(filePath);
                 const contents = new TextDecoder('utf-8').decode(await vscode.workspace.fs.readFile(uri));
                 this.parseDocumentContents(contents, uri, false, fileInfo.diagnoseProblems);
             }
