@@ -224,7 +224,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         // a hander invoked when the document is changed
         const onDidChangeTextDocumentListener = (event: vscode.TextDocumentChangeEvent) => {
             const document = event.document;
-            if (document.languageId === 'spec') {
+            if (vscode.languages.match(spec.SELECTOR, document)) {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
             }
         };
@@ -232,14 +232,14 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         // a hander invoked when the document is opened
         // this is also invoked after the user manually changed the language id
         const onDidOpenTextDocumentListener = (document: vscode.TextDocument) => {
-            if (document.languageId === 'spec') {
+            if (vscode.languages.match(spec.SELECTOR, document)) {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
             }
         };
 
         // a hander invoked when the document is saved
         const onDidSaveTextDocumentListener = (document: vscode.TextDocument) => {
-            if (document.languageId === 'spec') {
+            if (vscode.languages.match(spec.SELECTOR, document)) {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
             }
         };
@@ -247,7 +247,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         // a hander invoked when the document is closed
         // this is also invoked after the user manually changed the language id
         const onDidCloseTextDocumentListener = async (document: vscode.TextDocument) => {
-            if (document.languageId === 'spec') {
+            if (vscode.languages.match(spec.SELECTOR, document)) {
                 const uriString = document.uri.toString();
 
                 this.treeCollection.delete(uriString);
@@ -408,7 +408,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
             // they are handled by onDidOpenTextDocument and onDidCloseTextDocument events.
             const openedFilePaths = new Set<string>();
             for (const document of vscode.workspace.textDocuments) {
-                if (document.languageId === 'spec') {
+                if (vscode.languages.match(spec.SELECTOR, document)) {
                     openedFilePaths.add(document.uri.path);
                 }
             }
@@ -482,7 +482,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         // parse documents opened by editors
         const openedFilePaths = new Set<string>();
         for (const document of vscode.workspace.textDocuments) {
-            if (document.languageId === 'spec') {
+            if (vscode.languages.match(spec.SELECTOR, document)) {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
                 openedFilePaths.add(document.uri.path);
             }
