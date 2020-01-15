@@ -58,22 +58,24 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
             const apiReference: APIReference = JSON.parse(new TextDecoder('utf-8').decode(uint8Array));
 
             // convert the object to ReferenceMap and register the set.
-            const builtinStorage = new spec.ReferenceStorage();
-            builtinStorage.set(spec.ReferenceItemKind.Constant, new spec.ReferenceMap(Object.entries(apiReference.constants)));
-            builtinStorage.set(spec.ReferenceItemKind.Variable, new spec.ReferenceMap(Object.entries(apiReference.variables)));
-            builtinStorage.set(spec.ReferenceItemKind.Macro, new spec.ReferenceMap(Object.entries(apiReference.macros)));
-            builtinStorage.set(spec.ReferenceItemKind.Function, new spec.ReferenceMap(Object.entries(apiReference.functions)));
-            builtinStorage.set(spec.ReferenceItemKind.Keyword, new spec.ReferenceMap(Object.entries(apiReference.keywords)));
+            const builtinStorage = new spec.ReferenceStorage(
+                [
+                    [spec.ReferenceItemKind.Constant, new spec.ReferenceMap(Object.entries(apiReference.constants))],
+                    [spec.ReferenceItemKind.Variable, new spec.ReferenceMap(Object.entries(apiReference.variables))],
+                    [spec.ReferenceItemKind.Macro, new spec.ReferenceMap(Object.entries(apiReference.macros))],
+                    [spec.ReferenceItemKind.Function, new spec.ReferenceMap(Object.entries(apiReference.functions))],
+                    [spec.ReferenceItemKind.Keyword, new spec.ReferenceMap(Object.entries(apiReference.keywords))],
+                ]
+            );
             this.storageCollection.set(spec.BUILTIN_URI, builtinStorage);
             this.updateCompletionItemsForUriString(spec.BUILTIN_URI);
         });
 
-        // register motor-mnemonic storage
+        // register motor and counter mnemonic storage
         this.storageCollection.set(spec.MOTOR_URI, new spec.ReferenceStorage());
         this.storageCollection.set(spec.COUNTER_URI, new spec.ReferenceStorage());
         this.updateMotorMnemonicStorage();
         this.updateCounterMnemonicStorage();
-
 
         // observe the change in configuration
         const onDidChangeConfigurationListener = (event: vscode.ConfigurationChangeEvent) => {
@@ -86,21 +88,22 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
         };
 
         // register command to show reference manual as a virtual document
-        const openReferenceManualCommandCallback = async () => {
+        const openReferenceManualCommandCallback = () => {
             const storage = this.storageCollection.get(spec.BUILTIN_URI);
             if (storage) {
                 let quickPickLabels = ['all'];
                 for (const itemKind of storage.keys()) {
                     quickPickLabels.push(spec.getStringFromReferenceItemKind(itemKind));
                 }
-                const quickPickLabel = await vscode.window.showQuickPick(quickPickLabels);
-                if (quickPickLabel) {
-                    let uri = vscode.Uri.parse(spec.BUILTIN_URI);
-                    if (quickPickLabel !== 'all') {
-                        uri = uri.with({ query: quickPickLabel });
+                vscode.window.showQuickPick(quickPickLabels).then(quickPickLabel => {
+                    if (quickPickLabel) {
+                        let uri = vscode.Uri.parse(spec.BUILTIN_URI);
+                        if (quickPickLabel !== 'all') {
+                            uri = uri.with({ query: quickPickLabel });
+                        }
+                        vscode.window.showTextDocument(uri, { preview: false });
                     }
-                    await vscode.window.showTextDocument(uri, { preview: false });
-                }
+                });
             }
         };
 

@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import * as spec from './spec';
 
 
+function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceItemKind, itemUriString: string, documentUriString: string, outputsMarkdown: true): vscode.MarkdownString;
+function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceItemKind, itemUriString: string, documentUriString: string, outputsMarkdown: false): string;
 function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceItemKind, itemUriString: string, documentUriString: string, outputsMarkdown: boolean) {
     let symbolLabel: string;
     let relativePath: string | undefined;
@@ -156,7 +158,7 @@ export class Provider implements vscode.CompletionItemProvider, vscode.HoverProv
         if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(selectorName)) { return; }
 
         const aggregatedCompletionItems: vscode.CompletionItem[] = [];
-        for (const [uriString, completionItems] of this.completionItemCollection.entries()) {
+        for (const completionItems of this.completionItemCollection.values()) {
             aggregatedCompletionItems.push(...completionItems);
         }
         return aggregatedCompletionItems;
@@ -189,7 +191,7 @@ export class Provider implements vscode.CompletionItemProvider, vscode.HoverProv
         const newCompletionItem = Object.assign({}, completionItem);
 
         // set the detail of the completion item
-        newCompletionItem.detail = <string>getShortDescription(item, itemKind, refUriString, documentUriString, false);
+        newCompletionItem.detail = getShortDescription(item, itemKind, refUriString, documentUriString, false);
 
         // set the description of the completion item
         // if the main description exists, append it.
@@ -234,7 +236,7 @@ export class Provider implements vscode.CompletionItemProvider, vscode.HoverProv
                 // find the symbol information about the symbol.
                 const item = map.get(selectorName);
                 if (item) {
-                    let mainMarkdown = <vscode.MarkdownString>getShortDescription(item, itemKind, refUriString, document.uri.toString(), true);
+                    let mainMarkdown = getShortDescription(item, itemKind, refUriString, document.uri.toString(), true);
 
                     // prepare the second line: the description (if it exists)
                     if (item.description) {
