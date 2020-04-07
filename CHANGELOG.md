@@ -6,6 +6,11 @@ All notable changes to the __spec__ extension will be documented in this file.
 
 ## [Unreleased]
 
+## [1.1.1] - 2020-04-07
+
+* update Node.js packages (including a vulnerable dependency)
+* add icon
+
 ## [1.1.0] - 2020-01-15
 
 * observe file events (deletion and rename) and track file reference. Previously the database of user-defined symbols lost the file reference after file deletion or rename.
@@ -88,6 +93,7 @@ All notable changes to the __spec__ extension will be documented in this file.
   * code snippets feature
 
 [Unreleased]: https://github.com/fujidana/vscode-spec/compare/v1.1.0...HEAD
+[1.1.1]: https://github.com/fujidana/vscode-spec/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/fujidana/vscode-spec/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/fujidana/vscode-spec/compare/v0.7.2...v1.0.0
 [0.7.2]: https://github.com/fujidana/vscode-spec/compare/v0.7.1...v0.7.2
