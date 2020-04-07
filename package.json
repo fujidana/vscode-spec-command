@@ -12,6 +12,7 @@
 		"Snippets",
 		"Linters"
 	],
+	"icon": "resources/icon.png",
 	"keywords": [
 		"X-ray diffraction",
 		"synchrotron",
