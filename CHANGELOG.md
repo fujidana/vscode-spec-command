@@ -6,6 +6,12 @@ All notable changes to the __spec__ extension will be documented in this file.
 
 ## [Unreleased]
 
+## [1.1.2] - 2020-07-08
+
+* fix a bug that caused duplicated user-defined symbols in IntelliSence. This occurred when a file whose URI scheme is not `file` (e.g., a virtual file in a `git` repository) was opened.
+* fix a bug that prevented updating IntelliSence database after file rename.
+* modify icon
+
 ## [1.1.1] - 2020-04-07
 
 * update Node.js packages (including a vulnerable dependency)
@@ -92,7 +98,8 @@ All notable changes to the __spec__ extension will be documented in this file.
   * syntax highlighting feature
   * code snippets feature
 
-[Unreleased]: https://github.com/fujidana/vscode-spec/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/fujidana/vscode-spec/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/fujidana/vscode-spec/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/fujidana/vscode-spec/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/fujidana/vscode-spec/compare/v0.7.2...v1.0.0
