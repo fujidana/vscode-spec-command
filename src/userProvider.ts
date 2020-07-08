@@ -150,7 +150,7 @@ async function findFilesInWorkspaces() {
             const exclusivePattern = (exclusivePatternStr.length > 0) ? new vscode.RelativePattern(workspaceFolder, exclusivePatternStr) : undefined;
             const uris = await vscode.workspace.findFiles(inclusivePattern, exclusivePattern);
             for (const uri of uris) {
-                map.set(uri.path, { diagnoseProblems });
+                map.set(uri.toString(), { diagnoseProblems });
             }
         }
     }
@@ -254,11 +254,11 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
 
                 // check whether the file is in a workspace folder. If not in a folder, delete from the database.
                 const filesInWorkspaces = await findFilesInWorkspaces();
-                const fileInfo = filesInWorkspaces.get(document.uri.path);
-                if (fileInfo) {
+                const fileMetadata = filesInWorkspaces.get(document.uri.toString());
+                if (fileMetadata) {
                     // if file also exists in a workspace folder,
                     // clear diagnostics if setting for workspace.diagnoseProblem is false. 
-                    if (!fileInfo.diagnoseProblems) {
+                    if (!fileMetadata.diagnoseProblems) {
                         this.diagnosticCollection.delete(document.uri);
                     }
                 } else {
@@ -289,28 +289,30 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                 const stat = await vscode.workspace.fs.stat(newUri);
 
                 if (stat.type === vscode.FileType.File) {
-                    oldFiles.add(oldUri.path);
-                    const newFileInfo = filesInWorkspaces.get(newUri.path);
-                    if (newFileInfo) {
-                        newFiles.set(newUri.path, newFileInfo);
+                    oldFiles.add(oldUri.toString());
+                    const newFileMetadata = filesInWorkspaces.get(newUri.toString());
+                    if (newFileMetadata) {
+                        newFiles.set(newUri.toString(), newFileMetadata);
                     }
                 } else if (stat.type === vscode.FileType.Directory) {
-                    const directoryUriString = oldUri.toString() + "/";
-
+                    const oldDirUriString = oldUri.toString() + "/";
+                    
                     for (const fileUriString of this.storageCollection.keys()) {
-                        if (fileUriString.startsWith(directoryUriString)) {
-                            oldFiles.add(vscode.Uri.parse(fileUriString).path);
+                        if (fileUriString.startsWith(oldDirUriString)) {
+                            oldFiles.add(fileUriString);
                         }
                     }
 
-                    const dirPath = newUri.path + "/";
-                    for (const [filePath, fileInfo] of filesInWorkspaces) {
-                        if (filePath.startsWith(dirPath)) {
-                            newFiles.set(filePath, fileInfo);
+                    const newDirUriString = newUri.toString() + "/";
+                    for (const [fileUriString, fileMetadata] of filesInWorkspaces) {
+                        if (fileUriString.startsWith(newDirUriString)) {
+                            newFiles.set(fileUriString, fileMetadata);
                         }
                     }
                 }
             }
+
+            this.applyFileOperation(oldFiles, newFiles);
         };
 
         // a hander invoked before files are deleted
@@ -318,19 +320,19 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
             for (const oldUri of event.files) {
                 const promise = vscode.workspace.fs.stat(oldUri).then(
                     stat => {
-                        const oldFilePaths: Set<string> = new Set();
+                        const oldFiles: Set<string> = new Set();
                         if (stat.type === vscode.FileType.File) {
-                            oldFilePaths.add(oldUri.path);
+                            oldFiles.add(oldUri.toString());
                         } else if (stat.type === vscode.FileType.Directory) {
-                            const directoryUriString = oldUri.toString() + "/";
+                            const oldDirUriString = oldUri.toString() + "/";
 
                             for (const fileUriString of this.storageCollection.keys()) {
-                                if (fileUriString.startsWith(directoryUriString)) {
-                                    oldFilePaths.add(vscode.Uri.parse(fileUriString).path);
+                                if (fileUriString.startsWith(oldDirUriString)) {
+                                    oldFiles.add(fileUriString);
                                 }
                             }
                         }
-                        this.applyFileOperation(oldFilePaths);
+                        this.applyFileOperation(oldFiles);
                     }
                 );
                 event.waitUntil(promise);
@@ -354,7 +356,6 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         const onDidChangeWorkspaceFoldersListener = (event: vscode.WorkspaceFoldersChangeEvent) => {
             this.refreshCollections();
         };
-
 
 
         context.subscriptions.push(
@@ -393,31 +394,30 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
     private async applyFileOperation(oldFiles?: Set<string>, newFiles?: Map<string, { diagnoseProblems: boolean }>) {
         // unregister metadata for old URIs.
         if (oldFiles) {
-            for (const oldFilePath of oldFiles) {
-                const oldFileUri = vscode.Uri.file(oldFilePath);
-                this.storageCollection.delete(oldFileUri.toString());
-                this.diagnosticCollection.delete(oldFileUri);
-                this.completionItemCollection.delete(oldFileUri.toString());
+            for (const oldFileUriString of oldFiles) {
+                this.storageCollection.delete(oldFileUriString);
+                this.diagnosticCollection.delete(vscode.Uri.parse(oldFileUriString));
+                this.completionItemCollection.delete(oldFileUriString);
             }
         }
         
         // register metadata for new URIs.
         if (newFiles) {
-            // list opened document.
-            // Do nothing for the files opened by editor because 
-            // they are handled by onDidOpenTextDocument and onDidCloseTextDocument events.
-            const openedFilePaths = new Set<string>();
+            // make a list of opened documents.
+            // Do nothing for these files because they are handled by
+            // onDidOpenTextDocument and onDidCloseTextDocument events.
+            const openedFiles = new Set<string>();
             for (const document of vscode.workspace.textDocuments) {
                 if (vscode.languages.match(spec.SELECTOR, document)) {
-                    openedFilePaths.add(document.uri.path);
+                    openedFiles.add(document.uri.toString());
                 }
             }
 
-            for (const [newFilePath, newFileInfo] of newFiles) {
-                if (!openedFilePaths.has(newFilePath)) {
-                    const newFileUri = vscode.Uri.file(newFilePath);
+            for (const [newFileUriString, newFileMetadata] of newFiles) {
+                if (!openedFiles.has(newFileUriString)) {
+                    const newFileUri = vscode.Uri.parse(newFileUriString);
                     const contents = new TextDecoder('utf-8').decode(await vscode.workspace.fs.readFile(newFileUri));
-                    this.parseDocumentContents(contents, newFileUri, false, newFileInfo.diagnoseProblems);
+                    this.parseDocumentContents(contents, newFileUri, false, newFileMetadata.diagnoseProblems);
                 }
             }
         }
@@ -480,22 +480,22 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         this.completionItemCollection.clear();
 
         // parse documents opened by editors
-        const openedFilePaths = new Set<string>();
+        const openedFiles = new Set<string>();
         for (const document of vscode.workspace.textDocuments) {
             if (vscode.languages.match(spec.SELECTOR, document)) {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
-                openedFilePaths.add(document.uri.path);
+                openedFiles.add(document.uri.toString());
             }
         }
 
         // parse the other files in workspace folders.
         const filesInWorkspaces = await findFilesInWorkspaces();
 
-        for (const [filePath, fileInfo] of filesInWorkspaces) {
-            if (!openedFilePaths.has(filePath)) {
-                const uri = vscode.Uri.file(filePath);
-                const contents = new TextDecoder('utf-8').decode(await vscode.workspace.fs.readFile(uri));
-                this.parseDocumentContents(contents, uri, false, fileInfo.diagnoseProblems);
+        for (const [fileUriString, fileMetadata] of filesInWorkspaces) {
+            if (!openedFiles.has(fileUriString)) {
+                const fileUri = vscode.Uri.parse(fileUriString);
+                const contents = new TextDecoder('utf-8').decode(await vscode.workspace.fs.readFile(fileUri));
+                this.parseDocumentContents(contents, fileUri, false, fileMetadata.diagnoseProblems);
             }
         }
     }
