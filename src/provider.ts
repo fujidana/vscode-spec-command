@@ -6,7 +6,7 @@ function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceI
 function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceItemKind, itemUriString: string, documentUriString: string, outputsMarkdown: false): string;
 function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceItemKind, itemUriString: string, documentUriString: string, outputsMarkdown: boolean) {
     let symbolLabel: string;
-    let relativePath: string | undefined;
+    let itemUriLabel: string | undefined;
 
     symbolLabel = spec.getStringFromReferenceItemKind(itemKind);
 
@@ -19,8 +19,14 @@ function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceI
     } else if (itemUriString === spec.ACTIVE_FILE_URI || itemUriString === documentUriString) {
         symbolLabel = symbolLabel + ' defined in this file';
     } else {
-        relativePath = vscode.workspace.asRelativePath(vscode.Uri.parse(itemUriString));
-        symbolLabel = outputsMarkdown ? 'user-defined ' + symbolLabel : symbolLabel + ' defined in ' + relativePath;
+        const itemUri = vscode.Uri.parse(itemUriString);
+        if (itemUri.scheme === 'file') {
+            itemUriLabel = vscode.workspace.asRelativePath(itemUri);
+            symbolLabel = outputsMarkdown ? 'user-defined ' + symbolLabel : symbolLabel + ' defined in ' + itemUriLabel;
+        } else {
+            itemUriLabel = itemUriString;
+            symbolLabel = outputsMarkdown ? 'user-defined ' + symbolLabel : symbolLabel + ' defined in ' + itemUriString;
+        }
     }
 
     let mainText = `${item.signature} # ${symbolLabel}`;
@@ -30,8 +36,8 @@ function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceI
 
     if (outputsMarkdown) {
         let markdownString = new vscode.MarkdownString().appendCodeblock(mainText);
-        if (relativePath) {
-            markdownString = markdownString.appendMarkdown(`_defined in_ [${relativePath}](${itemUriString}).\n\n`);
+        if (itemUriLabel) {
+            markdownString = markdownString.appendMarkdown(`_defined in_ [${itemUriLabel}](${itemUriString}).\n\n`);
         }
         return markdownString;
     } else {
