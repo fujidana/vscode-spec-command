@@ -99,7 +99,7 @@ All notable changes to the __spec__ extension will be documented in this file.
   * code snippets feature
 
 [Unreleased]: https://github.com/fujidana/vscode-spec/compare/v1.1.1...HEAD
-[1.1.1]: https://github.com/fujidana/vscode-spec/compare/v1.1.1...v1.1.2
+[1.1.2]: https://github.com/fujidana/vscode-spec/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/fujidana/vscode-spec/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/fujidana/vscode-spec/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/fujidana/vscode-spec/compare/v0.7.2...v1.0.0
