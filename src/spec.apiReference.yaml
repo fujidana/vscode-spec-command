@@ -1078,7 +1078,7 @@ functions:
       For two-dimensional arrays, `#` is the number of rows to print per line.
       If an optional `W` is added, the number becomes the number of elements to print per line, which can split two-dimensional arrays at different points in the rows.
       If an optional `C` is added to the option string, a backslash will be added to each line where a row is split.
-      (The **C-PLOT** *scans.4* user function can properly inter- pret such "continued" lines for one-dimensional MCA-type array data.)
+      (The **C-PLOT** *scans.4* user function can properly interpret such "continued" lines for one-dimensional MCA-type array data.)
 
       Finally, the various options can be combined in a single string.
       For example,
@@ -1147,7 +1147,7 @@ functions:
       Reads data from the ASCII text file `file`, and stuffs the data into the array `arr`.
       For a row-wise array, the values on each line of the file are assigned into successive columns for each row of the array.
       If there are more items on a line in the file than columns in the array, or if there are more points in the file than rows in the array, the extra values are ignored.
-      For a column-wise array, each row of the data file is assigned to succes- sive columns of the array.
+      For a column-wise array, each row of the data file is assigned to successive columns of the array.
 
       If `arr` is a string array, successive bytes from each line of the file are assigned to elements of the array (as of **spec** release 6.04.05).
 
@@ -2047,7 +2047,7 @@ functions:
         If the serial device `addr` is in *cooked* mode, reads and returns a string of bytes, up to and including a newline character, or returns the null string if the read times out.
         If the device is in *raw* mode, the function reads and returns as many characters as are already available in the queue.
         If no characters are available, waits for a character and returns it, or returns a null string if no characters become available within the time-out period.
-        The maxi- mum string length in this mode is 8191 characters.
+        The maximum string length in this mode is 8191 characters.
     - signature: ser_get(addr, n)
       description: |-
         If the serial device `addr` is in *cooked* mode, reads up to a newline, but no more than `n` bytes and returns the string so obtained.
@@ -2154,7 +2154,7 @@ functions:
       - `"dcl"` — Device clear (sent to all devices).
       - `"get"` — Group execute trigger (sent to addressed device).
       - `"ifc"` — Interface clear. This command resets the GPIB bus by sending the IFC message. The address `addr` is ignored. **spec** runs the same code sequence with the `"ifc"` command as it does when it initializes the GPIB controller on start up or on the `reconfig` command. For most controllers, **spec** sleeps for some fraction of a second after resetting the bus. Also, for most controllers, **spec** asserts the REN (remote enable) command after sending IFC.
-      - `"responsive"` — Not a GPIB command, but returns 1 or 0 indicating whether the associated controller is configured and working. Note, the test is on the controller, not the device. To test controllers other than unit 0, the address syntax for `addr` is `"1:1"` or `101` for unit 1, etc. The device ad- dress isn’t looked at for this option.
+      - `"responsive"` — Not a GPIB command, but returns 1 or 0 indicating whether the associated controller is configured and working. Note, the test is on the controller, not the device. To test controllers other than unit 0, the address syntax for `addr` is `"1:1"` or `101` for unit 1, etc. The device address isn’t looked at for this option.
   gpib_get:
     signature: gpib_get(addr[, <n|s|mode>])
     overloads:
