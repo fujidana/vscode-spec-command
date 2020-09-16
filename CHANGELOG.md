@@ -6,6 +6,11 @@ All notable changes to the __spec__ extension will be documented in this file.
 
 ## [Unreleased]
 
+## [1.1.3] - 2020-09-16
+
+* fix hyphenation errors in API references
+* update Node.js packages (including a vulnerable dependency)
+
 ## [1.1.2] - 2020-07-08
 
 * fix a bug that caused duplicated user-defined symbols in IntelliSence. This occurred when a file whose URI scheme is not `file` (e.g., a virtual file in a `git` repository) was opened.
@@ -98,7 +103,8 @@ All notable changes to the __spec__ extension will be documented in this file.
   * syntax highlighting feature
   * code snippets feature
 
-[Unreleased]: https://github.com/fujidana/vscode-spec/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec/compare/v1.1.3...HEAD
+[1.1.3]: https://github.com/fujidana/vscode-spec/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/fujidana/vscode-spec/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/fujidana/vscode-spec/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/fujidana/vscode-spec/compare/v1.0.0...v1.1.0
