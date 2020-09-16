@@ -4,13 +4,6 @@ This extension provides __spec__ macro script (`*.mac`) support for Visual Studi
 This extension is not the official one developed by Certified Scientific Software.
 Use [GitHub issues](https://github.com/fujidana/vscode-spec/issues) for bug reports and feature requests about this extension.
 
-## IMPORTANT NOTICE
-
-During migration of my PCs, I deleted my Visual Studio Marketplace publisher account by mistake.
-I recreated a new account with the same name (`fujidana`) but it was not treated identically in the Marketplace.
-__Users of version 0.6 or earlier need to manually uninstall their version and install this version in order to receive future updates.__
-Sorry for inconvenience.
-
 ## What's __spec__?
 
 > __spec__ is internationally recognized as the leading software for instrument control and data acquisition in X-ray diffraction experiments.
