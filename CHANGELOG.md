@@ -6,6 +6,11 @@ All notable changes to the __spec__ extension will be documented in this file.
 
 ## [Unreleased]
 
+## [1.1.4] - 2020-10-05
+
+* modify syntax checker so that `rdef` for functions (e.g.,  `rdef myfunc(i, j) "..."`) becomes valid.
+* fix hyphenation errors in API references
+
 ## [1.1.3] - 2020-09-16
 
 * fix hyphenation errors in API references
@@ -103,7 +108,8 @@ All notable changes to the __spec__ extension will be documented in this file.
   * syntax highlighting feature
   * code snippets feature
 
-[Unreleased]: https://github.com/fujidana/vscode-spec/compare/v1.1.3...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec/compare/v1.1.4...HEAD
+[1.1.4]: https://github.com/fujidana/vscode-spec/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/fujidana/vscode-spec/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/fujidana/vscode-spec/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/fujidana/vscode-spec/compare/v1.1.0...v1.1.1
