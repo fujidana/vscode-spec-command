@@ -520,7 +520,14 @@ undef_stmt =
  */
 rdef_stmt =
   'rdef' _1_ p:(
-    id:identifier_w_check !word _0_ expr:(
+    id:identifier_w_check _0_ params:(
+      '(' _0_ params:_identifier_list_item* _0_ closer:')'? _0_ {
+        if (!closer) {
+          pushDiagnostic(shortenRange(location(), 1), 'Unterminated parenthesis.', vscode.DiagnosticSeverity.Error);
+        }
+        return params ? diagnoseListItems(params, 'identifier', 1) : [];
+      }
+    )? expr:(
       expr:expr_multi? {
         if (!expr) {
           pushDiagnostic(location(), `Expected an expression.`, vscode.DiagnosticSeverity.Error);

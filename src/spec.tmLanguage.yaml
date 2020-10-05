@@ -98,7 +98,8 @@ repository:
             contentName: meta.function-body.spec
             patterns: [{ include: "#statement" }]
           - ### usage: rdef <identifier> <expression>;
-            begin: \b(rdef)\s+(\w+)\s+
+            ### usage: rdef <identifier> ([<arg>...]) <expression>;
+            begin: \b(rdef)\s+(\w+)(?:\s*(\()([^'"#)]*)(\)))?\s+
             beginCaptures:
               "1": { name: storage.type.macro.spec }
               "2":
@@ -106,6 +107,9 @@ repository:
                   name: entity.name.function.spec,
                   patterns: [{ include: "#validation-id" }],
                 }
+              "3": { name: punctuation.function-argument.begin.spec }
+              "4": { patterns: [{ include: "#list-id" }] }
+              "5": { name: punctuation.function-argument.end.spec }
             end: (?=$|;|#|"""|}|')
             patterns: [{ include: "#expression-single" }]
           - ### usage: undef <identifier>[(,| )<identifier>...];
