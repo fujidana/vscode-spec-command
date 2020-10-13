@@ -113,6 +113,7 @@ export function getStringFromReferenceItemKind(refItemKind: ReferenceItemKind): 
 export interface ReferenceItem {
     signature: string;
     description?: string;
+    comments?: string;
     snippet?: string;
     location?: IFileRange;
     overloads?: Overload[];

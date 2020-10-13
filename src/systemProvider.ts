@@ -213,7 +213,7 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
             const storage = this.storageCollection.get(uri.with({ query: '' }).toString());
             if (storage) {
                 let mdText = '# __spec__ Reference Manual\n\n';
-                mdText += 'The contents of this page are cited from the _Reference Manual_ section in [PDF version](https://www.certif.com/downloads/css_docs/spec_man.pdf) of the _User manual and Tutorials_, written by [Certified Scientific Software](https://www.certif.com/).\n\n';
+                mdText += 'The contents of this page are cited from the _Reference Manual_ section in [PDF version](https://www.certif.com/downloads/css_docs/spec_man.pdf) of the _User manual and Tutorials_, written by [Certified Scientific Software](https://www.certif.com/), except where otherwise noted.\n\n';
 
                 for (const [itemKind, map] of storage.entries()) {
                     const itemKindString = spec.getStringFromReferenceItemKind(itemKind);
@@ -231,6 +231,7 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
                         mdText += `### ${key}\n\n`;
                         mdText += `\`${item.signature}\``;
                         mdText += (item.description) ? ` \u2014 ${item.description}\n\n` : '\n\n';
+                        mdText += (item.comments) ? `${item.comments}\n\n` : '';
 
                         if (item.overloads) {
                             for (const overload of item.overloads) {
