@@ -228,11 +228,13 @@ variables:
   ### Not documented in spec_manA4.pdf. Instaed, cited from https://certif.com/spec_help/hdf5.html.
 
   HDF5_VERSION:
-    signature: VERSION
+    signature: HDF5_VERSION
+    comments: 'cited from [CSS spec help pages: hdf5](https://certif.com/spec_help/hdf5.html).'
     description: |-
       Contains the HDF5 version used when compiling **spec**, as in "1.8.13".
       Note, its value will not be set until the first call of one of the above functions.
   HDF5_ERROR_MODE:
+    comments: 'cited from [CSS spec help pages: hdf5](https://certif.com/spec_help/hdf5.html).'
     signature: HDF5_ERROR_MODE
     description: |-
       Sets the verbosity level of error messages.
@@ -2291,6 +2293,7 @@ functions:
 
   taco_io:
     signature: taco_io(...)
+    comments: 'cited from [CSS spec help pages: esrf](https://certif.com/spec_help/esrf.html).'
     description: |-
       The ESRF data collector system can be accessed using the following functions. All devices must reside on `NETHOST`.
     overloads:
@@ -2361,6 +2364,7 @@ functions:
         Sets the ethernet protocol for the named device.
   taco_db:
     signature: taco_db(...)
+    comments: 'cited from [CSS spec help pages: esrf](https://certif.com/spec_help/esrf.html).'
     overloads:
     - signature: taco_dc(dev, "create", cmd, data_type)
       description: |-
@@ -2415,6 +2419,7 @@ functions:
         Lists all the devices, commands and data types in the data collector for `NETHOST`.
   taco_dc:
     signature: taco_dc(...)
+    comments: 'cited from [CSS spec help pages: esrf](https://certif.com/spec_help/esrf.html).'
     overloads:
     - signature: taco_db(dev, res)
       description: |-
@@ -2430,6 +2435,7 @@ functions:
 
   tango_io:
     signature: tango_io(dev, ...)
+    comments: 'cited from [CSS spec help pages: tango](https://certif.com/spec_help/tango.html).'
     overloads:
     - signature: tango_io(dev, "?")
       description: |-
@@ -2462,6 +2468,7 @@ functions:
         Sets the data source for *dev*. Allowed values are 0, 1 and 2, with meanings as described above.
   tango_get:
     signature: tango_get(dev, ...)
+    comments: 'cited from [CSS spec help pages: tango](https://certif.com/spec_help/tango.html).'
     overloads:
     - signature: tango_get(dev, "?")
       description: |-
@@ -2555,6 +2562,7 @@ functions:
         If present, the *extras* array will be two dimensional, with the first index being the attribute name and the second index as above.
   tango_put:
     signature: tango_put(dev, ...)
+    comments: 'cited from [CSS spec help pages: tango](https://certif.com/spec_help/tango.html).'
     overloads:
     - signature: tango_put(dev, "?")
       description: |-
@@ -2584,6 +2592,7 @@ functions:
   
   epics_get:
     signature: epics_get(ca_name [, type] [, count])
+    comments: 'cited from [CSS spec help pages: epics](https://certif.com/spec_help/epics.html).'
     description: |-
       Returns the result of a channel-access get of the process variable *ca_name*, as in `print epics_get("ioc:m1.VAL")`.
       By default, the native data type of the process variable will be retrieved over channel access.
@@ -2599,6 +2608,7 @@ functions:
       Otherwise (or if there has been no monitor call back), **spec** will access the process variable value using the standard channel access `ca_array_get()`.
   epics_put:
     signature: epics_put(ca_name, value [, wait_time])
+    comments: 'cited from [CSS spec help pages: epics](https://certif.com/spec_help/epics.html).'
     description: |-
       Does a channel-access put of *value*, which can be either a string or a number, to the process variable *ca_name*.
       If the optional *wait_time* argument is set, **spec** will wait for a channel-access `"callback"` to indicate the value has been sent.
@@ -2607,6 +2617,7 @@ functions:
       If the process variable is an array of a `DBF_CHAR` type, any non-array *value*, whether number or string, will be sent via channel access as a string, filling as many elements of the array as the string is long.
   epics_par:
     signature: epics_par(...)
+    comments: 'cited from [CSS spec help pages: epics](https://certif.com/spec_help/epics.html).'
     overloads:
     - signature: epics_par(ca_name, what)
       description: |-
@@ -2634,6 +2645,7 @@ functions:
 
   gpib_par:
     signature: gpib_par(addr, "timeout" [, t])
+    comments: 'cited from [CSS spec help pages: gpib](https://certif.com/spec_help/gpib.html).'
     description: |-
       Returns or sets the timeout for the device with address *addr*.
       The units are seconds.
@@ -2645,6 +2657,7 @@ functions:
 
   vxi11_get:
     signature: vxi11_get(...)
+    comments: 'cited from [CSS spec help pages: vxi11](https://certif.com/spec_help/vxi11.html).'
     overloads:
     - signature: vxi11_get("name")
       description: |-
@@ -2669,6 +2682,7 @@ functions:
         If the incoming data is *little endian*, use `"short_swap"` or `"long_swap"`.
   vxi11_put:
     signature: vxi11_put(...)
+    comments: 'cited from [CSS spec help pages: vxi11](https://certif.com/spec_help/vxi11.html).'
     overloads:
     - signature: vxi11_put(name, s)
       description: |-
@@ -2685,6 +2699,7 @@ functions:
         Returns the number of bytes written.
   vxi11_par:
     signature: vxi11_par(...)
+    comments: 'cited from [CSS spec help pages: vxi11](https://certif.com/spec_help/vxi11.html).'
     overloads:
     - signature: vxi11_par("show")
       description: |-
@@ -2718,6 +2733,7 @@ functions:
 
   h5_file:
     signature: h5_file(...)
+    comments: 'cited from [CSS spec help pages: hdf5](https://certif.com/spec_help/hdf5.html).'
     overloads:
     - signature: h5_file(filename, "open" [,"cache=bytes[[:slots]:policy]"])
       description: |-
@@ -2740,6 +2756,7 @@ functions:
         Returns the name of the currently active HDF5 file, or the null string if no file is open.
   h5_attr:
     signature: h5_attr(...)
+    comments: 'cited from [CSS spec help pages: hdf5](https://certif.com/spec_help/hdf5.html).'
     overloads:
     - signature: h5_attr(group_path, attribute_name, attribute_value [, option ...])
       description: |-
@@ -2753,6 +2770,7 @@ functions:
         Sets the current group to *group_path*. A call such as `h5_attr("..")` moves the current group up one level.
   h5_data:
     signature: h5_data(...)
+    comments: 'cited from [CSS spec help pages: hdf5](https://certif.com/spec_help/hdf5.html).'
     overloads:
     - signature: h5_data(group_path, dataset_name, dataset_value [, option ...])
       description: |-
@@ -2773,6 +2791,7 @@ functions:
         Sets the current group to *group_path*. A call such as `h5_attr("..")` moves the current group up one level.
   h5_link:
     signature: h5_link(group_path, link_name, target_file, target_object)
+    comments: 'cited from [CSS spec help pages: hdf5](https://certif.com/spec_help/hdf5.html).'
     description: |-
       Creates a soft link named *link_name* pointing to the specified target object in the target file*.
 

@@ -45,20 +45,29 @@ function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceI
     }
 }
 
-function truncateText(text: string, settingKey: string): string {
+function truncateString(settingKey: string, description?: string, comments?: string): string | undefined {
     const config = vscode.workspace.getConfiguration('vscode-spec.editor.hintVolume');
     const volume = config.get<string>(settingKey, '');
-    if (volume === 'full') {
-        return text;
-    } else if (volume === 'paragraph') {
-        const endIndex = text.indexOf('\n\n');
-        return (endIndex >= 0) ? text.substr(0, endIndex) + '\n\n...' : text;
-    } else if (volume === 'sentence') {
-        const endIndex = text.search(/\.\s/g);
-        return (endIndex >= 0) ? text.substr(0, endIndex) + '. ...' : text;
-    } else {
-        return '';
+    let truncatedString;
+    if (description) {
+        if (volume === 'full') {
+            truncatedString = description;
+        } else if (volume === 'paragraph') {
+            const endIndex = description.indexOf('\n\n');
+            truncatedString = (endIndex >= 0) ? description.substr(0, endIndex) + '\n\n...' : description;
+        } else if (volume === 'sentence') {
+            const endIndex = description.search(/\.\s/g);
+            truncatedString = (endIndex >= 0) ? description.substr(0, endIndex) + '. ...' : description;
+        }
     }
+
+    if (comments) {
+        if (volume === 'full' || volume === 'paragraph') {
+            truncatedString = (truncatedString) ? truncatedString + '\n\n' + comments : comments;
+        }
+    }
+
+    return truncatedString;
 }
 
 function getParameterInformation(signature: string): vscode.ParameterInformation[] | undefined {
@@ -201,24 +210,24 @@ export class Provider implements vscode.CompletionItemProvider, vscode.HoverProv
 
         // set the description of the completion item
         // if the main description exists, append it.
-        let descriptionMarkdown =
-            item.description ?
-                new vscode.MarkdownString(truncateText(item.description, 'completionItem')) :
-                new vscode.MarkdownString();
+        
+        let descriptionMarkdown = new vscode.MarkdownString(truncateString('completionItem', item.description, item.comments));
 
         // if overloaded signature exists, append them.
         if (item.overloads) {
             for (const overload of item.overloads) {
                 // descriptionMarkdown.appendMarkdown('---');
                 descriptionMarkdown.appendCodeblock(overload.signature);
-                if (overload.description) {
-                    descriptionMarkdown.appendMarkdown(truncateText(overload.description, 'completionItem'));
-                    // descriptionMarkdown.appendMarkdown('\n\n');
+                const truncatedString = truncateString('completionItem', overload.description, undefined);
+                if (truncatedString) {
+                    descriptionMarkdown.appendMarkdown(truncatedString);
                 }
             }
         }
-
-        newCompletionItem.documentation = descriptionMarkdown;
+        
+        if (descriptionMarkdown.value) {
+            newCompletionItem.documentation = descriptionMarkdown;
+        }
         return newCompletionItem;
     }
 
@@ -245,8 +254,9 @@ export class Provider implements vscode.CompletionItemProvider, vscode.HoverProv
                     let mainMarkdown = getShortDescription(item, itemKind, refUriString, document.uri.toString(), true);
 
                     // prepare the second line: the description (if it exists)
-                    if (item.description) {
-                        mainMarkdown = mainMarkdown.appendMarkdown(truncateText(item.description, 'hover'));
+                    const truncatedString = truncateString('hover', item.description, item.comments);
+                    if (truncatedString) {
+                        mainMarkdown = mainMarkdown.appendMarkdown(truncatedString);
                     }
 
                     if (!hover) {
@@ -259,8 +269,9 @@ export class Provider implements vscode.CompletionItemProvider, vscode.HoverProv
                     if (item.overloads) {
                         for (const overload of item.overloads) {
                             let overloadMarkdown = new vscode.MarkdownString().appendCodeblock(overload.signature);
-                            if (overload.description) {
-                                overloadMarkdown = overloadMarkdown.appendMarkdown(truncateText(overload.description, 'hover'));
+                            const truncatedString2 = truncateString('hover', overload.description, undefined);
+                            if (truncatedString2) {
+                                overloadMarkdown = overloadMarkdown.appendMarkdown(truncatedString2);
                             }
                             hover.contents.push(overloadMarkdown);
                         }
@@ -290,9 +301,10 @@ export class Provider implements vscode.CompletionItemProvider, vscode.HoverProv
 
                 for (const overload of overloads) {
                     // assume that usage.signature must exist.
-                    let signatureInformation = new vscode.SignatureInformation(overload.signature);
-                    if (overload.description) {
-                        signatureInformation.documentation = new vscode.MarkdownString(truncateText(overload.description, 'signatureHelp'));
+                    const signatureInformation = new vscode.SignatureInformation(overload.signature);
+                    const truncatedString = truncateString('signatureHelp', overload.description, undefined);
+                    if (truncatedString) {
+                        signatureInformation.documentation = new vscode.MarkdownString(truncatedString);
                     }
                     let parameters: vscode.ParameterInformation[] | undefined;
                     if ((parameters = getParameterInformation(overload.signature)) !== undefined) {
