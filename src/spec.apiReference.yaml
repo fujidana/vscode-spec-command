@@ -16,7 +16,7 @@ variables:
       is an array dimensioned to the number of motors as obtained from the *config* file.
       The function `read_motors(0)` fills the array with user angles.
       The user can assign values to any of the elements.
-      The commands move_all and `move_cnt` use the values in the array.
+      The commands `move_all` and `move_cnt` use the values in the array.
       Also, the various site-dependent, geometry-specific calculations, accessed through the `calc()` userhook function, base their results on the values in this array or place new values in it.
   CCDS:
     signature: CCDS
@@ -224,6 +224,21 @@ variables:
     signature: VERSION
     description: |-
       is string valued and is set to the version number of **spec**, as in `3.03.11`.
+
+  ### Not documented in spec_manA4.pdf. Instaed, cited from https://certif.com/spec_help/hdf5.html.
+
+  HDF5_VERSION:
+    signature: VERSION
+    description: |-
+      Contains the HDF5 version used when compiling **spec**, as in "1.8.13".
+      Note, its value will not be set until the first call of one of the above functions.
+  HDF5_ERROR_MODE:
+    signature: HDF5_ERROR_MODE
+    description: |-
+      Sets the verbosity level of error messages.
+      Valid values are 1 through 4.
+      Higher levels are useful for debugging calls of the above functions in conjunction with the HDF5 library source code.
+      The default value is 1.
 
 # Built-In Functions and Commands
 
@@ -2272,53 +2287,504 @@ functions:
       During normal operation, you should not need to issue these commands. 
       You should probably issue a `reconfig` after sending a crate initialize or clear.
 
-  ## Not documented. Added by the language support developper
+  ### Not documented in spec_manA4.pdf. Instaed, cited from https://certif.com/spec_help/esrf.html.
 
   taco_io:
     signature: taco_io(...)
+    description: |-
+      The ESRF data collector system can be accessed using the following functions. All devices must reside on `NETHOST`.
+    overloads:
+    - signature: taco_io(dev, cmd [, arg1_in [, arg2_in]] [, array_out]|[, grp, el])
+      description: |-
+        Allows general access to ESRF hardware device servers.
+        The argument *dev* is the (case-insensitive) string name of the hardware device as specified in the corresponding device server documentation.
+        The name might represent an entire VME module or it might represent an individual channel on a module.
+        The argument *cmd* is the string name of a valid command for the device.
+        Each command has associated specific input and output data types.
+        At present, the following data types are supported.
+
+        - `D_VOID_TYPE` — void
+        - `D_BOOLEAN_TYPE` — Boolean
+        - `D_SHORT_TYPE` — short
+        - `D_USHORT_TYPE` — unsigned short
+        - `D_LONG_TYPE` — long
+        - `D_ULONG_TYPE` — unsigned long
+        - `D_FLOAT_TYPE` — float
+        - `D_DOUBLE_TYPE` — double
+        - `D_STRING_TYPE` — string
+        - `D_VAR_CHARARR` — char array
+        - `D_VAR_SHORTARR` — short array
+        - `D_VAR_LONGARR` — long array
+        - `D_VAR_ULONGARR` — unsigned-long array
+        - `D_VAR_FLOATARR` — float array
+        - `D_VAR_DOUBLEARR` — double array
+        - `D_VAR_STRINGARR` — string array
+        - `D_INT_FLOAT_TYPE` — one long, one float
+        - `D_MOTOR_FLOAT` — one long, one float
+        - `D_ATTE_TYPE` — two shorts
+        - `D_LONG_READPOINT` — two longs
+        - `D_MOTOR_LONG` — two longs
+        - `D_FLOAT_READPOINT` — two floats
+        - `D_DOUBLE_READPOINT` — two doubles
+        - `D_STATE_FLOAT_READPOINT` — one short, two floats
+        - `D_VAR_GRPFPARR` — array of DevGrpFramePair objects
+
+        The `D_VOID_TYPE` data type means no data value is to be passed.
+        For scalar values, **spec** treats all data types as a double - the necessary conversions are automatic.
+        The argument *arg1_in* is necessary if the command requires an input value.
+        For the two-element composite types, *arg2_in* must also be provided.
+        For array input types, *arg1_in* is the name of the array.
+        For the `D_VAR_` array types (except for `D_VAR_STRINGARR`), *arg1_in* can be an associative array or a data array type.
+        For commands that produce an output array or composite values, *array_out* is the name of an array to receive the values.
+        Data arrays can only be used for `D_VAR_` array types (except for `D_VAR_STRINGARR`).
+        For commands that produce an output array of numbers (not strings or composite data types), a data group and element can be specified as *grp* and *el*, and the received data will be placed there.
+    - signature: taco_io("?" [, filter])
+      description: |-
+        A single `"?"` lists all the devices available on the current `NETHOST`.
+        The optional filter argument can be used to limit the contents of the returned list and is in the usual DOMAIN/FAMILY/MEMBER format, where the `*` character can be used to match patterns in any of the three fields.
+        See the TACO *db_getdevexp* man page for more information.
+    - signature: taco_io(dev, "?")
+      description: |-
+        Lists the valid commands for the named device, along with the data types of any input and/or output arguments.
+    - signature: taco_io(dev, "timeout", time)
+      description: |-
+        Sets the remote procedure call (RPC) timeout for the indicated device.
+        The value of *time* is in seconds.
+        If *time* is zero, the timeout is set to its original value.
+        The function returns the timeout value.
+    - signature: taco_io(dev, "reconnect")
+      description: |-
+        Closes the connection to the device via the `dev_free()` TACO function and reopens the connection to the same device using the same timeout and UDP/TCP protocol via `dev_import()`.
+        This option allows remaking a connection without the overhead associated with complete hardware reinitialization that comes with `reconfig`.
+    - signature: taco_io(dev, "udp"|"tcp")
+      description: |-
+        Sets the ethernet protocol for the named device.
   taco_db:
     signature: taco_db(...)
+    overloads:
+    - signature: taco_dc(dev, "create", cmd, data_type)
+      description: |-
+        Creates a new pseudodevice for the data collector named *dev* having data accessed using the command *cmd* having data type *data_type*.
+        The parameters *dev*, *cmd* and *data_type* are all strings.
+        **spec** requires data collector devices it creates to have only one command.
+        If the device already exists with a different command or with more than one command, the function fails.
+        The *cmd* argument must be one of the commands recognized by the data collector.
+        **spec** supports the following data types:
+
+        - D_BOOLEAN_TYPE
+        - D_SHORT_TYPE
+        - D_LONG_TYPE
+        - D_FLOAT_TYPE
+        - D_DOUBLE_TYPE
+        - D_STRING_TYPE
+        - D_VAR_CHARARR
+        - D_VAR_SHORTARR
+        - D_VAR_LONGARR
+        - D_VAR_ULONGARR
+        - D_VAR_FLOATARR
+        - D_VAR_DOUBLEARR
+        - D_VAR_STRINGARR
+
+        **spec** treats all data as either a string or a double.
+        The necessary type conversions will be made on the data passed through `taco_dc()`.
+    - signature: taco_dc(dev, "delete")
+      description: |-
+        Deletes the device *dev* from the data collector.
+    - signature: taco_dc(dev, "put", data)
+      description: |-
+        Writes data to the device *dev*.
+        The device must exist in the data collector and must only have one command.
+        The *data* argument will be converted to the appropriate string or number data type, according to the data type required by the device's command.
+        If the command uses an array data type, *data* should be an array name.
+    - signature: taco_dc(dev, cmd)
+      description: |-
+        Returns the string or number value associated with the command *cmd* for device *dev*.
+    - signature: taco_dc(dev, cmd, array_name)
+      description: |-
+        If the command *cmd* for device *dev* returns an array data type, *array_name* is the name of a **spec** array that will receive the string or number data.
+        The function returns the number of elements in the array.
+    - signature: taco_dc(dev, cmd, grp, el)
+      description: |-
+        If the command *cmd* for device *dev* returns an array data type containing number values, the arguments *grp* and *el* specify a **spec** data group and element number to receive the values.
+        The function returns the number of elements in the array.
+    - signature: taco_dc(dev, "?")
+      description: |-
+        Lists the commands and data types available for the device *dev*.
+    - signature: taco_dc("?")
+      description: |-
+        Lists all the devices, commands and data types in the data collector for `NETHOST`.
   taco_dc:
     signature: taco_dc(...)
+    overloads:
+    - signature: taco_db(dev, res)
+      description: |-
+        Returns a string containing the value of the resource *res* for the database item *dev*.
+        The string *dev* is of the form *//facility/domain/family/member* or *domain/family/member*, with the default *facility* taken from the `NETHOST` environment variable.
+        If there are multiple elements in the resource value, they are returned in a comma-separated list.
+    - signature: taco_db(dev, res, value)
+      description: |-
+        The first two arguments are as above, with the resource *res* associated with *dev* being set to *value*.
+        If multiple elements are required, the argument *value* should be a string in a comma-separated list.
+
+### Not documented in spec_manA4.pdf. Instaed, cited from https://certif.com/spec_help/tango.html.
 
   tango_io:
-    signature: tango_io(...)
+    signature: tango_io(dev, ...)
+    overloads:
+    - signature: tango_io(dev, "?")
+      description: |-
+        Lists the command properties for *dev* in a concise format, showing the input and output data types for each available command.
+    - signature: tango_io(dev, "??")
+      description: |-
+        Lists the command properties for *dev* in a more verbose format, showing not only the input and output data types, but also the command description, as supplied by the TANGO server.
+    - signature: tango_io(dev, cmd [, argin [, argout])
+      description: |-
+        Allows general access to TANGO devices.
+        If *cmd* returns a scalar, the *argout* argument is optional.
+        If present, the return value for *cmd* will be placed there and `tango_io()` will return zero on success.
+        If absent, `tango_io()` will return the value for *cmd*.
+        If *cmd* returns an array, the *argout* array argument is required.
+        On success, `tango_io()` returns the number of elements in the array.
+    - signature: tango_io(dev, "timeout")
+      description: |-
+        Returns the current connection timeout for *dev* in seconds.
+    - signature: tango_io(dev, "timeout", sec)
+      description: |-
+        Sets the connection timeout for *dev* in seconds.
+    - signature: tango_io(dev, "source")
+      description: |-
+        Returns the data source for *dev*.
+        A value of 0 indicates data is read directly from the device.
+        A value of 1 means data is read from the polling cache.
+        A value of 2 indicates data is read from the cache or the device.
+    - signature: tango_io(dev, "source", value)
+      description: |-
+        Sets the data source for *dev*. Allowed values are 0, 1 and 2, with meanings as described above.
   tango_get:
-    signature: tango_get(...)
+    signature: tango_get(dev, ...)
+    overloads:
+    - signature: tango_get(dev, "?")
+      description: |-
+        Lists the attributes, the read-write permissions and data type for *dev* in a concise format.
+    - signature: tango_get(dev, "??")
+      description: |-
+        Lists the attributes, the read-write permissions, data type and command description for *dev*.
+    - signature: tango_get(dev, "?", attr)
+      description: |-
+        Displays elements of the attribute information structure for the selected attribute.
+    - signature: tango_get(dev, "?", attr, info)
+      description: |-
+        Fills the associative array *info* with the elements of the attribute information structure for the selected attribute.
+        Elements are indexed as shown:
+
+        - `info["data_format"]` — Scalar, spectrum or image
+        - `info["data_name"]` — Data type as a string
+        - `info["data_type"]` — Data type code number
+        - `info["description"]` — Description text
+        - `info["disp_level"]` — Operator or expert
+        - `info["display_unit"]` — Conversion factor to GUI display unit
+        - `info["format"]` — Format specification string for GUI display
+        - `info["label"]` — GUI label
+        - `info["max_alarm"]` — Max value, checked when reading
+        - `info["max_dim_x"]` — Max data size in X
+        - `info["max_dim_y"]` — Max data size in Y
+        - `info["max_value"]` — Max value, checked when writing
+        - `info["min_alarm"]` — Min value, checked when reading
+        - `info["min_value"]` — Min value, checked when writing
+        - `info["name"]` — Attribute name
+        - `info["standard_unit"]` — Conversion factor to MKS units
+        - `info["unit"]` — Unit string
+        - `info["writable"]` — Read, write, read_write or read_with_write
+        - `info["writable_attr_name"]` — Needed for read_with_write
+
+        In addition, the function returns an associative array containing the information.
+    - signature: tango_get(dev, "timeout")
+      description: |-
+        Returns the current connection timeout for *dev* in seconds.
+    - signature: tango_get(dev, "timeout", sec)
+      description: |-
+        Sets the connection timeout for *dev* in seconds.
+        Returns -1 on error, otherwise returns the new timeout value.
+    - signature: tango_get(dev, attr [, argout ] [, extras])
+      description: |-
+        Reads one device attribute.
+        If the attribute is a `SPECTRUM` or `IMAGE` type, then the *argout* argument is needed and is the name of an associative or data array that will receive the attribute data.
+
+        For `SCALAR` data types, the *argout* argument is optional.
+        If present, *argout* will be assigned the value.
+        If absent, the `tango_get()` call will return the value.
+        With the optional *argout* argument, barring other errors, the return value of `tango_get()` will be zero unless the data quality is `INVALID`, in which case the return value is 1.
+        Without the optional *argout* argument, if the data quality is `INVALID` the return value will be the string `"invalid"`.
+
+        For `SPECTRUM` and `IMAGE` data types, the return value will be the number of array elements returned and the string `"invalid"` if the data quality is `INVALID`.
+
+        If there is a TANGO error, the function returns -1, with the `TANGO_ERR` global variable set to the error message.
+
+        If the optional argument *extras* is included, it must be an associative array.
+        The elements of the *extras* array will be assigned attribute data elements indexed as follows:
+
+        - `extras["data_name"]` — String name of data type
+        - `extras["data_type"]` — Data scalar-type code
+        - `extras["dim_x"]` — Data dimension for X
+        - `extras["dim_y"]` — Data dimension for Y
+        - `extras["name"]` — Attribute name
+        - `extras["quality"]` — Data quality factor
+        - `extras["time_stamp"]` — Time stamp
+
+        For scalar data `"dim_y"` is zero.
+        The quality factor values are as follows:
+
+        - 0 — VALID
+        - 1 — INVALID
+        - 2 — ALARM
+        - 3 — CHANGING
+        - 4 — WARNING
+
+        The `"time_stamp"` element contains the time in seconds and milliseconds from the UNIX epoch.
+    - signature: tango_get(dev, at1, argout1, at2, argout2 [, ... ]] [, extras])
+      description: |-
+        Reads multiple device attributes.
+        An *argout* argument must be provided for each attribute, whether scalar or array.
+
+        When reading multiple attributes, if there are no errors, the return value of `tango_get()` will be the number of attributes that have `INVALID` quality.
+        If no attributes have `INVALID` quality, the return value is zero.
+        The *extras* array will be needed to sort out which attributes have `INVALID` data.
+
+        If there is a TANGO error, the function returns -1, with the `TANGO_ERR` global variable set to the error message.
+
+        If present, the *extras* array will be two dimensional, with the first index being the attribute name and the second index as above.
   tango_put:
-    signature: tango_put(...)
+    signature: tango_put(dev, ...)
+    overloads:
+    - signature: tango_put(dev, "?")
+      description: |-
+        Lists the attributes, the read-write permissions and data type for *dev* in a concise format.
+    - signature: tango_put(dev, "??")
+      description: |-
+        Lists the attributes, the read-write permissions, data type and command description for *dev*.
+    - signature: tango_put(dev, "timeout")
+      description: |-
+        Returns the current connection timeout for *dev* in seconds.
+    - signature: tango_put(dev, "timeout", sec)
+      description: |-
+        Sets the connection timeout for *dev* in seconds.
+        Returns -1 on error, otherwise returns the new timeout value.
+    - signature: tango_put(dev, attr1, argin1 [, attr2, argin2 [, ...]])
+      description: |-
+        Writes one or more device attributes.
+        Each attribute is followed by its value. Attributes can be scalar or arrays.
+        
+        On success, the return value is 0.
+        
+        If there is a TANGO error, the function returns -1, with the `TANGO_ERR` global variable set to the error message.
   tango_db:
     signature: tango_db(...)
+
+  ### Not documented in spec_manA4.pdf. Instaed, cited from https://certif.com/spec_help/epics.html.
+  
+  epics_get:
+    signature: epics_get(ca_name [, type] [, count])
+    description: |-
+      Returns the result of a channel-access get of the process variable *ca_name*, as in `print epics_get("ioc:m1.VAL")`.
+      By default, the native data type of the process variable will be retrieved over channel access.
+      However, a different data type can be specified using the optional second argument.
+      Possible types are `"char"`, `"short"`, `"long"`, `"float"`, `"double"`, `"enum"` and `"string"`.
+      For `DBF_ENUM` data types, the string value of the process variable is returned, unless another type is specified.
+      For array types, the entire array is retrieved and returned, unless the optional argument *count* specifies fewer elements (as of **spec** release 5.00.04).
+      When requesting `"string"` for types other than `DBF_CHAR`, arrays will be returned as a **spec** string data array consisting of 40-byte rows, with as many rows as elements in the EPICS array.
+      Each row will contain an ASCII representation of the corresponding value, with the rest of the row padded with null bytes.
+      For `DBF_CHAR` data, the return value will be converted to an ordinary string (as of release 5.10.01-8).
+      Note, any bytes following a null byte in the `DBF_CHAR` array will be lost.
+      If a `"monitor"` has been set for the process variable using the `"monitor_set"` option below, the returned result will be the most recent value as set by the monitor call back.
+      Otherwise (or if there has been no monitor call back), **spec** will access the process variable value using the standard channel access `ca_array_get()`.
+  epics_put:
+    signature: epics_put(ca_name, value [, wait_time])
+    description: |-
+      Does a channel-access put of *value*, which can be either a string or a number, to the process variable *ca_name*.
+      If the optional *wait_time* argument is set, **spec** will wait for a channel-access `"callback"` to indicate the value has been sent.
+      **spec** will wait up to the specified number of seconds for that response.
+      Such a feature might come in handy if the channel-access put is to start an acquisition device and one wants to insure the device is started before continuing.
+      If the process variable is an array of a `DBF_CHAR` type, any non-array *value*, whether number or string, will be sent via channel access as a string, filling as many elements of the array as the string is long.
   epics_par:
     signature: epics_par(...)
-  epics_get:
-    signature: epics_get(...)
-  em_io:
-    signature: em_io(...)
+    overloads:
+    - signature: epics_par(ca_name, what)
+      description: |-
+        Returns parameters associated with the process variable *ca_name*, according to the value of the string *what*, which may have the following values:
+        
+        - `"connect"` — Queues the call to make the initial connection for the designated process variable, but doesn't force a network packet to be sent. If many process variables are to be accessed from user level, it will be more efficient in terms of network access to use this `"connect"` option for each, before the individual `epics_get()` and `epics_put()` calls. (Available as of **spec** release 5.08.01-4.)
+        - `"refresh"` — Closes then reopens the channel access connection. If a monitor has been set, it will be restored. (Available as of **spec** release 6.00.02.)
+        - `"count"` — Returns the element count associated with *ca_name*.
+        - `"host"` — Returns the host name for *ca_name* (EPICS 3.12 and above).
+        - `"monitor_set"` — Creates a "monitor" for the indicated process variable.
+        - `"monitor_check"` — If the indicated process variable has a monitor, returns the value 1 if the value of the process variable has changed since last read with `epics_get()`. Returns -1 if no monitor has been created and for other EPICS errors. Otherwise returns zero.
+        - `"monitor_clear"` — Removes the monitor for the indicated process variable.
+        - `"read_access"` — Returns nonzero if *ca_name* has read access (EPICS 3.12 and above).
+        - `"timeout"` — Returns the value **spec** uses for the `ca_pend_io()` time-out parameter.
+        - `"timestamp"` — Returns the EPICS timestamp associated with the indicated process variable. The value is converted to the seconds since the UNIX epoch (00:00:00 Jan 1, 1970 UTC - also the **spec** epoch - the EPICS epoch is marked exactly twenty years later) and includes the fractional part to nanosecond resolution. The value returned here can be used as an argument to **spec**'s `date()` function to print the time of day associated with the timestamp value. Note, for array EPICS process variables, the timestamp associated with the first element of the array is returned. (Available as of **spec** release 5.10.02-11.)
+        - `"type"` — Returns a string (such as `"string"`, `"double"`, `"short"`, etc.) indicating the data type of *ca_name*.
+        - `"write_access"` — Returns nonzero if *ca_name* has write access (EPICS 3.12 and above).
+    - signature: epics_par(ca_name, what, value)
+      description: |-
+        Sets parameters associated with the process variable *ca_name*, according to the value of the string *what*, which may have the following values:
+
+        - `"timeout"` — Sets the value **spec** uses for the `ca_pend_io()` time-out parameter.
+
+  ### Not documented in spec_manA4.pdf. Instead, cited from https://certif.com/spec_help/gpib.html.
 
   gpib_par:
-    signature: gpib_par(...)
+    signature: gpib_par(addr, "timeout" [, t])
+    description: |-
+      Returns or sets the timeout for the device with address *addr*.
+      The units are seconds.
+      A value less than or equal to zero resets the timeout to the default value of three seconds.
+      Timeouts are per device (rather than per controller). The timeouts only apply to the user-level GPIB commands.
+      Timeouts used by built-in hardware support will continue to apply to that access. (As of **spec** release 5.09.02-3.)
 
-  vxi11_par:
-    signature: vxi11_par(...)
+  ### Not documented in spec_manA4.pdf. Instaed, cited from https://certif.com/spec_help/vxi11.html.
+
   vxi11_get:
     signature: vxi11_get(...)
+    overloads:
+    - signature: vxi11_get("name")
+      description: |-
+        Reads up 8192 bytes from the device.
+        A device will usually indicate a read is finished by setting the end bit, resulting in the transfer of less than the maximum number.
+    - signature: vxi11_get("name", n)
+      description: |-
+        Reads up to *n* bytes.
+    - signature: vxi11_get("name", d)
+      description: |-
+        Reads incoming bytes into the data array *d*.
+        The size of *d* determines how many bytes are to be read.
+        Sub-array syntax can be used to limit the number of bytes.
+        The function returns the number of array elements read, or zero if the read times out.
+        Note, no byte re-ordering is done for short- or long-integer data, and no format conversions are done for float or double data.
+    - signature: vxi11_get("name", mode)
+      description: |-
+        If *mode* is the string `"byte"`, reads and returns one unsigned binary byte.
+        If *mode* is the string `"short"`, reads two binary bytes and returns the short integer so formed.
+        If *mode* is the string `"long"`, reads four binary bytes and returns the long integer so formed.
+        The last two modes work the same on both *big-endian* and *little-endian* platforms. On both, the incoming data is treated as *big endian*.
+        If the incoming data is *little endian*, use `"short_swap"` or `"long_swap"`.
   vxi11_put:
     signature: vxi11_put(...)
-  
+    overloads:
+    - signature: vxi11_put(name, s)
+      description: |-
+        Writes the string s to the device.
+        Returns the number of bytes written.
+    - signature: vxi11_put(name, d, [cnt])
+      description: |-
+        Writes the contents of the data array *d* to the device.
+        By default, the entire array (or subarray, if specified) will be sent.
+        The optional third argument *cnt* can be used to specify the number of array elements to send.
+        For short and long integer arrays, the data will be sent using native byte order.
+        The `"swap"` option of the `array_op()` function can be used to change the byte order, if necessary.
+        No format conversions are available for float or double data.
+        Returns the number of bytes written.
+  vxi11_par:
+    signature: vxi11_par(...)
+    overloads:
+    - signature: vxi11_par("show")
+      description: |-
+        Lists the current open clients.
+    - signature: vxi11_par("info")
+      description: |-
+        Returns a string that lists the current open clients.
+    - signature: vxi11_par("timeout" [, t])
+      description: |-
+        Returns or sets the default timeout for the RPC calls. The units are seconds.
+    - signature: vxi11_par("name", "timeout" [, t])
+      description: |-
+        Returns or sets the timeout for the named device.
+        This value overrides the global default.
+        The units are seconds.
+    - signature: vxi11_par("name", "connect")
+      description: |-
+        Opens the RPC connection to the named device.
+        Returns true if successful and false for failure.
+        Connections are created automatically with the `vxi11_get()` and `vxi11_put()` functions.
+        It is not necessary to use the `"connect"` option.
+        However, it may be useful to check if a connection is possible.
+        There is no difference in behavior for a connection opened using this `"connect"` option or one opened automatically with `vxi11_get()` or `vxi_put()`.
+    - signature: vxi11_par("name", "close")
+      description: |-
+        Closes the RPC connection to the named device and frees associated resources.
+        Returns true whether or not the named device is open.
+        All connections are closed during a `reconfig`.
+
+  ### Not documented in spec_manA4.pdf. Instaed, cited from https://certif.com/spec_help/hdf5.html.
+
+  h5_file:
+    signature: h5_file(...)
+    overloads:
+    - signature: h5_file(filename, "open" [,"cache=bytes[[:slots]:policy]"])
+      description: |-
+        Opens *filename* if it exists or creates it if it doesn't.
+        The HDF5 file remains open across calls, although all objects and resources created by `h5_attr()` and `h5_data()` are closed and released when those functions return.
+        The optional argument sets the raw data chunk cache parameters for all data sets saved to the file as long as it remains open.
+        The meaning of the parameters is explained above.
+    - signature: h5_file(filename, "flush")
+      description: |-
+        Tells the HDF5 library to write buffered data for *filename* out to disk.
+    - signature: h5_file(filename, "close")
+      description: |-
+        Closes *filename*.
+    - signature: h5_file(filename)
+      description: |-
+        If more than one HDF5 file is open, makes *filename* the active one.
+        If no HDF5 file is open, attempts to open *filename*. Returns **true** (1) for success.
+    - signature: h5_file()
+      description: |-
+        Returns the name of the currently active HDF5 file, or the null string if no file is open.
+  h5_attr:
+    signature: h5_attr(...)
+    overloads:
+    - signature: h5_attr(group_path, attribute_name, attribute_value [, option ...])
+      description: |-
+        Creates a new attribute with the name *attribute_name* and the value *attribute_value*.
+        The *options* can be a **spec** data type as in the table above.
+    - signature: h5_attr()
+      description: |-
+        With no arguments, returns the path of the current group.
+    - signature: h5_attr(group_path)
+      description: |-
+        Sets the current group to *group_path*. A call such as `h5_attr("..")` moves the current group up one level.
+  h5_data:
+    signature: h5_data(...)
+    overloads:
+    - signature: h5_data(group_path, dataset_name, dataset_value [, option ...])
+      description: |-
+        Creates a new dataset with the name *dataset_name* and the value *dataset_value*.
+        The *options* can be a **spec** data type, as in the table above.
+        Additional options include `"dims=[frames:]rows:columns"`, `"chunk=[frames:]rows:columns"`, `"cache=bytes[[:slots]:policy]"` and `"gzip[=deflation_factor]`.
+    - signature: h5_data(group_path, dataset_name, dataset_value, "frame=#"|#)
+      description: |-
+        Adds *dataset_value* to the existing dataset at the specified frame or row number.
+    - signature: h5_data(group_path, dataset_name, dataset_link, "link")
+      description: |-
+        Creates a dataset containing a hard link from *dataset_link* to *dataset_name*.
+    - signature: h5_data()
+      description: |-
+        With no arguments, returns the path of the current group.
+    - signature: h5_data(group_path)
+      description: |-
+        Sets the current group to *group_path*. A call such as `h5_attr("..")` moves the current group up one level.
+  h5_link:
+    signature: h5_link(group_path, link_name, target_file, target_object)
+    description: |-
+      Creates a soft link named *link_name* pointing to the specified target object in the target file*.
+
+  ### Not documented in spec_manA4.pdf.
+
   fbus_get:
     signature: fbus_get(...)
   fbus_put:
     signature: fbus_put(...)
 
-  h5_attr:
-    signature: h5_attr(...)
-  h5_file:
-    signature: h5_file(...)
-  h5_link:
-    signature: h5_link(...)
-  h5_data:
-    signature: h5_data(...)
+  em_io:
+    signature: em_io(...)
 
 macros:
 
