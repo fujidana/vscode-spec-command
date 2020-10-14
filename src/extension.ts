@@ -5,10 +5,14 @@ import { SystemProvider } from './systemProvider';
 import { UserProvider } from './userProvider';
 
 // this method is called when your extension is activated
-export function activate(context: vscode.ExtensionContext) {
-    const systemProvider = new SystemProvider(context);
-    const userProvider = new UserProvider(context);
+export function activate(context: vscode.ExtensionContext): undefined {
+    new SystemProvider(context);
+    new UserProvider(context);
+
+    return undefined;
 }
 
 // this method is called when your extension is deactivated
-export function deactivate() { }
+export function deactivate(): undefined {
+    return undefined;
+}

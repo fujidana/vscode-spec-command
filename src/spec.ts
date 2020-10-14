@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 import { IFileRange, IFilePosition } from './grammar';
 
-export function convertPosition(position: IFilePosition) {
+export function convertPosition(position: IFilePosition): vscode.Position {
     return new vscode.Position(position.line - 1, position.column - 1);
 }
-export function convertRange(range: IFileRange) {
+export function convertRange(range: IFileRange): vscode.Range {
     return new vscode.Range(convertPosition(range.start), convertPosition(range.end));
 }
 export const SELECTOR = { scheme: '*', language: 'spec' };

@@ -91,7 +91,7 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
         const openReferenceManualCommandCallback = () => {
             const storage = this.storageCollection.get(spec.BUILTIN_URI);
             if (storage) {
-                let quickPickLabels = ['all'];
+                const quickPickLabels = ['all'];
                 for (const itemKind of storage.keys()) {
                     quickPickLabels.push(spec.getStringFromReferenceItemKind(itemKind));
                 }
@@ -209,6 +209,8 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
      * required implementation of vscode.TextDocumentContentProvider
      */
     public provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken): vscode.ProviderResult<string> {
+        if (token.isCancellationRequested) { return; }
+
         if (uri.scheme === 'spec' && uri.authority === 'system') {
             const storage = this.storageCollection.get(uri.with({ query: '' }).toString());
             if (storage) {

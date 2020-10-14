@@ -61,7 +61,7 @@ function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position
                     // register arguments of function as variables if the cursor is in the function block.
                     for (const param of currentNode.params) {
                         if (param.type === 'Identifier') {
-                            refItem = { signature: param.name, location: <any>currentNode.loc };
+                            refItem = { signature: param.name, location: <IFileRange>currentNode.loc };
                             variableRefMap.set(param.name, refItem);
                         }
                     }
@@ -120,9 +120,9 @@ function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position
                 }
             }
         },
-        leave: (currentNode, parentNode) => {
-            // console.log('leave', currentNode.type, parentNode && parentNode.type);
-        },
+        // leave: (currentNode, parentNode) => {
+        //     console.log('leave', currentNode.type, parentNode && parentNode.type);
+        // },
         keys: ADDITIONAL_TRAVERSE_KEYS,
     });
 
@@ -183,7 +183,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         };
 
         // command to run file in terminal
-        const execFileInTerminalCommandCallback = (...args: any[]) => {
+        const execFileInTerminalCommandCallback = (...args: unknown[]) => {
             // find active terminal.
             const terminal = vscode.window.activeTerminal;
             if (!terminal) {
@@ -218,7 +218,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
 
             // send a command to the active terminal.
             terminal.show(true);
-            terminal.sendText(`qdofile(\"${path}\")`);
+            terminal.sendText(`qdofile("${path}")`);
         };
 
         // a hander invoked when the document is changed
@@ -428,7 +428,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         const uriString = uri.toString();
 
         interface CustomProgram extends estree.Program {
-            x_diagnostics: { location: IFileRange, message: string, severity: vscode.DiagnosticSeverity }[];
+            exDiagnostics: { location: IFileRange, message: string, severity: vscode.DiagnosticSeverity }[];
         }
 
         let tree: CustomProgram | undefined;
@@ -456,7 +456,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         // console.log(JSON.stringify(tree, null, 2));
 
         if (diagnoseProblems) {
-            const diagnostics = tree.x_diagnostics.map(item => new vscode.Diagnostic(spec.convertRange(item.location), item.message, item.severity));
+            const diagnostics = tree.exDiagnostics.map(item => new vscode.Diagnostic(spec.convertRange(item.location), item.message, item.severity));
             this.diagnosticCollection.set(uri, diagnostics);
         }
 
