@@ -180,7 +180,7 @@ start =
     return {
       type: 'Program',
       body: body,
-      x_diagnostics: _diagnostics,
+      exDiagnostics: _diagnostics,
     };
   }
 
@@ -572,9 +572,9 @@ data_array_def 'data-array declaration' =
       type: 'VariableDeclaration',
       declarations: makeDeclarators(items, location(), 'array identifier'),
       kind: 'let',
-      x_type: 'data-array',
-      x_scope: scope ? scope[0] : undefined,
-      x_unit: unit ? unit[0] : undefined,
+      exType: 'data-array',
+      exScope: scope ? scope[0] : undefined,
+      exUnit: unit ? unit[0] : undefined,
     };
   }
 
@@ -600,7 +600,7 @@ _data_array_list_item =
     if (!sizes || sizes.length === 0) {
       pushDiagnostic(location(), 'Array size must be sepcified.', vscode.DiagnosticSeverity.Error);
     }
-    return [ id, sep, location(), { x_sizes: sizes } ];
+    return [ id, sep, location(), { exSizes: sizes } ];
   }
   /
   sep:list_sep {
@@ -613,9 +613,9 @@ extern_array_def =
       type: 'VariableDeclaration',
       declarations: makeDeclarators(items, location(), 'external array identifier'),
       kind: 'let',
-      x_type: 'data-array',
-      x_scope: 'extern',
-      x_size: undefined,
+      exType: 'data-array',
+      exScope: 'extern',
+      exSize: undefined,
     };
   }
 
@@ -627,7 +627,7 @@ _extern_array_list_item =
   )? id:identifier_w_check sep:list_sep? {
     const spec = spec_pid ? spec_pid[0] : null;
     const pid = spec_pid ? spec_pid[1] : null;
-    return [id, sep, location(), { x_spec: spec, x_pid: pid }];
+    return [id, sep, location(), { exSpec: spec, exPid: pid }];
   }
   /
   sep:list_sep {
@@ -645,7 +645,7 @@ variable_def 'variable declaration' =
       type: 'VariableDeclaration',
       declarations: makeDeclarators(items, location(), 'variable identifier'),
       kind: 'let',
-      x_scope: scope,
+      exScope: scope,
     };
   }
 
@@ -660,7 +660,7 @@ _variable_list_item =
       }
     ) { return p; }
   )? sep:list_sep? {
-    return [ id, sep, location(), { x_type: bracket !== null ? 'assoc-array' : 'scalar', } ];
+    return [ id, sep, location(), { exType: bracket !== null ? 'assoc-array' : 'scalar', } ];
   }
   /
   sep:list_sep {
@@ -1027,7 +1027,7 @@ string_literal 'string literal' =
       p:.
       & { return testIfEscapedCharIsAvailable(p); }
         {
-          let loc = location();
+          const loc = location();
           loc.start.offset -= 1;
           loc.start.column -= 1;
           pushDiagnostic(loc, 'Unknown escape sequence.', vscode.DiagnosticSeverity.Warning);

@@ -77,7 +77,7 @@ function getParameterInformation(signature: string): vscode.ParameterInformation
         return undefined;
     }
     // const selectorName = signature.substring(0, parStart).trim();
-    const argumentList = signature.substring(parStart + 1, parEnd).replace(/[\[\]]/g, '').split(',');
+    const argumentList = signature.substring(parStart + 1, parEnd).replace(/[[\]]/g, '').split(',');
     return argumentList.map(argStr => new vscode.ParameterInformation(argStr.trim()));
 }
 
@@ -87,7 +87,7 @@ function parseSignatureInEditing(line: string, position: number) {
     // flatten paired parentheses:
     // from "parentfunc(sonfunc(a, b, c), daughterFunc(d, e"
     // to   "parentfunc(sonfunc_________, daughterFunc(d, e"
-    while (1) {
+    for (;;) {
         const newstr = substr.replace(/\([^()]*\)/g, substr => '_'.repeat(substr.length));
         if (newstr === substr) {
             substr = newstr;
@@ -138,7 +138,7 @@ export class Provider implements vscode.CompletionItemProvider, vscode.HoverProv
      * Generate completion items from the registered storage and cache it in the map using `uri` as the key.
      * Subclass must invoke it when the storage contents are changed. 
      */
-    protected updateCompletionItemsForUriString(uriString: string) {
+    protected updateCompletionItemsForUriString(uriString: string) : vscode.CompletionItem[] | undefined {
         const storage = this.storageCollection.get(uriString);
         if (storage) {
             const completionItems: vscode.CompletionItem[] = [];
@@ -155,8 +155,10 @@ export class Provider implements vscode.CompletionItemProvider, vscode.HoverProv
                 }
             }
             this.completionItemCollection.set(uriString, completionItems);
+            return completionItems;
         } else {
             this.completionItemCollection.delete(uriString);
+            return undefined;
         }
     }
 
@@ -195,7 +197,7 @@ export class Provider implements vscode.CompletionItemProvider, vscode.HoverProv
 
         const activeEditor = vscode.window.activeTextEditor;
         const documentUriString = (activeEditor) ? activeEditor.document.uri.toString() : '';
-        let map = storage.get(itemKind);
+        const map = storage.get(itemKind);
         if (map === undefined) { return; }
 
         // find the symbol information about the symbol.
@@ -211,7 +213,7 @@ export class Provider implements vscode.CompletionItemProvider, vscode.HoverProv
         // set the description of the completion item
         // if the main description exists, append it.
         
-        let descriptionMarkdown = new vscode.MarkdownString(truncateString('completionItem', item.description, item.comments));
+        const descriptionMarkdown = new vscode.MarkdownString(truncateString('completionItem', item.description, item.comments));
 
         // if overloaded signature exists, append them.
         if (item.overloads) {
@@ -224,7 +226,7 @@ export class Provider implements vscode.CompletionItemProvider, vscode.HoverProv
                 }
             }
         }
-        
+
         if (descriptionMarkdown.value) {
             newCompletionItem.documentation = descriptionMarkdown;
         }
@@ -292,7 +294,7 @@ export class Provider implements vscode.CompletionItemProvider, vscode.HoverProv
         const signatureHint = parseSignatureInEditing(document.lineAt(position.line).text, position.character);
         if (signatureHint === undefined) { return; }
 
-        for (const [uriString, storage] of this.storageCollection.entries()) {
+        for (const storage of this.storageCollection.values()) {
             const map = storage.get(spec.ReferenceItemKind.Function);
             let item: spec.ReferenceItem | undefined;
             if (map && (item = map.get(signatureHint.signature)) !== undefined) {
