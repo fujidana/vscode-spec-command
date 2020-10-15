@@ -12,37 +12,20 @@ interface APIReference {
 }
 
 const SNIPPET_TEMPLATES: string[] = [
-    'mv ${1|%s|} ${2:pos}',
-    'mvr ${1|%s|} ${2:pos}',
-    'umv ${1|%s|} ${2:pos}',
-    'umvr ${1|%s|} ${2:pos}',
-    'ascan ${1|%s|} ${2:begin} ${3:end} ${4:steps} ${5:sec}',
-    'dscan ${1|%s|} ${2:begin} ${3:end} ${4:steps} ${5:sec}',
-    'a2scan ${1|%s|} ${2:begin1} ${3:end1} ${4|%s|} ${5:begin2} ${6:end2} ${7:steps} ${8:sec}',
-    'd2scan ${1|%s|} ${2:begin1} ${3:end1} ${4|%s|} ${5:begin2} ${6:end2} ${7:steps} ${8:sec}',
-    'mesh ${1|%s|} ${2:begin1} ${3:end1} ${4:step1} ${5|%s|} ${6:begin2} ${7:end2} ${8:steps2} ${9:sec}',
-    'a3scan ${1|%s|} ${2:begin1} ${3:end1} ${4|%s|} ${5:begin2} ${6:end2} ${7|%s|} ${8:begin3} ${9:end3} ${10:steps} ${11:sec}',
-    'd3scan ${1|%s|} ${2:begin1} ${3:end1} ${4|%s|} ${5:begin2} ${6:end2} ${7|%s|} ${8:begin3} ${9:end3} ${10:steps} ${11:sec}',
-    'a4scan ${1|%s|} ${2:begin1} ${3:end1} ${4|%s|} ${5:begin2} ${6:end2} ${7|%s|} ${8:begin3} ${9:end3} ${10|%s|} ${11:begin4} ${12:end4} ${13:steps} ${14:sec}',
-    'd4scan ${1|%s|} ${2:begin1} ${3:end1} ${4|%s|} ${5:begin2} ${6:end2} ${7|%s|} ${8:begin3} ${9:end3} ${10|%s|} ${11:begin4} ${12:end4} ${13:steps} ${14:sec}',
+    'mv ${1%MOT} ${2:pos} # absolute-position motor move',
+    'mvr ${1%MOT} ${2:pos} # relative-position motor move',
+    'umv ${1%MOT} ${2:pos} # absolute-position motor move (live update)',
+    'umvr ${1%MOT} ${2:pos} # relative-position motor move (live update)',
+    'ascan ${1%MOT} ${2:begin} ${3:end} ${4:steps} ${5:sec} # single-motor absolute-position scan',
+    'dscan ${1%MOT} ${2:begin} ${3:end} ${4:steps} ${5:sec} # single-motor relative-position scan',
+    'a2scan ${1%MOT} ${2:begin1} ${3:end1} ${4%MOT} ${5:begin2} ${6:end2} ${7:steps} ${8:sec} # two-motor absolute-position scan',
+    'd2scan ${1%MOT} ${2:begin1} ${3:end1} ${4%MOT} ${5:begin2} ${6:end2} ${7:steps} ${8:sec} # two-motor relative-position scan',
+    'mesh ${1%MOT} ${2:begin1} ${3:end1} ${4:step1} ${5%MOT} ${6:begin2} ${7:end2} ${8:steps2} ${9:sec} # nested two-motor scan that scanned over a grid of points',
+    'a3scan ${1%MOT} ${2:begin1} ${3:end1} ${4%MOT} ${5:begin2} ${6:end2} ${7%MOT} ${8:begin3} ${9:end3} ${10:steps} ${11:sec} # single-motor absolute-position scan',
+    'd3scan ${1%MOT} ${2:begin1} ${3:end1} ${4%MOT} ${5:begin2} ${6:end2} ${7%MOT} ${8:begin3} ${9:end3} ${10:steps} ${11:sec} # single-motor relative-position scan',
+    'a4scan ${1%MOT} ${2:begin1} ${3:end1} ${4%MOT} ${5:begin2} ${6:end2} ${7%MOT} ${8:begin3} ${9:end3} ${10%MOT} ${11:begin4} ${12:end4} ${13:steps} ${14:sec} # four-motor absolute-position scan',
+    'd4scan ${1%MOT} ${2:begin1} ${3:end1} ${4%MOT} ${5:begin2} ${6:end2} ${7%MOT} ${8:begin3} ${9:end3} ${10%MOT} ${11:begin4} ${12:end4} ${13:steps} ${14:sec} # four-motor relative-position sca',
 ];
-
-const SNIPPET_DESCRIPTIONS: string[] = [
-    'absolute-position motor move',
-    'relative-position motor move',
-    'absolute-position motor move (live update)',
-    'relative-position motor move (live update)',
-    'single-motor absolute-position scan',
-    'single-motor relative-position scan',
-    'two-motor absolute-position scan',
-    'two-motor relative-position scan',
-    'nested two-motor scan that scanned over a grid of points',
-    'three-motor absolute-position scan',
-    'three-motor relative-position scan',
-    'four-motor absolute-position scan',
-    'four-motor relative-position scan',
-];
-
 /**
  * Provider for symbols that spec system manages.
  * This class manages built-in symbols and motor mnemonics user added in VS Code configuraion.
@@ -71,19 +54,26 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
             this.updateCompletionItemsForUriString(spec.BUILTIN_URI);
         });
 
-        // register motor and counter mnemonic storage
-        this.storageCollection.set(spec.MOTOR_URI, new spec.ReferenceStorage());
-        this.storageCollection.set(spec.COUNTER_URI, new spec.ReferenceStorage());
-        this.updateMotorMnemonicStorage();
-        this.updateCounterMnemonicStorage();
+        // register motor and counter mnemonic storages and snippet storage.
+        this.storageCollection.set(spec.MOTOR_URI, new spec.ReferenceStorage().set(spec.ReferenceItemKind.Enum, new spec.ReferenceMap));
+        this.storageCollection.set(spec.COUNTER_URI, new spec.ReferenceStorage().set(spec.ReferenceItemKind.Enum, new spec.ReferenceMap));
+        this.storageCollection.set(spec.SNIPPET_URI, new spec.ReferenceStorage().set(spec.ReferenceItemKind.Snippet, new spec.ReferenceMap));
+        this.updateMnemonicStorage(spec.MOTOR_URI, 'motors');
+        this.updateMnemonicStorage(spec.COUNTER_URI, 'counters');
+        this.updateSnippetStorage();
 
         // observe the change in configuration
         const onDidChangeConfigurationListener = (event: vscode.ConfigurationChangeEvent) => {
-            if (event.affectsConfiguration('vscode-spec.mnemonic.motor')) {
-                this.updateMotorMnemonicStorage();
+            if (event.affectsConfiguration('vscode-spec.mnemonic.motors')) {
+                this.updateMnemonicStorage(spec.MOTOR_URI, 'motors');
+                this.updateSnippetStorage();
             }
-            if (event.affectsConfiguration('vscode-spec.mnemonic.counter')) {
-                this.updateCounterMnemonicStorage();
+            if (event.affectsConfiguration('vscode-spec.mnemonic.counters')) {
+                this.updateMnemonicStorage(spec.COUNTER_URI, 'counters');
+                this.updateSnippetStorage();
+            }
+            if (event.affectsConfiguration('vscode-spec.editor.codeSnippets')) {
+                this.updateSnippetStorage();
             }
         };
 
@@ -117,92 +107,70 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
     }
 
     /**
-     * Update the contents of motor-mnemonic storage.
+     * Update the contents of motor or counter mnemonic storage.
      * Invoked when initialization completed or configuration modified. 
      */
-    private updateCounterMnemonicStorage() {
-        const storage = this.storageCollection.get(spec.COUNTER_URI);
-        if (!storage) { return; }
+    private updateMnemonicStorage(uriString: string, sectionString: string) {
+        const enumRefMap = this.storageCollection.get(uriString)?.get(spec.ReferenceItemKind.Enum);
+        if (!enumRefMap) { return; }
+        enumRefMap.clear();
 
-        const config = vscode.workspace.getConfiguration('vscode-spec.mnemonic.counter');
-        const mneLabels: string[] = config.get('labels', []);
-        const mneDescriptions: string[] = config.get('descriptions', []);
+        const mneStrings: string[] = vscode.workspace.getConfiguration('vscode-spec.mnemonic').get(sectionString, []);
 
-        // refresh storages related to motor mnemonic, which is configured in the settings.
-        storage.clear();
+        if (mneStrings.length > 0) {
+            // 'tth # two-theta' -> Array ["tth # two-theta", "tth", " # two-theta", "two-theta"]
+            const regexp = /^([a-zA-Z_][a-zA-Z0-9_]{0,6})\s*(#\s*(.*))?$/;
 
-        if (mneLabels.length > 0) {
-            // refresh storage for motor mnemonic label
-            const enumRefMap = new spec.ReferenceMap();
-            for (let index = 0; index < mneLabels.length; index++) {
-                const mneLabel = mneLabels[index];
-                const mneDescription = (mneDescriptions.length > index) ? mneDescriptions[index] : undefined;
-                enumRefMap.set(mneLabel, { signature: mneLabel, description: mneDescription });
+            for (const mneString of mneStrings) {
+                const match = mneString.match(regexp);
+                if (match) {
+                    enumRefMap.set(match[1], { signature: match[1], description: match[3] });
+                }
             }
-            storage.set(spec.ReferenceItemKind.Enum, enumRefMap);
         }
-        this.updateCompletionItemsForUriString(spec.COUNTER_URI);
+        this.updateCompletionItemsForUriString(uriString);
     }
 
     /**
      * Update the contents of motor-mnemonic storage.
      * Invoked when initialization completed or configuration modified. 
      */
-    private updateMotorMnemonicStorage() {
-        const storage = this.storageCollection.get(spec.MOTOR_URI);
-        if (!storage) { return; }
+    private updateSnippetStorage() {
+        const snippetRefMap = this.storageCollection.get(spec.SNIPPET_URI)?.get(spec.ReferenceItemKind.Snippet);
+        if (!snippetRefMap) { return; }
+        snippetRefMap.clear();
 
-        const config = vscode.workspace.getConfiguration('vscode-spec.mnemonic.motor');
-        const mneLabels: string[] = config.get('labels', []);
-        const mneDescriptions: string[] = config.get('descriptions', []);
+        const userSnippetStrings: string[] = vscode.workspace.getConfiguration('vscode-spec.editor').get('codeSnippets', []);
+        const snippetStrings = SNIPPET_TEMPLATES.concat(userSnippetStrings);
 
-        // refresh storages related to motor mnemonic, which is configured in the settings.
-        storage.clear();
+        const motorEnumRefMap = this.storageCollection.get(spec.MOTOR_URI)?.get(spec.ReferenceItemKind.Enum);
+        const counterEnumRefMap = this.storageCollection.get(spec.COUNTER_URI)?.get(spec.ReferenceItemKind.Enum);
+        const motorChoiceString = (motorEnumRefMap && motorEnumRefMap.size > 0) ?
+            '|' + Array.from(motorEnumRefMap.keys()).join(',') + '|' :
+            ':motor';
+        const counterChoiceString = (counterEnumRefMap && counterEnumRefMap.size > 0) ?
+            '|' + Array.from(counterEnumRefMap.keys()).join(',') + '|' :
+            ':counter';
 
-        if (mneLabels.length > 0) {
-            // refresh storage for motor mnemonic label
-            const enumRefMap = new spec.ReferenceMap();
-            for (let index = 0; index < mneLabels.length; index++) {
-                const mneLabel = mneLabels[index];
-                const mneDescription = (mneDescriptions.length > index) ? mneDescriptions[index] : undefined;
-                enumRefMap.set(mneLabel, { signature: mneLabel, description: mneDescription });
-            }
-            storage.set(spec.ReferenceItemKind.Enum, enumRefMap);
+        // 'mv ${1%MOT} ${2:pos} # motor move' -> Array ["mv ${1%MOT} ${2:pos} # motor move", "mv ${1%MOT} ${2:pos}", "mv", "# motor move", "motor move"]
+        const mainRegexp = /^(([a-zA-Z_][a-zA-Z0-9_]*)\s+[^#]+?)\s*(#\s*(.*))?$/;
+        const motorRegexp = /%MOT/g;
+        const counterRegexp = /%CNT/g;
+        const placeHolderRegexp = /\${\d+:([^{}]+)}/g;
+        const choiceRegexp = /\${\d+\|[^|]+\|}/g;
 
-            // refresh storage for motor mnemonic macro (snippet)
-            const snippetRefMap = new spec.ReferenceMap();
-            for (let index = 0; index < SNIPPET_TEMPLATES.length; index++) {
-                const snippetTemplate = SNIPPET_TEMPLATES[index];
-                const snippetDesription = (SNIPPET_DESCRIPTIONS.length > index) ? SNIPPET_DESCRIPTIONS[index] : undefined;
-
-                // treat the first word of the template as the snippet key.
-                const offset = snippetTemplate.indexOf(' ');
-                if (offset < 0) {
-                    console.log('Unexpected Snippet Format:', snippetTemplate);
-                    continue;
-                }
-                const snippetKey = snippetTemplate.substring(0, offset);
-
-                // check the necessary number of motors. If not satisfied, skip the template.
-                const minMotor = snippetTemplate.match(/%s/g);
-                if (minMotor === null) {
-                    console.log('Unexpected Snippet Format:', snippetTemplate);
-                    continue;
-                }
-                if (minMotor.length > mneLabels.length) {
-                    continue;
-                }
-
-                // reformat the information.
-                const snippetSignature = snippetTemplate.replace(/\$\{\d+:([^}]*)\}/g, '$1').replace(/\$\{\d+\|%s\|\}/g, mneLabels[0]);
-                const snippetCode = snippetTemplate.replace(/%s/g, mneLabels.join(','));
+        for (const snippetString of snippetStrings) {
+            const match = snippetString.match(mainRegexp);
+            if (match) {
+                const snippetKey = match[2];
+                const snippetSignature = match[1].replace(motorRegexp, ':motor').replace(counterRegexp, ':counter').replace(placeHolderRegexp, '$1').replace(choiceRegexp, 'choice');
+                const snippetCode = match[1].replace(motorRegexp, motorChoiceString).replace(counterRegexp, counterChoiceString);
+                const snippetDesription = match[4];
 
                 snippetRefMap.set(snippetKey, { signature: snippetSignature, description: snippetDesription, snippet: snippetCode });
             }
-            storage.set(spec.ReferenceItemKind.Snippet, snippetRefMap);
         }
-
-        this.updateCompletionItemsForUriString(spec.MOTOR_URI);
+        this.updateCompletionItemsForUriString(spec.SNIPPET_URI);
     }
 
     /**

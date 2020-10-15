@@ -129,7 +129,7 @@
 				"vscode-spec.editor.hintVolume.hover": {
 					"type": "string",
 					"default": "full",
-					"description": "Controls the volume of explanatory text in hovers, which is shown when the mouse cursor is on a symbol",
+					"description": "Controls the volume of explanatory text in hovers, which is shown when the mouse cursor is on a symbol.",
 					"enum": [
 						"sentence",
 						"paragraph",
@@ -139,7 +139,7 @@
 				"vscode-spec.editor.hintVolume.completionItem": {
 					"type": "string",
 					"default": "sentence",
-					"description": "Controls the volume of explanatory text in auto completion, which is shown when the user types a symbol",
+					"description": "Controls the volume of explanatory text in auto completion, which is shown when the user types a symbol.",
 					"enum": [
 						"sentence",
 						"paragraph",
@@ -149,17 +149,45 @@
 				"vscode-spec.editor.hintVolume.signatureHelp": {
 					"type": "string",
 					"default": "sentence",
-					"description": "Controls the volume of explanatory text in signature help, which is shown when the user enters a function",
+					"description": "Controls the volume of explanatory text in signature help, which is shown when the user edits function arguments.",
 					"enum": [
 						"sentence",
 						"paragraph",
 						"full"
 					]
 				},
+				"vscode-spec.editor.codeSnippets": {
+					"type": "array",
+					"default": [],
+					"markdownDescription": "Lists code snippet templates that may include a placeholder of motor (`%MOT`) or counter (`%CNT`) mnemonics in TextMate snippet syntax. Read [Snippets in Visual Studio Code](https://code.visualstudio.com/docs/editor/userdefinedsnippets) for other information about the syntax. Example: `mv ${1%MOT} ${2:pos} # absolute move`.",
+					"items": {
+						"type": "string",
+						"pattern": "^(([a-zA-Z_][a-zA-Z0-9_]*)\\s+[^#]+?)\\s*(#\\s*(.*))?$"
+					}
+				},
+				"vscode-spec.mnemonic.motors": {
+					"type": "array",
+					"default": [],
+					"markdownDescription": "Lists motor mnemonics, which will be used by IntelliSence and code snippets. One can optionally add the description after `#` letter. Example: `tth # Detector's two-theta angle`.",
+					"items": {
+						"type": "string",
+						"pattern": "^([a-zA-Z_][a-zA-Z0-9_]{0,6})\\s*(#\\s*(.*))?$"
+					}
+				},
+				"vscode-spec.mnemonic.counters": {
+					"type": "array",
+					"default": ["sec # count time in second"],
+					"markdownDescription": "Lists counter mnemonics, which will be used by IntelliSence and code snippets. One can optionally add the descriptions after `#` letter. Example: `sec # count time in second`.",
+					"items": {
+						"type": "string",
+						"pattern": "^([a-zA-Z_][a-zA-Z0-9_]{0,6})\\s*(#\\s*(.*))?$"
+					}
+				},
 				"vscode-spec.mnemonic.motor.labels": {
 					"type": "array",
 					"default": [],
 					"description": "Specifies a string list of motor mnemonics",
+					"markdownDeprecationMessage": "**Deprecated**: Please use `#vscode-spec.mnemonic.motors#` instead.",
 					"items": {
 						"type": "string",
 						"pattern": "^[a-zA-Z_][a-zA-Z0-9_]{0,6}$"
@@ -169,6 +197,7 @@
 					"type": "array",
 					"default": [],
 					"description": "Specifies a string list of descriptions corresponding to motor mnemonics",
+					"markdownDeprecationMessage": "**Deprecated**: Please use `#vscode-spec.mnemonic.motors#` instead.",
 					"items": {
 						"type": "string"
 					}
@@ -177,6 +206,7 @@
 					"type": "array",
 					"default": [],
 					"description": "Specifies a string list of counter mnemonics",
+					"markdownDeprecationMessage": "**Deprecated**: Please use `#vscode-spec.mnemonic.counters#` instead.",
 					"items": {
 						"type": "string",
 						"pattern": "^[a-zA-Z_][a-zA-Z0-9_]{0,6}$"
@@ -186,6 +216,7 @@
 					"type": "array",
 					"default": [],
 					"description": "Specifies a string list of descriptions corresponding to counter mnemonics",
+					"markdownDeprecationMessage": "**Deprecated**: Please use `#vscode-spec.mnemonic.counters#` instead.",
 					"items": {
 						"type": "string"
 					}
@@ -212,7 +243,7 @@
 					"type": "string",
 					"default": "",
 					"scope": "resource",
-					"description": "File path prefix used in \"Run File in Active Terminal\" command"
+					"description": "Specifies File path prefix used in \"Run File in Active Terminal\" command."
 				}
 			}
 		}

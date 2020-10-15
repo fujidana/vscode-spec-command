@@ -11,6 +11,7 @@ export const SELECTOR = { scheme: '*', language: 'spec' };
 export const BUILTIN_URI = 'spec://system/built-in.md';
 export const MOTOR_URI = 'spec://system/mnemonic-motor.md';
 export const COUNTER_URI = 'spec://system/mnemonic-counter.md';
+export const SNIPPET_URI = 'spec://system/code-snippet.md';
 export const ACTIVE_FILE_URI = 'spec://user/active-document.md';
 
 export const enum ReferenceItemKind {
