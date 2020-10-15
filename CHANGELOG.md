@@ -1,19 +1,24 @@
 # Change Log
 
-All notable changes to the __spec__ extension will be documented in this file.
+All notable changes to the __vscode-spec__ extension will be documented in this file.
 
 <!-- Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file. -->
 
 ## [Unreleased]
 
+## [1.2.0] - 2020-10-15
+
+* contribute a setting for user-defined code snippets that may include a placeholder for a motor or counter mnemonic.
+* add descriptions of built-in functions documented only in [CSS - spec help pages](https://certif.com/spec_help/index.html) (not in spec_manA4.pdf) into IntelliSence database: hdf5, taco (esrf), tango, epics, etc.
+
 ## [1.1.4] - 2020-10-05
 
-* modify syntax checker so that `rdef` for functions (e.g.,  `rdef myfunc(i, j) "..."`) becomes valid.
-* fix hyphenation errors in API references
+* modify syntax checker so that `rdef` for functions (e.g., `rdef myfunc(i, j) "..."`) becomes valid.
+* fix hyphenation errors in API reference
 
 ## [1.1.3] - 2020-09-16
 
-* fix hyphenation errors in API references
+* fix hyphenation errors in API reference
 * update Node.js packages (including a vulnerable dependency)
 
 ## [1.1.2] - 2020-07-08
@@ -37,18 +42,18 @@ All notable changes to the __spec__ extension will be documented in this file.
 * redesign configuration settings
   * change the identifier prefix from `spec` to `vscode-spec` (so as to match the extension ID)
   * improve support for multi-root workspaces.
-  * contribute settings to filter files in workspaces. Now `*.mac` files in workspaces are scanned to pick up global symbols but are not diagnosed by default.
+  * contribute settings to filter files in workspaces. Now all `*.mac` files in workspaces are scanned to pick up global symbols but are not diagnosed by default.
   * contribute a path prefix setting for "Run File in Terminal" command
   * contribute counter mnemonic registration
-* add some motor snippets
+* add some code snippets for motors
 * fix syntax parser bugs on glob-like pattern (used in `lsdef`, etc.)
 * make icon for macro different from function (Because VS Code does not provide `Macro` as a symbol kind, the extension uses `Module` instead.)
 
 ## [0.7.2] - 2019-11-14
 
 * improve behavior to handle symbols in IntelliSense and code navigation features
-  * Variables, constants and macro and function (`local`, `global`, `constant`, and `def`) declared at the top-level (i.e., not in the code block) are treated globally; IntelliSense feature lists these symbols in other editors (and optionally in workgroup files).
-  * Variables, constants and macro and function (`local`, `global`, `constant`, and `def`) declared in code blocks are treated locally; IntelliSense feature lists these symbols only when they are visible from the current cursor position.
+  * variables, constants and macro and function (`local`, `global`, `constant`, and `def`) declared at the top-level (i.e., not in the code block) are treated globally; IntelliSense feature lists these symbols in other editors (and optionally in workgroup files).
+  * variables, constants and macro and function (`local`, `global`, `constant`, and `def`) declared in code blocks are treated locally; IntelliSense feature lists these symbols only when they are visible from the current cursor position.
   * IntelliSense feature now lists function parameters as local variables.
 
 ## [0.7.1] - 2019-10-30
@@ -100,15 +105,16 @@ All notable changes to the __spec__ extension will be documented in this file.
 * add new features covering built-in functions, macros, variables and several other keywords:
   * hovers
   * code completion proposals
-  * Help with function signatures
+  * help with function signatures
 
 ## [0.1.1] - 2019-08-29
 
 * add new features:
-  * syntax highlighting feature
-  * code snippets feature
+  * syntax highlighting
+  * code snippets
 
-[Unreleased]: https://github.com/fujidana/vscode-spec/compare/v1.1.4...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/fujidana/vscode-spec/compare/v1.1.4...v1.2.0
 [1.1.4]: https://github.com/fujidana/vscode-spec/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/fujidana/vscode-spec/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/fujidana/vscode-spec/compare/v1.1.1...v1.1.2
