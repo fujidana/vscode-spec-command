@@ -16,6 +16,8 @@ function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceI
         symbolLabel = 'motor mnemonic ' + symbolLabel;
     } else if (itemUriString === spec.COUNTER_URI) {
         symbolLabel = 'counter mnemonic ' + symbolLabel;
+    } else if (itemUriString === spec.SNIPPET_URI) {
+        symbolLabel = 'counter/motor ' + symbolLabel;
     } else if (itemUriString === spec.ACTIVE_FILE_URI || itemUriString === documentUriString) {
         symbolLabel = symbolLabel + ' defined in this file';
     } else {
