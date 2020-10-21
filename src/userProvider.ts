@@ -44,6 +44,7 @@ function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position
 
             const nodeRange = currentNode.loc ? spec.convertRange(<IFileRange>currentNode.loc) : undefined;
             let refItem: spec.ReferenceItem | undefined;
+            const refItems: spec.ReferenceItem[] = [];
 
             if (!nodeRange) {
                 console.log('Statement should have location. This may be a bug in the parser.');
@@ -78,6 +79,7 @@ function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position
                         signatureStr += currentNode.params.map(param => (param.type === 'Identifier') ? param.name : '').join(', ') + ')';
                         refItem = { signature: signatureStr, location: <IFileRange>currentNode.loc };
                         functionRefMap.set(currentNode.id.name, refItem);
+                        refItems.push(refItem);
                     }
 
                 } else {
@@ -85,6 +87,7 @@ function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position
                     if (!position || (parentNode && parentNode.type !== 'Program')) {
                         refItem = { signature: currentNode.id.name, location: <IFileRange>currentNode.loc };
                         macroRefMap.set(currentNode.id.name, refItem);
+                        refItems.push(refItem);
                     }
                 }
 
@@ -102,14 +105,17 @@ function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position
                             } else {
                                 variableRefMap.set(declarator.id.name, refItem);
                             }
+                            refItems.push(refItem);
                         }
                     }
                 }
             }
 
-            // add docstrings            
-            if (refItem && currentNode.leadingComments && currentNode.leadingComments.length > 0) {
-                refItem.description = currentNode.leadingComments[currentNode.leadingComments.length - 1].value;
+            // add docstrings
+            if (refItems.length > 0 && currentNode.leadingComments && currentNode.leadingComments.length > 0) {
+                for (const refItem of refItems) {
+                    refItem.description = currentNode.leadingComments[currentNode.leadingComments.length - 1].value;
+                }
             }
 
             if (!position) {
