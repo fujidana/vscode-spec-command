@@ -19,7 +19,11 @@ function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceI
     } else if (itemUriString === spec.SNIPPET_URI) {
         symbolLabel = 'counter/motor ' + symbolLabel;
     } else if (itemUriString === spec.ACTIVE_FILE_URI || itemUriString === documentUriString) {
-        symbolLabel = symbolLabel + ' defined in this file';
+        if (item.location) {
+            symbolLabel = `${symbolLabel} defined in l.${item.location.start.line} of this file `;
+        } else {
+            symbolLabel = symbolLabel + ' defined in this file';
+        }
     } else {
         const itemUri = vscode.Uri.parse(itemUriString);
         if (itemUri.scheme === 'file') {
