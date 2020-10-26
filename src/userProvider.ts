@@ -363,7 +363,6 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
             this.refreshCollections();
         };
 
-
         context.subscriptions.push(
             // register command handlers
             vscode.commands.registerCommand('vscode-spec.execSelectionInTerminal', execSelectionInTerminalCommandCallback),
@@ -507,7 +506,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
     }
 
     /**
-	 * Required implementation of vscode.CompletionItemProvider, overriding the super class
+     * Required implementation of vscode.CompletionItemProvider, overriding the super class
      */
     public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.CompletionItem[] | undefined {
         if (token.isCancellationRequested) { return; }
@@ -520,9 +519,9 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         return super.provideCompletionItems(document, position, token, context);
     }
 
-	/**
-	 * Required implementation of vscode.HoverProvider, overriding the super class
-	 */
+    /**
+     * Required implementation of vscode.HoverProvider, overriding the super class
+     */
     public provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.Hover | undefined {
         if (token.isCancellationRequested) { return; }
 
@@ -533,9 +532,9 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         return super.provideHover(document, position, token);
     }
 
-	/**
-	 * Required implementation of vscode.DefinitionProvider
-	 */
+    /**
+     * Required implementation of vscode.DefinitionProvider
+     */
     public provideDefinition(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.ProviderResult<vscode.Definition | vscode.DefinitionLink[]> {
         if (token.isCancellationRequested) { return; }
 
@@ -568,8 +567,8 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
     }
 
     /**
-	 * Required implementation of vscode.DocumentSymbolProvider
-	 */
+     * Required implementation of vscode.DocumentSymbolProvider
+       */
     public provideDocumentSymbols(document: vscode.TextDocument, token: vscode.CancellationToken): vscode.ProviderResult<vscode.SymbolInformation[] | vscode.DocumentSymbol[]> {
         if (token.isCancellationRequested) { return; }
 
