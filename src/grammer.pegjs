@@ -6,11 +6,17 @@
  */
 
 {
+  interface Diagnostic {
+    location: IFileRange,
+    message: string,
+    severity: vscode.DiagnosticSeverity,
+  }
+
   const INVALID_STATEMENT = { type: 'InvalidStatement' };
   const NULL_EXPRESSION = { type: 'NullExpression' };
   const NULL_LITERAL = { type: 'Literal', value: null, raw: 'null'};
 
-  const _diagnostics: any[] = [];
+  const _diagnostics: Diagnostic[] = [];
   const _quoteStack: string[] = [];
 
   const _reservedKeywordRegExp = new RegExp(
@@ -26,7 +32,7 @@
   const _ttyCommandRegExp = /^(c(?:d|e)|do|ho|le|m(?:b|d|e|h|r)|nd|se|u(?:e|p|s))$/;
   const _patternRegExp = /^[a-zA-Z0-9_*?]+$/;
 
-  /** 
+  /**
    * create diagnostic object and store it.
    */
   function pushDiagnostic(location: IFileRange, message: string, severity: vscode.DiagnosticSeverity) {
@@ -189,16 +195,16 @@ start =
 
 eol 'EOL' = '\n' / '\r\n'
 eof 'EOF' = !.
-comment 'line comment' = '#' p:$(!eol .)* (eol / eof) { return {type: 'Line', value: p }; }
+line_comment 'line comment' = '#' p:$(!eol .)* (eol / eof) { return {type: 'Line', value: p }; }
 
 quotation_mark 'quotation mark' = $('\\'? ('"' / "'"))
 
 eos_lookahead    = eof { } / & quotation_mark { } / & '}' { }
-eos_no_lookahead = eol { } / comment / ';' eol? { } 
+eos_no_lookahead = eol { } / line_comment / ';' eol? { } 
 eos              = eos_no_lookahead  / eos_lookahead
 
 triple_quote = '"""'
-docstring 'block comment' =
+block_comment 'block comment' =
   triple_quote p:$(!triple_quote .)* closer:triple_quote? {
     if (!closer) {
       pushDiagnostic(shortenRange(location(), 3), 'Unterminated docstring.', vscode.DiagnosticSeverity.Error);
@@ -206,7 +212,7 @@ docstring 'block comment' =
     return { type: 'Block', value: p };
   }
 
-space = $(' ' / '\t' / '\\' eol / docstring { pushDiagnostic(location(), 'Inline docstring not recommended.', vscode.DiagnosticSeverity.Information); return text(); })
+space = $(' ' / '\t' / '\\' eol / block_comment { pushDiagnostic(location(), 'Inline docstring not recommended.', vscode.DiagnosticSeverity.Information); return text(); })
 _1_ 'whiltespace'         = space+
 _0_ 'optional whitespace' = space*
 
@@ -239,7 +245,7 @@ stmt 'statement' =
  * which is treated as the leading comments of the succeeding statement.
  */
 leading_comment 'empty statement with comment' =
-  $[ \t]* p:(comment / q:docstring [ \t]* (eol / eof) { return q; }) {
+  $[ \t]* p:(line_comment / q:block_comment [ \t]* (eol / eof) { return q; }) {
     return p;
   }
 
@@ -301,7 +307,7 @@ if_stmt 'if statement' =
       }
       return test;
     }
-  ) _0_ (eol / comment)? cons:(
+  ) _0_ (eol / line_comment)? cons:(
     cons:nonempty_stmt? {
       if (!cons) {
         pushDiagnostic(location(), 'The consequent clause of if-statement must not be empty.', vscode.DiagnosticSeverity.Error);
@@ -309,7 +315,7 @@ if_stmt 'if statement' =
       return cons;
     }
   ) alt:(
-    _0_ 'else' !word _0_ (eol / comment)? alt:(
+    _0_ 'else' !word _0_ (eol / line_comment)? alt:(
       alt:nonempty_stmt? {
         if (!alt) {
           pushDiagnostic(location(), 'The altanative clause of if-statement must not be empty.', vscode.DiagnosticSeverity.Error);
@@ -331,7 +337,7 @@ if_stmt 'if statement' =
  */
 while_stmt 'while statement' =
   'while' _0_ test:(
-    '(' _0_ test:expr_solo_forced? _0_ closer:')'? _0_ (eol / comment)? {
+    '(' _0_ test:expr_solo_forced? _0_ closer:')'? _0_ (eol / line_comment)? {
       if (!test) {
         pushDiagnostic(shortenRange(location(), 1), 'The test expression of while-statement must not be empty.', vscode.DiagnosticSeverity.Error);
       } else if (!closer) {
@@ -386,7 +392,7 @@ for_stmt 'for statement' =
       }
       return stmt;
     }
-  ) _0_ (eol / comment)? body:(
+  ) _0_ (eol / line_comment)? body:(
     body:nonempty_stmt? {
       if (!body) {
         pushDiagnostic(location(), 'The body of for-statement must not be empty.', vscode.DiagnosticSeverity.Error);
@@ -777,13 +783,13 @@ pattern_w_check =
   macro_argument
   /
   p:string_literal {
-    pushDiagnostic(location(), 'Expected a pattern.', vscode.DiagnosticSeverity.Error);      
+    pushDiagnostic(location(), 'Expected a pattern.', vscode.DiagnosticSeverity.Error);
     return p;
   }
   /
   (!space !eos .)+ {
     if (!_patternRegExp.test(text())) {
-      pushDiagnostic(location(), 'Expected a pattern.', vscode.DiagnosticSeverity.Error);      
+      pushDiagnostic(location(), 'Expected a pattern.', vscode.DiagnosticSeverity.Error);
     }
     return {
       type: 'literal',
@@ -913,7 +919,7 @@ identifier_w_check =
  * <BNF> identifier[expression]
  * <BNF> identifier[expression][expression]
  *
- * e.g., _foo12, bar[myfunc(a)], bar[], bar[:], bar[:4], bar[2:],  bar[1, 2, 3:5], ...
+ * e.g., _foo12, bar[myfunc(a)], bar[], bar[:], bar[:4], bar[2:], bar[1, 2, 3:5], ...
  */
 lvalue 'left value' =
   id:identifier arr_dims:(

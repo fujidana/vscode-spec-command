@@ -111,20 +111,18 @@ export function getStringFromReferenceItemKind(refItemKind: ReferenceItemKind): 
 }
 
 // 'overloads' parameter is for built-in macros and functions.
-export interface ReferenceItem {
+export type ReferenceItem = {
     signature: string;
     description?: string;
     comments?: string;
     snippet?: string;
     location?: IFileRange;
-    overloads?: Overload[];
-}
+    overloads?: {
+        signature: string;
+        description?: string;
+    }[];
+};
 
-export interface Overload {
-    signature: string;
-    description?: string;
-}
+export type ReferenceMap = Map<string, ReferenceItem>;
 
-export class ReferenceMap extends Map<string, ReferenceItem> { }
-
-export class ReferenceStorage extends Map<ReferenceItemKind, ReferenceMap> { }
+export type ReferenceStorage = Map<ReferenceItemKind, ReferenceMap>;
