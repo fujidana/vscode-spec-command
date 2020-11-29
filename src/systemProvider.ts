@@ -41,13 +41,13 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
             const apiReference: APIReference = JSON.parse(new TextDecoder('utf-8').decode(uint8Array));
 
             // convert the object to ReferenceMap and register the set.
-            const builtinStorage = new spec.ReferenceStorage(
+            const builtinStorage: spec.ReferenceStorage = new Map(
                 [
-                    [spec.ReferenceItemKind.Constant, new spec.ReferenceMap(Object.entries(apiReference.constants))],
-                    [spec.ReferenceItemKind.Variable, new spec.ReferenceMap(Object.entries(apiReference.variables))],
-                    [spec.ReferenceItemKind.Macro, new spec.ReferenceMap(Object.entries(apiReference.macros))],
-                    [spec.ReferenceItemKind.Function, new spec.ReferenceMap(Object.entries(apiReference.functions))],
-                    [spec.ReferenceItemKind.Keyword, new spec.ReferenceMap(Object.entries(apiReference.keywords))],
+                    [spec.ReferenceItemKind.Constant, new Map(Object.entries(apiReference.constants))],
+                    [spec.ReferenceItemKind.Variable, new Map(Object.entries(apiReference.variables))],
+                    [spec.ReferenceItemKind.Macro, new Map(Object.entries(apiReference.macros))],
+                    [spec.ReferenceItemKind.Function, new Map(Object.entries(apiReference.functions))],
+                    [spec.ReferenceItemKind.Keyword, new Map(Object.entries(apiReference.keywords))],
                 ]
             );
             this.storageCollection.set(spec.BUILTIN_URI, builtinStorage);
@@ -55,9 +55,9 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
         });
 
         // register motor and counter mnemonic storages and snippet storage.
-        this.storageCollection.set(spec.MOTOR_URI, new spec.ReferenceStorage().set(spec.ReferenceItemKind.Enum, new spec.ReferenceMap));
-        this.storageCollection.set(spec.COUNTER_URI, new spec.ReferenceStorage().set(spec.ReferenceItemKind.Enum, new spec.ReferenceMap));
-        this.storageCollection.set(spec.SNIPPET_URI, new spec.ReferenceStorage().set(spec.ReferenceItemKind.Snippet, new spec.ReferenceMap));
+        this.storageCollection.set(spec.MOTOR_URI, new Map([[spec.ReferenceItemKind.Enum, new Map()]]));
+        this.storageCollection.set(spec.COUNTER_URI, new Map([[spec.ReferenceItemKind.Enum, new Map()]]));
+        this.storageCollection.set(spec.SNIPPET_URI, new Map([[spec.ReferenceItemKind.Snippet, new Map()]]));
         this.updateMnemonicStorage(spec.MOTOR_URI, 'motors');
         this.updateMnemonicStorage(spec.COUNTER_URI, 'counters');
         this.updateSnippetStorage();

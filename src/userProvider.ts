@@ -16,16 +16,20 @@ const ADDITIONAL_TRAVERSE_KEYS = {
     NullExpression: [],
 };
 
+interface CustomProgram extends estree.Program {
+    exDiagnostics: { location: IFileRange, message: string, severity: vscode.DiagnosticSeverity }[];
+}
+
 /**
  * @param tree Parser AST object
  * @param position the current cursor position. If not given, top-level symbols (global variables, constant, macro and functions) are picked up.
  */
 function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position): spec.ReferenceStorage {
 
-    const constantRefMap = new spec.ReferenceMap();
-    const variableRefMap = new spec.ReferenceMap();
-    const macroRefMap = new spec.ReferenceMap();
-    const functionRefMap = new spec.ReferenceMap();
+    const constantRefMap: spec.ReferenceMap = new Map();
+    const variableRefMap: spec.ReferenceMap = new Map();
+    const macroRefMap: spec.ReferenceMap = new Map();
+    const functionRefMap: spec.ReferenceMap = new Map();
 
     // console.log('<<<Scan start>>>', JSON.stringify(position, undefined, ""));
 
@@ -132,7 +136,7 @@ function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position
         keys: ADDITIONAL_TRAVERSE_KEYS,
     });
 
-    return new spec.ReferenceStorage(
+    return new Map(
         [
             [spec.ReferenceItemKind.Constant, constantRefMap],
             [spec.ReferenceItemKind.Variable, variableRefMap],
@@ -170,7 +174,7 @@ async function findFilesInWorkspaces() {
 export class UserProvider extends Provider implements vscode.DefinitionProvider, vscode.DocumentSymbolProvider, vscode.WorkspaceSymbolProvider {
 
     private readonly diagnosticCollection: vscode.DiagnosticCollection;
-    private readonly treeCollection: Map<string, estree.Program>;
+    private readonly treeCollection: Map<string, CustomProgram>;
 
     constructor(context: vscode.ExtensionContext) {
         super(context);
@@ -232,6 +236,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
             const document = event.document;
             if (vscode.languages.match(spec.SELECTOR, document)) {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
+                // this.diagnoseOpenDocments();
             }
         };
 
@@ -432,11 +437,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
     private parseDocumentContents(contents: string, uri: vscode.Uri, isOpenDocument: boolean, diagnoseProblems: boolean) {
         const uriString = uri.toString();
 
-        interface CustomProgram extends estree.Program {
-            exDiagnostics: { location: IFileRange, message: string, severity: vscode.DiagnosticSeverity }[];
-        }
-
-        let tree: CustomProgram | undefined;
+        let tree;
         try {
             tree = <CustomProgram>parse(contents);
         } catch (error) {
@@ -455,7 +456,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
 
             }
             // update with an empty map object.
-            this.storageCollection.set(uriString, new spec.ReferenceStorage());
+            this.storageCollection.set(uriString, new Map());
             return false;
         }
         // console.log(JSON.stringify(tree, null, 2));
