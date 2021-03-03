@@ -37,6 +37,8 @@ repository:
               "0": { name: punctuation.branch-condition.end.spec }
             contentName: meta.branch-condition.spec
             patterns: [{ include: "#expression-single" }]
+          - match: \b(ifp|ifd)\b
+            name: keyword.control.branch.spec
           - match: \belse\b
             name: keyword.control.branch.spec
           - begin: \b(for)\s*(\()

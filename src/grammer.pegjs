@@ -298,15 +298,19 @@ block_stmt 'block statement' =
  * <BNF> if ( expression ) statement else statement
  */
 if_stmt 'if statement' =
-  'if' _0_ test:(
-    '(' _0_ test:expr_solo_forced? _0_ closer:')'? {
-      if (!test) {
-        pushDiagnostic(location(), 'The test expression of if-statement must not be empty.', vscode.DiagnosticSeverity.Error);
-      } else if (!closer) {
-        pushDiagnostic(shortenRange(location(), 1), 'Unterminated parenthesis.', vscode.DiagnosticSeverity.Error);
+  test:(
+    'if' _0_ test:(
+      '(' _0_ test:expr_solo_forced? _0_ closer:')'? {
+        if (!test) {
+          pushDiagnostic(location(), 'The test expression of if-statement must not be empty.', vscode.DiagnosticSeverity.Error);
+        } else if (!closer) {
+          pushDiagnostic(shortenRange(location(), 1), 'Unterminated parenthesis.', vscode.DiagnosticSeverity.Error);
+        }
+        return test;
       }
-      return test;
-    }
+    ) {return test; }
+    /
+    ('ifd' / 'ifp') { return NULL_EXPRESSION; }
   ) _0_ (eol / line_comment)? cons:(
     cons:nonempty_stmt? {
       if (!cons) {
