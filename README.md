@@ -18,7 +18,7 @@ and instead provides the following identifiers:
 * `vscode-spec.mnemonic.motors`
 * `vscode-spec.mnemonic.counters`
 
-If you have registered motor and counter mnemonics in the extension settings, please manually copy those values in the deprecated identifiers to the new identifiers.
+If you registered motor and counter mnemonics in the extension settings in the older version, please manually copy those values in the deprecated identifiers to the new identifiers.
 Read also __Extension Settings__ section below.
 Sorry for inconvenence.
 
@@ -70,7 +70,7 @@ qdo "/home/myuser/mymacro.mac"
 
 but this extension shows an alert on the first line because it expects explicit quotation marks for a string literal.
 
-Also, inline-macro, as shown below, is not supported. The macro definition must consist of one or more sentenses.
+Also, macros that consist of an imperfect statement are not supported except `ifd` and `ifp`, which are defined in `SPECD/standard.mac`. User-defined macros must consist of one or more perfectsentenses.
 
 ```
 def ifd 'if (DATAFILE != "" && DATAFILE != "/dev/null")'
@@ -96,6 +96,6 @@ The identifiers (dot-separated string) of these settings were changed in v1.0.0 
 ## Known Issues
 
 * Syntax check by this extension has small differences with actual __spec__ interpreters.
-* Statement continuation by putting a backslash at the end of the line is not supported in syntax highlighting.
+* Statement continuation by putting a backslash at the end of the line is not fully supported in syntax highlighting.
 
 Also read [GitHub issues](https://github.com/fujidana/vscode-spec/issues).
