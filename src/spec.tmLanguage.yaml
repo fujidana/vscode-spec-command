@@ -264,7 +264,7 @@ repository:
               "0": { name: punctuation.string.end.spec }
             name: string.quoted.single.spec
             patterns:
-              - match: \\([abfnrt"\\]|[0-7]{1,3}|\[(?:c(?:d|e)|do|ho|le|m(?:b|d|e|h|r)|nd|se|u(?:e|p|s))\])
+              - match: \\([abfnrt"\\]|[0-7]{1,3}|\[(?:c(?:d|e)|do|ho|le|m(?:b|d|e|h|r)|nd|s(?:e|o)|u(?:e|p|s))\])
                 name: constant.character.escape.spec
               - match: \\.
                 name: invalid.illegal.unknown-escape.spec
@@ -276,7 +276,7 @@ repository:
               "0": { name: punctuation.string.end.spec }
             name: string.quoted.double.spec
             patterns:
-              - match: \\([abfnrt'"\\]|[0-7]{1,3}|\[(?:c(?:d|e)|do|ho|le|m(?:b|d|e|h|r)|nd|se|u(?:e|p|s))\])
+              - match: \\([abfnrt'"\\]|[0-7]{1,3}|\[(?:c(?:d|e)|do|ho|le|m(?:b|d|e|h|r)|nd|s(?:e|o)|u(?:e|p|s))\])
                 name: constant.character.escape.spec
               - match: \\.
                 name: invalid.illegal.unknown-escape.spec
