@@ -4,16 +4,16 @@ This extension provides __spec__ macro script (`*.mac`) support for Visual Studi
 This is not the official one developed by Certified Scientific Software.
 Use [GitHub issues](https://github.com/fujidana/vscode-spec/issues) for bug reports and feature requests about the extension.
 
-## NOTICE for previous version users
+## NOTICE for previous version us
 
-The version 1.2.0 deprecates the following identifiers in the extension settings:
+The following identifiers in the extension settings are deprecated in the version 1.2.0:
 
 * `vscode-spec.mnemonic.motor.labels`
 * `vscode-spec.mnemonic.motor.descriptions`
 * `vscode-spec.mnemonic.counter.labels`
 * `vscode-spec.mnemonic.motor.descriptions`
 
-and instead provides the following identifiers:
+and the following identifiers are provided instead:
 
 * `vscode-spec.mnemonic.motors`
 * `vscode-spec.mnemonic.counters`
@@ -50,7 +50,7 @@ This extension supports the following features:
 This extention treats user-defined symbols declared at the top level (i.e., not in a code block, curly brackets) as global and those in code blocks as local.
 Global symbols are visible beyond a file where the symbol is defined; local symbols are visible only when the cursor is in the same block.
 
-This extension was developed with reference to the recent official PDF document about __spec__ release 6 (version 3 of the spec documentation, printed 16 July 2017).
+The extension was developed with reference to the recent official PDF document about __spec__ release 6 (version 3 of the spec documentation, printed 16 July 2017).
 The help text of built-in symbols are cited from this document, except where otherwise noted.
 
 ## Requirements
@@ -68,9 +68,10 @@ qdo /home/myuser/mymacro.mac
 qdo "/home/myuser/mymacro.mac"
 ```
 
-but this extension shows an alert on the first line because it expects explicit quotation marks for a string literal.
+but the extension shows an alert on the first line because it expects explicit quotation marks for a string literal.
 
-Also, macros that consist of an imperfect statement are not supported except `ifd` and `ifp`, which are defined in `SPECD/standard.mac`. User-defined macros must consist of one or more perfectsentenses.
+Also, the extension does not support macros made of an imperfect statement, except `ifd` and `ifp` (defined in `SPECD/standard.mac`).
+User-defined macros must be made of one or more perfect sentenses.
 
 ```
 def ifd 'if (DATAFILE != "" && DATAFILE != "/dev/null")'
@@ -82,16 +83,14 @@ ifd do_something; else do_otherthing;
 This extention contributes the follwing settings, which are configurable from the _Settings_ windw (`Ctrl+,`):
 
 * `vscode-spec.editor.hintVolume.*` - controls the volume of explanatory text shown by IntelliSense features.
-* `vscode-spec.editor.codeSnippets` - provides a place to add code snippet templates that include motor or counter mnemonics in TextMate snippet syntax. Snippets for `mv`, `mvr`, `umv`, `umvr`, `ascan`, `dscan`, `a2scan`, `d2scan`, `a3scan`, `d3scan`, `a4scan`, `d4scan`, and `mesh` are provided by default and thus, users does not need to add it. Read [Snippets in Visual Studio Code](https://code.visualstudio.com/docs/editor/userdefinedsnippets) for other information about the syntax. In addition, `%MOT` and `%CNT` are avaiable as the placeholders of motor and counter mnemonics, respectively. Optionally, a description can be added after `#` letter. Example: `mv ${1%MOT} ${2:pos} # absolute move`.
-* `vscode-spec.mnemonic.motors` and `vscode-spec.mnemonic.counters` - registers motor and counter mnemonics and optionally their descriptions after `#` letter. They are used by IntelliSense features and code snipeets above.  Example: `tth # two-theta angle`.
+* `vscode-spec.editor.codeSnippets` - provides a place to add code snippet templates that include motor or counter mnemonics in TextMate snippet syntax. Snippets for `mv`, `mvr`, `umv`, `umvr`, `ascan`, `dscan`, `a2scan`, `d2scan`, `a3scan`, `d3scan`, `a4scan`, `d4scan`, and `mesh` are provided by default and thus, users does not need to add it. Read [Snippets in Visual Studio Code](https://code.visualstudio.com/docs/editor/userdefinedsnippets) for other information about the syntax. In addition, `%MOT` and `%CNT` are avaiable as the placeholders of motor and counter mnemonics, respectively. Optionally, a description can be added after a hash sign (`#`). Example: `mv ${1%MOT} ${2:pos} # absolute move`.
+* `vscode-spec.mnemonic.motors` and `vscode-spec.mnemonic.counters` - registers motor and counter mnemonics and optionally their descriptions after `#` letter. They are used by IntelliSense features and code snippets above.  Example: `tth # two-theta angle`.
 * `vscode-spec.workspace.*` - controls the rule to scan files in workspace.
 * `vscode-spec.command.filePathPrefixInTerminal` - specifies file path prefix used in "Run File in Active Terminal" command.
-o
-Read [Visual Studio Code User and Workspace Settings](https://code.visualstudio.com/docs/getstarted/settings) for details abou the _Settings_ window.
 
-The identifiers (dot-separated string) of these settings were changed in v1.0.0 and v1.2.0.
+Read [Visual Studio Code User and Workspace Settings](https://code.visualstudio.com/docs/getstarted/settings) for details about the _Settings_ window.
 
-<!-- Include if your extension adds any VS Code settings through the `contributes.configuration` extension point . -->
+The identifiers (dot-separated string) of these settings were changed between v1.0.0 and v1.2.0.
 
 ## Known Issues
 
