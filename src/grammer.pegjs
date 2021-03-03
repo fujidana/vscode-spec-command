@@ -29,7 +29,7 @@
     + ')$'
   );
 
-  const _ttyCommandRegExp = /^(c(?:d|e)|do|ho|le|m(?:b|d|e|h|r)|nd|se|u(?:e|p|s))$/;
+  const _ttyCommandRegExp = /^(c(?:d|e)|do|ho|le|m(?:b|d|e|h|r)|nd|s(?:e|o)|u(?:e|p|s))$/;
   const _patternRegExp = /^[a-zA-Z0-9_*?]+$/;
 
   /**
