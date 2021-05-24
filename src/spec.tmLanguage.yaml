@@ -256,6 +256,18 @@ repository:
             name: invalid.illegal.numeric.other.spec
       literal-string:
         patterns:
+          - begin: \\"
+            beginCaptures:
+              "0": { name: punctuation.string.begin.spec }
+            end: \\"
+            endCaptures:
+              "0": { name: punctuation.string.end.spec }
+            name: string.quoted.double.spec
+            patterns:
+              - match: \\([abfnrt"\\]|[0-7]{1,3}|\[(?:c(?:d|e)|do|ho|le|m(?:b|d|e|h|r)|nd|s(?:e|o)|u(?:e|p|s))\])
+                name: constant.character.escape.spec
+              - match: \\.
+                name: invalid.illegal.unknown-escape.spec
           - begin: \\'
             beginCaptures:
               "0": { name: punctuation.string.begin.spec }
