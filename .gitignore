@@ -3,6 +3,6 @@ node_modules
 .vscode-test/
 *.vsix
 .DS_Store
-syntaxes/spec.tmLanguage.json
-syntaxes/spec.apiReference.json
+syntaxes/*.tmLanguage.json
+syntaxes/*.apiReference.json
 src/grammar.ts

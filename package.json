@@ -30,14 +30,22 @@
 			{
 				"id": "spec",
 				"aliases": [
-					"spec",
-					"Spec",
-					"SPEC"
+					"spec macro",
+					"spec command"
 				],
 				"extensions": [
 					".mac"
 				],
 				"configuration": "./language-configuration.json"
+			},
+			{
+				"id": "spec-log",
+				"aliases": [
+					"spec log"
+				],
+				"extensions": [
+					".tlog"
+				]
 			}
 		],
 		"grammars": [
@@ -45,6 +53,11 @@
 				"language": "spec",
 				"scopeName": "source.spec",
 				"path": "./syntaxes/spec.tmLanguage.json"
+			},
+			{
+				"language": "spec-log",
+				"scopeName": "source.spec-log",
+				"path": "./syntaxes/specLog.tmLanguage.json"
 			}
 		],
 		"snippets": [
@@ -258,7 +271,7 @@
 		"pretest": "npm run compile && npm run lint",
 		"test": "node ./out/test/runTest.js",
 		"js-yaml:apiReference": "js-yaml ./src/spec.apiReference.yaml > ./syntaxes/spec.apiReference.json",
-		"js-yaml:tmLanguage": "js-yaml ./src/spec.tmLanguage.yaml > ./syntaxes/spec.tmLanguage.json",
+		"js-yaml:tmLanguage": "js-yaml ./src/spec.tmLanguage.yaml > ./syntaxes/spec.tmLanguage.json; js-yaml ./src/specLog.tmLanguage.yaml > ./syntaxes/specLog.tmLanguage.json; ",
 		"pegjs": "pegjs --cache --plugin ./node_modules/ts-pegjs/src/tspegjs --extra-options-file ./src/pegconfig.json -o src/grammar.ts src/grammer.pegjs"
 	},
 	"dependencies": {
