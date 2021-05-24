@@ -1,0 +1,11 @@
+$schema: https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json
+name: spec-log
+scopeName: source.spec-log
+patterns:
+  - match: ^([0-9]+)(\.)([A-Z][A-Z0-9]*)(>)\s*(.*)\s*$
+    captures:
+      "1": { name: constant.numeric.spec-log }
+      "2": { name: punctuation.dot.spec-log }
+      "3": { name: constant.character.spec-log }
+      "4": { name: punctuation.gt.spec-log }
+      "5": { name: string.user-input.spec-log }
