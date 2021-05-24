@@ -3,7 +3,7 @@ import { TextDecoder } from 'util';
 import * as estree from "estree";
 import * as estraverse from "estraverse";
 import * as spec from "./spec";
-import { Provider } from "./provider";
+import { MacroProvider } from "./macroProvider";
 import { SyntaxError, parse, IFileRange } from './grammar';
 
 /**
@@ -31,6 +31,8 @@ function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position
     const macroRefMap: spec.ReferenceMap = new Map();
     const functionRefMap: spec.ReferenceMap = new Map();
 
+    // const nestedNodes: string[] = [];
+
     // console.log('<<<Scan start>>>', JSON.stringify(position, undefined, ""));
 
     estraverse.traverse(tree, {
@@ -57,6 +59,9 @@ function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position
 
             if (position) {
                 // in case of active document
+                // if (nodeRange.contains(position)) {
+                //     nestedNodes.push(currentNode.type);
+                // }
 
                 if (currentNode.type === 'BlockStatement' && nodeRange.end.isBefore(position)) {
                     // skip the code block that ends before the cursor.
@@ -152,7 +157,7 @@ async function findFilesInWorkspaces() {
 
     if (workspaceFolders) {
         for (const workspaceFolder of workspaceFolders) {
-            const config = vscode.workspace.getConfiguration('vscode-spec.workspace', workspaceFolder.uri);
+            const config = vscode.workspace.getConfiguration('vscode-spec.workspace', workspaceFolder);
             const inclusivePatternStr = config.get<string>('inclusiveFilePattern', '**/*.mac');
             const exclusivePatternStr = config.get<string>('exclusiveFilePattern', '');
             const diagnoseProblems = config.get<boolean>('diagnoseProblems', false);
@@ -171,7 +176,7 @@ async function findFilesInWorkspaces() {
  * Provider class for user documents.
  * This class manages opened documents and other documents in the current workspace.
  */
-export class UserProvider extends Provider implements vscode.DefinitionProvider, vscode.DocumentSymbolProvider, vscode.WorkspaceSymbolProvider {
+export class UserMacroProvider extends MacroProvider implements vscode.DefinitionProvider, vscode.DocumentSymbolProvider, vscode.WorkspaceSymbolProvider {
 
     private readonly diagnosticCollection: vscode.DiagnosticCollection;
     private readonly treeCollection: Map<string, CustomProgram>;
@@ -234,7 +239,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         // a hander invoked when the document is changed
         const onDidChangeTextDocumentListener = (event: vscode.TextDocumentChangeEvent) => {
             const document = event.document;
-            if (vscode.languages.match(spec.SELECTOR, document)) {
+            if (vscode.languages.match(spec.MACRO_SELECTOR, document)) {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
                 // this.diagnoseOpenDocments();
             }
@@ -243,14 +248,14 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         // a hander invoked when the document is opened
         // this is also invoked after the user manually changed the language id
         const onDidOpenTextDocumentListener = (document: vscode.TextDocument) => {
-            if (vscode.languages.match(spec.SELECTOR, document)) {
+            if (vscode.languages.match(spec.MACRO_SELECTOR, document)) {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
             }
         };
 
         // a hander invoked when the document is saved
         const onDidSaveTextDocumentListener = (document: vscode.TextDocument) => {
-            if (vscode.languages.match(spec.SELECTOR, document)) {
+            if (vscode.languages.match(spec.MACRO_SELECTOR, document)) {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
             }
         };
@@ -258,7 +263,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         // a hander invoked when the document is closed
         // this is also invoked after the user manually changed the language id
         const onDidCloseTextDocumentListener = async (document: vscode.TextDocument) => {
-            if (vscode.languages.match(spec.SELECTOR, document)) {
+            if (vscode.languages.match(spec.MACRO_SELECTOR, document)) {
                 const uriString = document.uri.toString();
 
                 this.treeCollection.delete(uriString);
@@ -307,7 +312,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                     }
                 } else if (stat.type === vscode.FileType.Directory) {
                     const oldDirUriString = oldUri.toString() + "/";
-                    
+
                     for (const fileUriString of this.storageCollection.keys()) {
                         if (fileUriString.startsWith(oldDirUriString)) {
                             oldFiles.add(fileUriString);
@@ -386,8 +391,8 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
             vscode.workspace.onDidChangeConfiguration(onDidChangeConfigurationListener),
             vscode.workspace.onDidChangeWorkspaceFolders(onDidChangeWorkspaceFoldersListener),
             // register providers
-            vscode.languages.registerDefinitionProvider(spec.SELECTOR, this),
-            vscode.languages.registerDocumentSymbolProvider(spec.SELECTOR, this),
+            vscode.languages.registerDefinitionProvider(spec.MACRO_SELECTOR, this),
+            vscode.languages.registerDocumentSymbolProvider(spec.MACRO_SELECTOR, this),
             vscode.languages.registerWorkspaceSymbolProvider(this),
             // register diagnostic collection
             this.diagnosticCollection,
@@ -410,7 +415,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                 this.completionItemCollection.delete(oldFileUriString);
             }
         }
-        
+
         // register metadata for new URIs.
         if (newFiles) {
             // make a list of opened documents.
@@ -418,7 +423,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
             // onDidOpenTextDocument and onDidCloseTextDocument events.
             const openedFiles = new Set<string>();
             for (const document of vscode.workspace.textDocuments) {
-                if (vscode.languages.match(spec.SELECTOR, document)) {
+                if (vscode.languages.match(spec.MACRO_SELECTOR, document)) {
                     openedFiles.add(document.uri.toString());
                 }
             }
@@ -488,7 +493,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         // parse documents opened by editors
         const openedFiles = new Set<string>();
         for (const document of vscode.workspace.textDocuments) {
-            if (vscode.languages.match(spec.SELECTOR, document)) {
+            if (vscode.languages.match(spec.MACRO_SELECTOR, document)) {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
                 openedFiles.add(document.uri.toString());
             }

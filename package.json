@@ -21,14 +21,15 @@
 		"multi-root ready"
 	],
 	"activationEvents": [
-		"onLanguage:spec"
+		"onLanguage:spec-macro",
+		"onLanguage:spec-log"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
 		"title": "spec",
 		"languages": [
 			{
-				"id": "spec",
+				"id": "spec-macro",
 				"aliases": [
 					"spec macro",
 					"spec command"
@@ -50,9 +51,9 @@
 		],
 		"grammars": [
 			{
-				"language": "spec",
-				"scopeName": "source.spec",
-				"path": "./syntaxes/spec.tmLanguage.json"
+				"language": "spec-macro",
+				"scopeName": "source.spec-macro",
+				"path": "./syntaxes/specMacro.tmLanguage.json"
 			},
 			{
 				"language": "spec-log",
@@ -62,8 +63,8 @@
 		],
 		"snippets": [
 			{
-				"language": "spec",
-				"path": "./syntaxes/spec.snippets.json"
+				"language": "spec-macro",
+				"path": "./syntaxes/specMacro.snippets.json"
 			}
 		],
 		"commands": [
@@ -91,40 +92,40 @@
 			"commandPalette": [
 				{
 					"command": "vscode-spec.openReferenceManual",
-					"when": "resourceLangId == 'spec'"
+					"when": "resourceLangId == 'spec-macro'"
 				},
 				{
 					"command": "vscode-spec.execSelectionInTerminal",
-					"when": "editorLangId == 'spec'"
+					"when": "editorLangId == 'spec-macro'"
 				},
 				{
 					"command": "vscode-spec.execFileInTerminal",
-					"when": "editorLangId == 'spec'"
+					"when": "editorLangId == 'spec-macro'"
 				}
 			],
 			"explorer/context": [
 				{
 					"command": "vscode-spec.execFileInTerminal",
-					"when": "resourceLangId == 'spec'",
+					"when": "resourceLangId == 'spec-macro'",
 					"group": "spec"
 				}
 			],
 			"editor/title": [
 				{
 					"command": "vscode-spec.execFileInTerminal",
-					"when": "editorLangId == 'spec'",
+					"when": "editorLangId == 'spec-macro'",
 					"group": "navigation"
 				}
 			],
 			"editor/context": [
 				{
 					"command": "vscode-spec.execSelectionInTerminal",
-					"when": "editorTextFocus && editorLangId == 'spec'",
+					"when": "editorTextFocus && editorLangId == 'spec-macro'",
 					"group": "spec"
 				},
 				{
 					"command": "vscode-spec.execFileInTerminal",
-					"when": "editorTextFocus && editorLangId == 'spec'",
+					"when": "editorTextFocus && editorLangId == 'spec-macro'",
 					"group": "spec"
 				}
 			]
@@ -133,7 +134,7 @@
 			{
 				"command": "vscode-spec.execSelectionInTerminal",
 				"key": "shift+enter",
-				"when": "editorTextFocus && editorLangId == 'spec'"
+				"when": "editorTextFocus && editorLangId == 'spec-macro'"
 			}
 		],
 		"configuration": {
@@ -270,8 +271,8 @@
 		"watch": "tsc -watch -p ./",
 		"pretest": "npm run compile && npm run lint",
 		"test": "node ./out/test/runTest.js",
-		"js-yaml:apiReference": "js-yaml ./src/spec.apiReference.yaml > ./syntaxes/spec.apiReference.json",
-		"js-yaml:tmLanguage": "js-yaml ./src/spec.tmLanguage.yaml > ./syntaxes/spec.tmLanguage.json; js-yaml ./src/specLog.tmLanguage.yaml > ./syntaxes/specLog.tmLanguage.json; ",
+		"js-yaml:apiReference": "js-yaml ./src/specMacro.apiReference.yaml > ./syntaxes/specMacro.apiReference.json",
+		"js-yaml:tmLanguage": "js-yaml ./src/specMacro.tmLanguage.yaml > ./syntaxes/specMacro.tmLanguage.json; js-yaml ./src/specLog.tmLanguage.yaml > ./syntaxes/specLog.tmLanguage.json; ",
 		"pegjs": "pegjs --cache --plugin ./node_modules/ts-pegjs/src/tspegjs --extra-options-file ./src/pegconfig.json -o src/grammar.ts src/grammer.pegjs"
 	},
 	"dependencies": {

@@ -1,6 +1,6 @@
 $schema: https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json
-name: spec
-scopeName: source.spec
+name: spec-macro
+scopeName: source.spec-macro
 patterns:
   - include: "#statement"
 repository:
