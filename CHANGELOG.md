@@ -9,8 +9,9 @@ All notable changes to the __vscode-spec__ extension will be documented in this 
 ## [1.3.0] - 2021-05-25
 
 * add support to __spec__ transaction log file (language identifier: `spec-log`, file extension: `.tlog`), including the following features:
-  * code navigation
   * synax highlighting
+  * code navigation
+  * folding
 * change the language identifier of __spec__ command file from `spec` to `spec-macro`
 * improve syntax support for string literal enclosed with `\"`
 

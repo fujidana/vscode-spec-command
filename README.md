@@ -2,8 +2,8 @@
 
 This VS Code extension provides editing/viewing support to the following files:
 
-* _spec-macro_: __spec__ command file typically loaded by `qdo` after a user writes user-defined macros in it
-* _spec-log_: __spec__ transaction log file created when __spec__ is launched with `-l logfile` option
+* `spec-macro`: __spec__ command file, typically loaded by `qdo` after a user writes user-defined macros in it
+* `spec-log`: __spec__ transaction log file, created when __spec__ is launched with `-l logfile` option
 
 The default file extensions of these files this extension expects are `.mac` and `.tlog`, respectively.
 VS Code provides a way for a user to change the association with file extensions.
@@ -27,7 +27,7 @@ Use [GitHub issues](https://github.com/fujidana/vscode-spec/issues) for bug repo
 
 ## NOTICE for previous version users
 
-The language identifier of __spec__ command files are changed from _spec_ to _spec-macro_ in the version 1.3.0.
+The language identifier of __spec__ command files are changed from `spec` to `spec-macro` in the version 1.3.0.
 
 The following identifiers in the extension settings are deprecated in the version 1.2.0:
 
@@ -71,9 +71,10 @@ The help text of built-in symbols are cited from this document, except where oth
 
 ### Features for __spec__ transaction log files
 
+* __Syntax highlighting__
 * __Code navigation__
   * __Show all symbol definitions within a document__
-  * __Code folding__
+* __Code folding__
 
 Lines of __spec__ prompts such as `1.FOURC>` are picked out for code navigation and folding.
 
