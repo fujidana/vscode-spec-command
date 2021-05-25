@@ -6,6 +6,14 @@ All notable changes to the __vscode-spec__ extension will be documented in this 
 
 ## [Unreleased]
 
+## [1.3.0] - 2021-05-25
+
+* add support to __spec__ transaction log file (language identifier: `spec-log`, file extension: `.tlog`), including the following features:
+  * code navigation
+  * synax highlighting
+* change the language identifier of __spec__ command file from `spec` to `spec-macro`
+* improve syntax support for string literal enclosed with `\"`
+
 ## [1.2.1] - 2021-03-03
 
 * add syntax support for `ifp` and `ifd`, defined in SPECD/standard.mac
@@ -114,11 +122,12 @@ All notable changes to the __vscode-spec__ extension will be documented in this 
 
 ## [0.1.1] - 2019-08-29
 
-* add new features:
+* add support to __spec__ command file (language identifier: `spec`, file extension: `.mac`), including the following features:
   * syntax highlighting
   * code snippets
 
-[Unreleased]: https://github.com/fujidana/vscode-spec/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/fujidana/vscode-spec/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/fujidana/vscode-spec/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/fujidana/vscode-spec/compare/v1.1.4...v1.2.0
 [1.1.4]: https://github.com/fujidana/vscode-spec/compare/v1.1.3...v1.1.4
