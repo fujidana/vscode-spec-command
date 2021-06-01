@@ -273,7 +273,7 @@
 		"test": "node ./out/test/runTest.js",
 		"js-yaml:apiReference": "js-yaml ./src/specMacro.apiReference.yaml > ./syntaxes/specMacro.apiReference.json",
 		"js-yaml:tmLanguage": "js-yaml ./src/specMacro.tmLanguage.yaml > ./syntaxes/specMacro.tmLanguage.json; js-yaml ./src/specLog.tmLanguage.yaml > ./syntaxes/specLog.tmLanguage.json; ",
-		"pegjs": "pegjs --cache --plugin ./node_modules/ts-pegjs/src/tspegjs --extra-options-file ./src/pegconfig.json -o src/grammar.ts src/grammer.pegjs"
+		"pegjs": "peggy --cache --plugin ./node_modules/ts-pegjs/src/tspegjs --extra-options-file ./src/pegconfig.json -o src/grammar.ts src/grammer.pegjs"
 	},
 	"dependencies": {
 		"estraverse": "^5.2.0"
@@ -291,7 +291,7 @@
 		"js-yaml": "^4.1.0",
 		"mocha": "^8.1.3",
 		"npm-run-all": "^4.1.5",
-		"ts-pegjs": "^0.3.1",
+		"ts-pegjs": "^1.0.0",
 		"typescript": "^4.1.3",
 		"vscode-test": "^1.5.0"
 	},
