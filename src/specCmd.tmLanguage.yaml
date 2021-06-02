@@ -15,6 +15,7 @@ repository:
       - include: "#control"
       - include: "#declaration"
       - include: "#builtin-macro"
+      - include: "#macro-statement"
       - include: "#expression-statement"
     repository:
       code-block:
@@ -178,6 +179,13 @@ repository:
               "1": { name: support.function.built-in.macro.spec-cmd }
             end: (?=$|;|#|"""|}|')
             patterns: [{ include: "#expression-single" }]
+      macro-statement:
+        patterns:
+          - begin: \b([a-zA-Z_][A-Za-z0-9_]*)(?:\s*+(?=$|;|#|"""|}|')|\s++(?!\+|-|\*|/\/|%|>|<|=|&|\|))
+            beginCaptures:
+              "1": { name: entity.name.function.macro.spec-cmd }
+            end: (?=$|;|#|"""|}|')
+            patterns: [{ include: "#expression-single" }]
       expression-statement:
         patterns:
           - begin: (?=.)
@@ -191,9 +199,10 @@ repository:
   expression-single:
     patterns:
       - include: "#expression-block"
-      - include: "#operator"
       - include: "#function-call"
+      # - include: "#lvalue_w_uop"
       - include: "#lvalue"
+      - include: "#operator"
       - include: "#literal-numeric"
       - include: "#literal-string"
       - include: "#comment"
@@ -218,6 +227,18 @@ repository:
           "0": { name: punctuation.definition.arguments.end.spec-cmd }
         contentName: meta.function-argument.spec-cmd
         patterns: [{ include: "#expression-single" }]
+      # lvalue_w_uop:
+      #   patterns:
+      #     - match: (--|\+\+)([a-zA-Z_][a-zA-Z0-9_]*|\$[0-9]+)
+      #       name: lvalue.increment-decrement.spec-cmd
+      #       captures:
+      #         "1": { name:  keyword.operator.unary.arithmetic.increment-decrement.spec-cmd }
+      #         "2": { patterns: [{ include: "#lvalue" }] }
+      #     - match: \b([a-zA-Z_][a-zA-Z0-9_]*|\$[0-9]+)(--|\+\+)
+      #       name: lvalue.increment-decrement.spec-cmd
+      #       captures:
+      #         "1": { patterns: [{ include: "#lvalue" }] }
+      #         "2": { name: keyword.operator.unary.arithmetic.increment-decrement.spec-cmd }
       lvalue:
         patterns:
           - match: \b(PI)\b
