@@ -1,8 +1,9 @@
 /** 
- * This is a spec parser file written in PEG.js (https://pegjs.org) syntax.
- * The parser generated from this file using PEG.js parses a spec script and outputs a 
- * JavaScript object that resembles the Parser AST (abstract syntax tree) described blow:
- * https://developer.mozilla.org/en-US/docs/Mozilla/Projects/SpiderMonkey/Parser_API.
+ * This is a source file written in Peggy.js (https://peggyjs.org) syntax with
+ * TS PEG.js plugin (https://github.com/metadevpro/ts-pegjs).
+ * A typescript file converted from this file parses spec command files and
+ * outputs a JavaScript object that resembles the Parser AST (abstract syntax tree, 
+ * https://developer.mozilla.org/en-US/docs/Mozilla/Projects/SpiderMonkey/Parser_API).
  */
 
 {
@@ -89,12 +90,18 @@
   /**
    * Make Variable Declarators from an array of [identifier | null, separator, location, option?].
    */
-  function makeDeclarators(elements: [any, string, IFileRange, any][] | null, locAll: IFileRange, label: string) {
+  function makeDeclarators(elements: [any, string, IFileRange, any][] | null, locAll: IFileRange, label: string, allows_assign: boolean) {
     if (!elements || elements.length === 0) {
       pushDiagnostic(locAll, `Expected at least one ${label}.`, vscode.DiagnosticSeverity.Error);
       return [];
     } else if (elements[elements.length - 1][1] === ',') {
       pushDiagnostic(elements[elements.length - 1][2], `Trailing comma not allowed.`, vscode.DiagnosticSeverity.Error);
+    } else if (elements.some((item: [any, string, IFileRange, any]) => item[3].init !== null)) {
+      if (!allows_assign) {
+        pushDiagnostic(locAll, `Assignment not allowed.`, vscode.DiagnosticSeverity.Error);
+      } else if (elements.length > 1) {
+        pushDiagnostic(locAll, `Only one variable per statement can be declared and initialized.`, vscode.DiagnosticSeverity.Error);
+      }
     }
 
     const declarators: any[] = [];
@@ -580,7 +587,7 @@ data_array_def 'data-array declaration' =
   )? 'array' _1_ items:_data_array_list_item* _0_ eos {
     return {
       type: 'VariableDeclaration',
-      declarations: makeDeclarators(items, location(), 'array identifier'),
+      declarations: makeDeclarators(items, location(), 'array identifier', true),
       kind: 'let',
       exType: 'data-array',
       exScope: scope ? scope[0] : undefined,
@@ -606,11 +613,24 @@ _data_array_list_item =
         return expr;
       }
     ) { return p; }
-  )* sep:list_sep? {
+  )* init:(
+    _0_ op:assignment_op _0_ term:expr_multi? {
+      if (op !== '=') {
+        pushDiagnostic(location(), `Invalid operator: \"${op}\". Only \"=\" is allowed.`, vscode.DiagnosticSeverity.Error);
+      }
+      if (!term) {
+        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, vscode.DiagnosticSeverity.Error);
+        term = NULL_LITERAL;
+      } else if (term.type !== 'ObjectExpression' && term.type !== 'ArrayExpression') {
+        pushDiagnostic(location(), 'Only array can be assigned.', vscode.DiagnosticSeverity.Error);
+      }
+      return term;
+    }
+  )? sep:list_sep? {
     if (!sizes || sizes.length === 0) {
       pushDiagnostic(location(), 'Array size must be sepcified.', vscode.DiagnosticSeverity.Error);
     }
-    return [ id, sep, location(), { exSizes: sizes } ];
+    return [ id, sep, location(), { exSizes: sizes, init: init } ];
   }
   /
   sep:list_sep {
@@ -621,7 +641,7 @@ extern_array_def =
   'extern' _1_ 'shared' _1_ 'array' _1_ items:_extern_array_list_item* _0_ eos {
     return {
       type: 'VariableDeclaration',
-      declarations: makeDeclarators(items, location(), 'external array identifier'),
+      declarations: makeDeclarators(items, location(), 'external array identifier', false),
       kind: 'let',
       exType: 'data-array',
       exScope: 'extern',
@@ -653,7 +673,7 @@ variable_def 'variable declaration' =
   scope:('local' / 'global' / 'unglobal') _1_ items:_variable_list_item* _0_ eos {
     return {
       type: 'VariableDeclaration',
-      declarations: makeDeclarators(items, location(), 'variable identifier'),
+      declarations: makeDeclarators(items, location(), 'variable identifier', scope !== 'unglobal'),
       kind: 'let',
       exScope: scope,
     };
@@ -669,8 +689,19 @@ _variable_list_item =
         return true;
       }
     ) { return p; }
+  )? init:(
+    _0_ op:assignment_op _0_ term:expr_multi? {
+      if (op !== '=') {
+        pushDiagnostic(location(), `Invalid operator: \"${op}\". Only \"=\" is allowed.`, vscode.DiagnosticSeverity.Error);
+      }
+      if (!term) {
+        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, vscode.DiagnosticSeverity.Error);
+        term = NULL_LITERAL;
+      }
+      return term;
+    }
   )? sep:list_sep? {
-    return [ id, sep, location(), { exType: bracket !== null ? 'assoc-array' : 'scalar', } ];
+    return [ id, sep, location(), { exType: bracket !== null ? 'assoc-array' : 'scalar', init: init, } ];
   }
   /
   sep:list_sep {
@@ -1102,7 +1133,7 @@ exponent =
   [eE] [+-]? [0-9]+
 
 /**
- * Array literals used in assingnment operation.
+ * Array literals used in assignment operation.
  * its BNF is undocumented in the Grammer Rules.
  * e.g., [ var0, 1+2, "test"], ["foo": 0x12, "bar": var1]
  */
@@ -1131,21 +1162,25 @@ array_literal 'array literal' =
     
     if (items.some((item: any) => item === NULL_LITERAL)) {
       return NULL_EXPRESSION;
-    } else if (items.every((item: any) => item.type === 'Property')) {
-      // every item is a key-value pair.
+    // } else if (items.every((item: any) => item.type === 'Property')) {
+    //   // every item is a key-value pair.
+    //   return {
+    //     type: 'ObjectExpression',
+    //     properties: items,
+    //   };
+    // } else if (items.every((item: any) => item.type !== 'Property')) {
+    //   // every item is an expression (not a key-value pair).
+    //   return {
+    //     type: 'ArrayExpression',
+    //     elements: items,
+    //   };
+    } else {
+    //     pushDiagnostic(location(), 'Mixture of associate-array and data-array literals not allowed.', vscode.DiagnosticSeverity.Error);
+    //     return NULL_EXPRESSION;
       return {
         type: 'ObjectExpression',
         properties: items,
-      };
-    } else if (items.every((item: any) => item.type !== 'Property')) {
-      // every item is an expression (not a key-value pair).
-      return {
-        type: 'ArrayExpression',
-        elements: items,
-      };
-    } else {
-        pushDiagnostic(location(), 'Mixture of associate-array and data-array literals not allowed.', vscode.DiagnosticSeverity.Error);
-        return NULL_EXPRESSION;
+      }
     }
   }
 
@@ -1155,6 +1190,23 @@ array_literal 'array literal' =
  * <NOTICE> that of spec can be an 'Expression'.
  */
 array_item =
+  //  e.g., [ 1: 2: "item", 2: 3: "item2" ]
+  key1:expr_multi? _0_ ':' _0_ key2:expr_multi? _0_ ':' _0_ value:expr_multi? {
+    if (!key1 || !key2) {
+      pushDiagnostic(location(), `Expected a key expression.`, vscode.DiagnosticSeverity.Error);
+    } else if (!value) {
+      pushDiagnostic(location(), `Expected a value expression.`, vscode.DiagnosticSeverity.Error);
+    }
+    // Not yet implemented. key2 is not exported!!!
+    return {
+      type: 'Property',
+      key: key1 ? key1 : NULL_LITERAL,
+      value: value ? value : NULL_LITERAL,
+      kind: 'init',
+    };
+  }
+  /
+  //  e.g., [ 0: "item", 1: "item2" ]
   key:expr_multi? _0_ ':' _0_ value:expr_multi? {
     if (!key) {
       pushDiagnostic(location(), `Expected a key expression.`, vscode.DiagnosticSeverity.Error);
