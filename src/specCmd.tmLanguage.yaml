@@ -91,7 +91,7 @@ repository:
                   patterns: [{ include: "#validation-id" }],
                 }
               "3": { name: punctuation.function-argument.begin.spec-cmd }
-              "4": { patterns: [{ include: "#list-id" }] }
+              "4": { patterns: [{ include: "#func-param-ids" }] }
               "5": { name: punctuation.function-argument.end.spec-cmd }
               "6": { name: punctuation.function-body.begin.spec-cmd }
             end: (')\s*(.*?)(?=$|;|#|"""|}|')
@@ -111,7 +111,7 @@ repository:
                   patterns: [{ include: "#validation-id" }],
                 }
               "3": { name: punctuation.function-argument.begin.spec-cmd }
-              "4": { patterns: [{ include: "#list-id" }] }
+              "4": { patterns: [{ include: "#func-param-ids" }] }
               "5": { name: punctuation.function-argument.end.spec-cmd }
             end: (?=$|;|#|"""|}|')
             patterns: [{ include: "#expression-single" }]
@@ -126,7 +126,7 @@ repository:
               "1": { name: storage.modifier.access.data-array.spec-cmd }
               "2": { name: storage.modifier.data-type.data-array.spec-cmd }
               "3": { name: storage.type.data-array.spec-cmd }
-              "4": { patterns: [{ include: "#list-array" }] }
+              "4": { patterns: [{ include: "#list-array-declared" }] }
           - ### usage: extern shared array <spec-identifier>:<id-number>:<array-identifier>;
             match: \b(extern)\s+(shared)\s+(array)\s+(\S.*?)(?=$|;|#|"""|}|')
             captures:
@@ -150,12 +150,12 @@ repository:
             match: \b(local|global|unglobal)\s+(\S.*?)(?=$|;|#|"""|}|')
             captures:
               "1": { name: storage.type.variable.spec-cmd }
-              "2": { patterns: [{ include: "#list-arrayable-id" }] }
+              "2": { patterns: [{ include: "#list-variable-declared" }] }
           - ### delete <assoc-elem-list>; delete <accos-array>
             match: \b(delete)\s+(\S.*?)(?=$|;|#|"""|}|')
             captures:
               "1": { name: support.function.built-in.macro.spec-cmd }
-              "2": { patterns: [{ include: "#list-array" }] }
+              "2": { patterns: [{ include: "#list-array-delete" }] }
       builtin-macro:
         patterns:
           - ### usage: (memstat|savstate|reconfig|getcounts|move_all|move_cnt|sync)
@@ -381,26 +381,42 @@ repository:
     endCaptures:
       "0": { name: punctuation.comment.docstring.end.spec-cmd }
     name: comment.block.documentation.spec-cmd #string.quoted.triple.spec-cmd
-  list-id:
+  func-param-ids:
     match: ([^,\s]+?)(?:\s*(,)\s*|\s+|$)
     captures:
       "1":
         {
-          name: entity.name.variable.spec-cmd,
+          name: variable.parameter.spec-cmd,
           patterns: [{ include: "#validation-id" }],
         }
       "2": { name: punctuation.id-separator.spec-cmd }
-  list-arrayable-id:
-    match: ([^,\s]+?)(?:(\[\s*)(\])){0,2}(?:\s*(,)\s*|\s+|$)
-    captures:
-      "1":
-        {
-          name: entity.name.variable.spec-cmd,
-          patterns: [{ include: "#validation-id" }],
-        }
-      "2": { name: punctuation.array.left.spec-cmd }
-      "3": { name: punctuation.array.right.spec-cmd }
-      "4": { name: punctuation.id-separator.spec-cmd }
+  list-variable-declared:
+    patterns:
+      - begin: ([^,\s\[\]]+)\s*(?:(\[)\s*(\]))?\s*(=)\s*
+        beginCaptures:
+          "1":
+            {
+              name: entity.name.variable.spec-cmd,
+              patterns: [{ include: "#validation-id" }],
+            }
+          "2": { name: punctuation.array.left.spec-cmd }
+          "3": { name: punctuation.array.right.spec-cmd }
+          "4": { name: keyword.operator.arithmetic.assignment.spec-cmd }
+        end: (?:\s*(,)\s*|\s+|$)
+        endCaptures:
+          "1": { name: punctuation.id-separator.spec-cmd }
+        # name: meta.variable-init.spec-cmd
+        patterns: [{ include: "#expression-single" }]
+      - match: ([^,\s\[\]]+)\s*(?:(\[)\s*(\]))?(?:\s*(,)\s*|\s+|$)
+        captures:
+          "1":
+            {
+              name: entity.name.variable.spec-cmd,
+              patterns: [{ include: "#validation-id" }],
+            }
+          "2": { name: punctuation.array.left.spec-cmd }
+          "3": { name: punctuation.array.right.spec-cmd }
+          "4": { name: punctuation.id-separator.spec-cmd }
   list-function-id:
     match: ([^,\s]+?)(?:\s*(,)\s*|\s+|$)
     captures:
@@ -410,7 +426,7 @@ repository:
           patterns: [{ include: "#validation-id" }],
         }
       "2": { name: punctuation.id-separator.spec-cmd }
-  list-array: # e.g., arr_a[(2+3)], arr_b["abc"]["def"]
+  list-array-delete: # e.g., arr_a[(2+3)], arr_b["abc"]["def"]
     patterns:
       - begin: ([^,\s]+?)\s*(?=\[)(?!\[\s*\])
         beginCaptures:
@@ -425,6 +441,41 @@ repository:
         patterns: [{ include: "#expression-single" }]
       - match: (\w+)(?:\s*(,)\s*|\s+|$)
         patterns: [{ include: "#validation-id" }]
+  list-array-declared:
+    patterns:
+      - begin: ([^,\s\[\]]+)\s*(?:(\[)([^\]]+)(\]))\s*(?:(\[)([^\]]+)(\]))?\s*(=)\s*
+        beginCaptures:
+          "1":
+            {
+              name: entity.name.variable.array.spec-cmd,
+              patterns: [{ include: "#validation-id" }],
+            }
+          "2": { name: punctuation.array.left.spec-cmd }
+          "3": { patterns: [{ include: "#expression-single" }] }
+          "4": { name: punctuation.array.right.spec-cmd }
+          "5": { name: punctuation.array.left.spec-cmd }
+          "6": { patterns: [{ include: "#expression-single" }] }
+          "7": { name: punctuation.array.right.spec-cmd }
+          "8": { name: keyword.operator.arithmetic.assignment.spec-cmd }
+        end: (?:\s*(,)\s*|\s+|$)
+        endCaptures:
+          "1": { name: punctuation.id-separator.spec-cmd }
+        name: meta.array-init.spec-cmd
+        patterns: [{ include: "#expression-single" }]
+      - match: ([^,\s\[\]]+)\s*(?:(\[)([^\]]+)(\]))\s*(?:(\[)([^\]]+)(\]))?
+        captures:
+          "1":
+            {
+              name: entity.name.variable.array.spec-cmd,
+              patterns: [{ include: "#validation-id" }],
+            }
+          "2": { name: punctuation.array.left.spec-cmd }
+          "3": { patterns: [{ include: "#expression-single" }] }
+          "4": { name: punctuation.array.right.spec-cmd }
+          "5": { name: punctuation.array.left.spec-cmd }
+          "6": { patterns: [{ include: "#expression-single" }] }
+          "7": { name: punctuation.array.right.spec-cmd }
+          "8": { name: punctuation.id-separator.spec-cmd }
   list-extern-array: # e.g., spec:0:arr0, spec:arr1, arr2
     match: (?:(\w+?)(:)(?:(\d+)(:))?)?(\w+)(?:\s*(,)\s*|\s+|$)
     captures:
