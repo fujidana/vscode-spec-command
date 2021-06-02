@@ -225,8 +225,20 @@ variables:
     description: |-
       is string valued and is set to the version number of **spec**, as in `3.03.11`.
 
-  ### Not documented in spec_manA4.pdf. Instaed, cited from https://certif.com/spec_help/hdf5.html.
+  ### documented not in spec_manA4.pdf but in CSS spec help pages (https://www.certif.com/spec_help/index.html).
 
+  SPEC_PID:
+    signature: SPEC_PID
+    comments: 'cited from [CSS spec help pages: chg6_09](https://www.certif.com/spec_help/chg6_09.html).'
+    description: |-
+      contains the process ID of the **spec** process.
+  HISTCMD:
+    signature: HISTCMD
+    comments: 'cited from [CSS spec help pages: chg6_10](https://www.certif.com/spec_help/chg6_10.html).'
+    description: |-
+      is the command line history number.
+      That is the name used for the same item in the standard bash and zsh shells.
+      `HISTCMD` is used in the new standard `highlight` macro.
   HDF5_VERSION:
     signature: HDF5_VERSION
     comments: 'cited from [CSS spec help pages: hdf5](https://certif.com/spec_help/hdf5.html).'
@@ -234,13 +246,22 @@ variables:
       Contains the HDF5 version used when compiling **spec**, as in "1.8.13".
       Note, its value will not be set until the first call of one of the above functions.
   HDF5_ERROR_MODE:
-    comments: 'cited from [CSS spec help pages: hdf5](https://certif.com/spec_help/hdf5.html).'
     signature: HDF5_ERROR_MODE
+    comments: 'cited from [CSS spec help pages: hdf5](https://certif.com/spec_help/hdf5.html).'
     description: |-
       Sets the verbosity level of error messages.
       Valid values are 1 through 4.
       Higher levels are useful for debugging calls of the above functions in conjunction with the HDF5 library source code.
       The default value is 1.
+  argc:
+    signature: argc
+    comments: 'cited from [CSS spec help pages: chg6_06](https://www.certif.com/spec_help/chg6_06.html).'
+    description: |-
+      is the number of arguments used to invoke the macro function.
+      The additional variables `arg1`, `arg2`, etc., contain the values of arguments not included in the macro definition, but used in the macro invocation.
+      The argument number corresponds to the position of the argument.
+      If the macro definition defines an argument, there will be no new argument variable created for that position.
+
 
 # Built-In Functions and Commands
 
@@ -954,6 +975,33 @@ functions:
       Scans the literal string or string variable *string* for data, where *format* contains a format specification in the same style as the C language *scanf()* function.
       Each subsequent argument is a variable name or array element that will be assigned the values scanned for.
       The function returns the number of items found in the string.
+  tolower:
+    signature: tolower(s[, count[, start]])
+    comments: 'cited from [CSS spec help pages: funcs](https://www.certif.com/spec_help/funcs.html).'
+    description: |-
+      Returns a string with upper case letters converted to lower case.
+      If `count` is specified, only that many characters are converted.
+      If `start` is specified, the conversion starts at that position, counted starting from 1.
+      Returns the original string if no conversions are possible.
+      (Function added in **spec** release 6.08.05.)
+    overloads:
+    - signature: tolower(s)
+    - signature: tolower(s, count)
+    - signature: tolower(s, count, start)
+  toupper:
+    signature: toupper(s[, count[, start]])
+    comments: 'cited from [CSS spec help pages: funcs](https://www.certif.com/spec_help/funcs.html).'
+    description: |-
+      Returns a string with lower case letters converted to upper case.
+      If `count` is specified, only that many characters are converted.
+      If `start` is specified, the conversion starts at that position, counted starting from 1.
+      Returns the original string if no conversions are possible.
+      (Function added in **spec** release 6.08.05.)
+    overloads:
+    - signature: toupper(s)
+    - signature: toupper(s, count)
+    - signature: toupper(s, count, start)
+
 
   ### Regular Expression Functions
 
@@ -1003,9 +1051,15 @@ functions:
   ### Conversion Functions
 
   asc:
-    signature: asc(s)
-    description: |-
-      Returns the ASCII value of the first character of the string value of the argument.
+    signature: asc(s[, position])
+    overloads:
+    - signature: asc(s)
+      description: |-
+        Returns the ASCII value of the first character of the string value of the argument `s`.
+    - signature: asc(s, position)
+      description: |-
+        Returns the ASCII value of the character at position in string `s`, counted from 1.
+        If `position` isn't within the string, returns 0. (Available in **spec** release 6.08.05.)
   bcd:
     signature: bcd(x)
     description: |-
@@ -1531,12 +1585,18 @@ functions:
     - signature: remote_poll(id)
   encode:
     signature: encode(format, obj[, ...])
+    comments: 'cited from [CSS spec help pages: funcs](https://www.certif.com/spec_help/funcs.html).'
     description: |-
       Returns a string representation of the **spec** data objects `obj ...` in the specified `format`.
+      Currently the only recognized format is `"json"`.
+      See the [encode](https://www.certif.com/spec_help/funcs.html) help file for details.
   decode:
     signature: decode(format, string)
+    comments: 'cited from [CSS spec help pages: funcs](https://www.certif.com/spec_help/funcs.html).'
     description: |-
       Returns a **spec** data object obtained from the string `str` in `format`.
+      Currently the only recognized format is `"json"`.
+      See the [encode](https://www.certif.com/spec_help/funcs.html) help file for details.
 
   ## Hardware Functions and Commands
 
@@ -2431,7 +2491,7 @@ functions:
         The first two arguments are as above, with the resource *res* associated with *dev* being set to *value*.
         If multiple elements are required, the argument *value* should be a string in a comma-separated list.
 
-### Not documented in spec_manA4.pdf. Instaed, cited from https://certif.com/spec_help/tango.html.
+  ### Not documented in spec_manA4.pdf. Instaed, cited from https://certif.com/spec_help/tango.html.
 
   tango_io:
     signature: tango_io(dev, ...)
@@ -2797,13 +2857,45 @@ functions:
 
   ### Not documented in spec_manA4.pdf.
 
+  get_history:
+    signature: get_history(num)
+    comments: 'cited from [CSS spec help pages: chg6_07](https://www.certif.com/spec_help/chg6_07.html).'
+    description: |-
+      returns entries from the command-line history as a string.
+      If `num` is positive, returns the specified history item.
+      If `num` is negative, returns the item relative to the current history number.
+      If no item exists at the specified number, returns an empty string.
+      See the [history](https://www.certif.com/spec_help/history.html) help file for details.
+
   fbus_get:
     signature: fbus_get(...)
+    comments: 'cited from [CSS spec help pages: chg6_08](https://www.certif.com/spec_help/chg6_08.html).'
+    description: |-
+      See the new [fbus](https://www.certif.com/spec_help/fbus.html) help file for details.
   fbus_put:
     signature: fbus_put(...)
+    comments: 'cited from [CSS spec help pages: chg6_08](https://www.certif.com/spec_help/chg6_08.html).'
+    description: |-
+      See the new [fbus](https://www.certif.com/spec_help/fbus.html) help file for details.
 
   em_io:
     signature: em_io(...)
+    comments: 'cited from [CSS spec help pages: chg6_08](https://www.certif.com/spec_help/chg6_08.html).'
+    description: |-
+      The built-in `em_io()` function has been renamed `madoca_io()`.
+      See the [madoca](https://www.certif.com/spec_help/madoca.html) help file (formerly named [equipman](https://www.certif.com/spec_help/equipman.html)) for details.
+  madoca_io:
+    signature: madoca_io(...)
+    comments: 'cited from [CSS spec help pages: chg6_08](https://www.certif.com/spec_help/chg6_08.html).'
+    description: |-
+      The built-in `em_io()` function has been renamed `madoca_io()`.
+      See the [madoca](https://www.certif.com/spec_help/madoca.html) help file (formerly named [equipman](https://www.certif.com/spec_help/equipman.html)) for details.
+  rpi_io:
+    signature: rpi_io(...)
+    comments: 'cited from [CSS spec help pages: chg6_09](https://www.certif.com/spec_help/chg6_09.html).'
+    description: |-
+      is a function for the Raspberry PI platform to allow access to the general purpose I/O (GPIO) pins.
+      See the [rpi](https://www.certif.com/spec_help/rpi.html) help file for details.
 
 macros:
 
