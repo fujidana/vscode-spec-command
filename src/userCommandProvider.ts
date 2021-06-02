@@ -3,7 +3,7 @@ import { TextDecoder } from 'util';
 import * as estree from "estree";
 import * as estraverse from "estraverse";
 import * as spec from "./spec";
-import { MacroProvider } from "./macroProvider";
+import { CommandProvider } from "./commandProvider";
 import { SyntaxError, parse, IFileRange } from './grammar';
 
 /**
@@ -176,7 +176,7 @@ async function findFilesInWorkspaces() {
  * Provider class for user documents.
  * This class manages opened documents and other documents in the current workspace.
  */
-export class UserMacroProvider extends MacroProvider implements vscode.DefinitionProvider, vscode.DocumentSymbolProvider, vscode.WorkspaceSymbolProvider {
+export class UserCommandProvider extends CommandProvider implements vscode.DefinitionProvider, vscode.DocumentSymbolProvider, vscode.WorkspaceSymbolProvider {
 
     private readonly diagnosticCollection: vscode.DiagnosticCollection;
     private readonly treeCollection: Map<string, CustomProgram>;
@@ -239,7 +239,7 @@ export class UserMacroProvider extends MacroProvider implements vscode.Definitio
         // a hander invoked when the document is changed
         const onDidChangeTextDocumentListener = (event: vscode.TextDocumentChangeEvent) => {
             const document = event.document;
-            if (vscode.languages.match(spec.MACRO_SELECTOR, document)) {
+            if (vscode.languages.match(spec.CMD_SELECTOR, document)) {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
                 // this.diagnoseOpenDocments();
             }
@@ -248,14 +248,14 @@ export class UserMacroProvider extends MacroProvider implements vscode.Definitio
         // a hander invoked when the document is opened
         // this is also invoked after the user manually changed the language id
         const onDidOpenTextDocumentListener = (document: vscode.TextDocument) => {
-            if (vscode.languages.match(spec.MACRO_SELECTOR, document)) {
+            if (vscode.languages.match(spec.CMD_SELECTOR, document)) {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
             }
         };
 
         // a hander invoked when the document is saved
         const onDidSaveTextDocumentListener = (document: vscode.TextDocument) => {
-            if (vscode.languages.match(spec.MACRO_SELECTOR, document)) {
+            if (vscode.languages.match(spec.CMD_SELECTOR, document)) {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
             }
         };
@@ -263,7 +263,7 @@ export class UserMacroProvider extends MacroProvider implements vscode.Definitio
         // a hander invoked when the document is closed
         // this is also invoked after the user manually changed the language id
         const onDidCloseTextDocumentListener = async (document: vscode.TextDocument) => {
-            if (vscode.languages.match(spec.MACRO_SELECTOR, document)) {
+            if (vscode.languages.match(spec.CMD_SELECTOR, document)) {
                 const uriString = document.uri.toString();
 
                 this.treeCollection.delete(uriString);
@@ -391,8 +391,8 @@ export class UserMacroProvider extends MacroProvider implements vscode.Definitio
             vscode.workspace.onDidChangeConfiguration(onDidChangeConfigurationListener),
             vscode.workspace.onDidChangeWorkspaceFolders(onDidChangeWorkspaceFoldersListener),
             // register providers
-            vscode.languages.registerDefinitionProvider(spec.MACRO_SELECTOR, this),
-            vscode.languages.registerDocumentSymbolProvider(spec.MACRO_SELECTOR, this),
+            vscode.languages.registerDefinitionProvider(spec.CMD_SELECTOR, this),
+            vscode.languages.registerDocumentSymbolProvider(spec.CMD_SELECTOR, this),
             vscode.languages.registerWorkspaceSymbolProvider(this),
             // register diagnostic collection
             this.diagnosticCollection,
@@ -423,7 +423,7 @@ export class UserMacroProvider extends MacroProvider implements vscode.Definitio
             // onDidOpenTextDocument and onDidCloseTextDocument events.
             const openedFiles = new Set<string>();
             for (const document of vscode.workspace.textDocuments) {
-                if (vscode.languages.match(spec.MACRO_SELECTOR, document)) {
+                if (vscode.languages.match(spec.CMD_SELECTOR, document)) {
                     openedFiles.add(document.uri.toString());
                 }
             }
@@ -493,7 +493,7 @@ export class UserMacroProvider extends MacroProvider implements vscode.Definitio
         // parse documents opened by editors
         const openedFiles = new Set<string>();
         for (const document of vscode.workspace.textDocuments) {
-            if (vscode.languages.match(spec.MACRO_SELECTOR, document)) {
+            if (vscode.languages.match(spec.CMD_SELECTOR, document)) {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
                 openedFiles.add(document.uri.toString());
             }
@@ -574,7 +574,7 @@ export class UserMacroProvider extends MacroProvider implements vscode.Definitio
 
     /**
      * Required implementation of vscode.DocumentSymbolProvider
-       */
+     */
     public provideDocumentSymbols(document: vscode.TextDocument, token: vscode.CancellationToken): vscode.ProviderResult<vscode.SymbolInformation[] | vscode.DocumentSymbol[]> {
         if (token.isCancellationRequested) { return; }
 

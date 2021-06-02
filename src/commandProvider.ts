@@ -119,7 +119,7 @@ function parseSignatureInEditing(line: string, position: number) {
 /**
  * Provider class
  */
-export class MacroProvider implements vscode.CompletionItemProvider, vscode.HoverProvider, vscode.SignatureHelpProvider {
+export class CommandProvider implements vscode.CompletionItemProvider, vscode.HoverProvider, vscode.SignatureHelpProvider {
 
     // vscode.Uri objects can not be used as a key for a Map object because these 
     // objects having the same string representation can be recognized different,
@@ -134,9 +134,9 @@ export class MacroProvider implements vscode.CompletionItemProvider, vscode.Hove
     constructor(context: vscode.ExtensionContext) {
         // register providers
         context.subscriptions.push(
-            vscode.languages.registerCompletionItemProvider(spec.MACRO_SELECTOR, this),
-            vscode.languages.registerSignatureHelpProvider(spec.MACRO_SELECTOR, this, '(', ')', ','),
-            vscode.languages.registerHoverProvider(spec.MACRO_SELECTOR, this),
+            vscode.languages.registerCompletionItemProvider(spec.CMD_SELECTOR, this),
+            vscode.languages.registerSignatureHelpProvider(spec.CMD_SELECTOR, this, '(', ')', ','),
+            vscode.languages.registerHoverProvider(spec.CMD_SELECTOR, this),
         );
     }
 
