@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { TextDecoder } from "util";
 import * as spec from "./spec";
-import { MacroProvider } from "./macroProvider";
+import { CommandProvider } from "./commandProvider";
 
 interface APIReference {
     constants: spec.ReferenceItem[];
@@ -30,12 +30,12 @@ const SNIPPET_TEMPLATES: string[] = [
  * Provider for symbols that spec system manages.
  * This class manages built-in symbols and motor mnemonics user added in VS Code configuraion.
  */
-export class SystemMacroProvider extends MacroProvider implements vscode.TextDocumentContentProvider {
+export class SystemCommandProvider extends CommandProvider implements vscode.TextDocumentContentProvider {
     constructor(context: vscode.ExtensionContext) {
         super(context);
 
         // load the API reference file
-        const apiReferencePath = context.asAbsolutePath('./syntaxes/specMacro.apiReference.json');
+        const apiReferencePath = context.asAbsolutePath('./syntaxes/specCmd.apiReference.json');
         vscode.workspace.fs.readFile(vscode.Uri.file(apiReferencePath)).then(uint8Array => {
             // convert JSON-formatted file contents to a javascript object.
             const apiReference: APIReference = JSON.parse(new TextDecoder('utf-8').decode(uint8Array));

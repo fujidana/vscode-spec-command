@@ -1,14 +1,14 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import { SystemMacroProvider } from './systemProvider';
-import { UserMacroProvider } from './userMacroProvider';
+import { SystemCommandProvider } from './systemCommandProvider';
+import { UserCommandProvider } from './userCommandProvider';
 import { LogProvider } from './logProvider';
 
 // this method is called when your extension is activated
 export function activate(context: vscode.ExtensionContext): void {
-    new SystemMacroProvider(context);
-    new UserMacroProvider(context);
+    new SystemCommandProvider(context);
+    new UserCommandProvider(context);
 
     new LogProvider(context);
 }
