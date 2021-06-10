@@ -6,13 +6,26 @@ All notable changes to the __vscode-spec__ extension will be documented in this 
 
 ## [Unreleased]
 
+## [1.4.0] - 2021-06-10
+
+* eliminate non-physical files (for example, virtual files in a git repository) from IntelliSense features
+* change the language identifier of __spec__ command files from `spec-macro` to `spec-cmd`
+* refine syntax highlighting rules to __spec__ log files
+* refine syntax highlighting rules and diagnostics to __spec__ command files, including support of recently introduced syntaxes:
+  * initialization of associative arrays without specifying the array index (__spec__ 6.05.03), e.g., `testarray = [ 123, 456, "testing"]`
+  * initialization of 2D associative arrays (__spec__ 6.06.01), e.g. `testarray = [ 1:2:"item", 2:3:"item2" ]`
+  * assignment of global and local variables at declaration (__spec__ 6.09.10): e.g., `local tmp[] = [ 1, 2, 3 ]; global VAR = 1.234;`
+  * assingment of array at declaration (__spec__ 6.10.02), e.g., `array a[10] = [ 1, 2, 3 ]`
+* add recently introduced built-in symbols into the IntelliSense database
+* update Node.js packages, including migration of diagnostic engine from pegjs to peggy
+
 ## [1.3.0] - 2021-05-25
 
-* add support to __spec__ transaction log file (language identifier: `spec-log`, file extension: `.tlog`), including the following features:
+* add support to __spec__ log files (language identifier: `spec-log`, file extension: `.tlog`), including the following features:
   * synax highlighting
   * code navigation
   * folding
-* change the language identifier of __spec__ command file from `spec` to `spec-macro`
+* change the language identifier of __spec__ command files from `spec` to `spec-macro`
 * improve syntax support for string literal enclosed with `\"`
 
 ## [1.2.1] - 2021-03-03
@@ -127,7 +140,8 @@ All notable changes to the __vscode-spec__ extension will be documented in this 
   * syntax highlighting
   * code snippets
 
-[Unreleased]: https://github.com/fujidana/vscode-spec/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/fujidana/vscode-spec/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/fujidana/vscode-spec/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/fujidana/vscode-spec/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/fujidana/vscode-spec/compare/v1.1.4...v1.2.0
