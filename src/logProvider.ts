@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-const LOG_SELECTOR = { scheme: '*', language: 'spec-log' };
+const LOG_SELECTOR = [{ scheme: 'file', language: 'spec-log' }, { scheme: 'untitled', language: 'spec-log' }];
 
 /**
  * Provider class
