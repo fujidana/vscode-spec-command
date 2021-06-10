@@ -2,18 +2,8 @@
 
 This VS Code extension provides editing/viewing support to the following files:
 
-* `spec-macro`: __spec__ command file, typically loaded by `qdo` after a user writes user-defined macros in it
-* `spec-log`: __spec__ transaction log file, created when __spec__ is launched with `-l logfile` option
-
-The default file extensions of these files this extension expects are `.mac` and `.tlog`, respectively.
-VS Code provides a way for a user to change the association with file extensions.
-
-```json
-"files.associations": {
-  "*.src": "spec-macro",
-  "*.log": "spec-log"
-}
-```
+* `spec-cmd` (`*.mac`): __spec__ command file, typically loaded by `qdo` after a user writes user-defined macros in it
+* `spec-log` (`*.tlog`): __spec__ log file, created when __spec__ is launched with `-l logfile` option
 
 ## What's __spec__?
 
@@ -27,9 +17,9 @@ Use [GitHub issues](https://github.com/fujidana/vscode-spec/issues) for bug repo
 
 ## NOTICE for previous version users
 
-The language identifier of __spec__ command files are changed from `spec` to `spec-macro` in the version 1.3.0.
+The language identifier of __spec__ command files are changed from `spec` to `spec-macro` at v1.3.0 and again to `spec-cmd` at v1.4.0.
 
-The following identifiers in the extension settings are deprecated in the version 1.2.0:
+The following identifiers in the extension settings are deprecated at v1.2.0:
 
 * `vscode-spec.mnemonic.motor.labels`
 * `vscode-spec.mnemonic.motor.descriptions`
@@ -69,7 +59,7 @@ Global symbols are visible beyond a file where the symbol is defined; local symb
 The extension was developed with reference to the recent official PDF document about __spec__ release 6 (version 3 of the spec documentation, printed 16 July 2017).
 The help text of built-in symbols are cited from this document, except where otherwise noted.
 
-### Features for __spec__ transaction log files
+### Features for __spec__ log files
 
 * __Syntax highlighting__
 * __Code navigation__
@@ -83,9 +73,33 @@ Lines of __spec__ prompts such as `1.FOURC>` are picked out for code navigation 
 The extension assumes UTF-8 as the file encoding in workspace scan, regardless of user settings or selection in current editor.
 This does not mean the developer garantees UTF-8 characters are safe for __spec__ interpreters.
 
-The __spec__ grammar is torelant, lazy in other word.
-It is difficult to perfectly mimic its behavior.
-Instead, this extension requires stricter coding than the __spec__ interpreters does.
+The __spec__ grammar is torelant and its behavior is determined only at runtime, which makes it impossible for the extension to mimic spec's interpreter perfectly.
+For example, the extention treats `f(var)` in a __spec__ script as a function call (like most people assume) but there is another possibility:
+
+```
+1.SEPC> def f1(var) '{p var}' # function definition
+2.SEPC> f1(123)               # function call, common
+123
+3.SEPC> f1(123) f1(456)       # invalid syntax
+syntax error on ";"
+
+4.SEPC> def f2 '{p "$*"}'     # macro definition
+5.SEPC> f2(123)               # macro call, anomalous but valid
+(123)
+5.SEPC> f2(123) f2(456)       # also valid
+(123) f2(456)
+```
+
+Macros made of an imperfect statement are another examples the extention can not handle well
+(`ifd` and `ifp` defined in `SPECD/standard.mac` are exceptionally supported).
+User-defined macros must be made of one or more perfect sentenses.
+
+```
+def ifd 'if (DATAFILE != "" && DATAFILE != "/dev/null")'
+ifd do_something; else do_otherthing;
+```
+
+This extension also requires stricter coding than the __spec__ interpreters does.
 For example, __spec__ interpreters evaluate the following two lines equivalently:
 
 ```
@@ -95,21 +109,13 @@ qdo "/home/myuser/mymacro.mac"
 
 but the extension shows an alert on the first line because it expects explicit quotation marks for a string literal.
 
-Also, the extension does not support macros made of an imperfect statement, except `ifd` and `ifp` (defined in `SPECD/standard.mac`).
-User-defined macros must be made of one or more perfect sentenses.
-
-```
-def ifd 'if (DATAFILE != "" && DATAFILE != "/dev/null")'
-ifd do_something; else do_otherthing;
-```
-
 ## Extension Settings
 
 This extention contributes the follwing settings, which are configurable from the _Settings_ windw (`Ctrl+,`):
 
 * `vscode-spec.editor.hintVolume.*` - controls the volume of explanatory text shown by IntelliSense features.
-* `vscode-spec.editor.codeSnippets` - provides a place to add code snippet templates that include motor or counter mnemonics in TextMate snippet syntax. Snippets for `mv`, `mvr`, `umv`, `umvr`, `ascan`, `dscan`, `a2scan`, `d2scan`, `a3scan`, `d3scan`, `a4scan`, `d4scan`, and `mesh` are provided by default and thus, users does not need to add it. Read [Snippets in Visual Studio Code](https://code.visualstudio.com/docs/editor/userdefinedsnippets) for other information about the syntax. In addition, `%MOT` and `%CNT` are avaiable as the placeholders of motor and counter mnemonics, respectively. Optionally, a description can be added after a hash sign (`#`). Example: `mv ${1%MOT} ${2:pos} # absolute move`.
-* `vscode-spec.mnemonic.motors` and `vscode-spec.mnemonic.counters` - registers motor and counter mnemonics and optionally their descriptions after `#` letter. They are used by IntelliSense features and code snippets above.  Example: `tth # two-theta angle`.
+* `vscode-spec.editor.codeSnippets` - provides a place to add code snippet templates that include motor/counter mnemonics in TextMate snippet syntax. Snippets for `mv`, `mvr`, `umv`, `umvr`, `ascan`, `dscan`, `a2scan`, `d2scan`, `a3scan`, `d3scan`, `a4scan`, `d4scan`, and `mesh` are provided by default and thus, users does not need to add it. Read [Snippets in Visual Studio Code](https://code.visualstudio.com/docs/editor/userdefinedsnippets) for other information about the syntax. In addition, `%MOT` and `%CNT` are avaiable as the placeholders of motor/counter mnemonics, respectively. Optionally, a description can be added after a hash sign (`#`). Example: `mv ${1%MOT} ${2:pos} # absolute move`.
+* `vscode-spec.mnemonic.motors`, `vscode-spec.mnemonic.counters` - registers motor/counter mnemonics and optionally their descriptions after `#` letter. They are used by IntelliSense features and code snippets above.  Example: `tth # two-theta angle`.
 * `vscode-spec.workspace.*` - controls the rule to scan files in workspace.
 * `vscode-spec.command.filePathPrefixInTerminal` - specifies file path prefix used in "Run File in Active Terminal" command.
 
