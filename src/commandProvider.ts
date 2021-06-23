@@ -8,7 +8,7 @@ function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceI
     let symbolLabel: string;
     let itemUriLabel: string | undefined;
 
-    symbolLabel = spec.getStringFromReferenceItemKind(itemKind);
+    symbolLabel = spec.getReferenceItemKindMetadata(itemKind).label;
 
     if (itemUriString === spec.BUILTIN_URI) {
         symbolLabel = 'built-in ' + symbolLabel;
@@ -149,7 +149,7 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
         if (storage) {
             const completionItems: vscode.CompletionItem[] = [];
             for (const [itemKind, map] of storage.entries()) {
-                const completionItemKind = spec.getCompletionItemKindFromReferenceItemKind(itemKind);
+                const completionItemKind = spec.getReferenceItemKindMetadata(itemKind).completionItemKind;
                 for (const [identifier, item] of map.entries()) {
                     const completionItem = new vscode.CompletionItem(identifier, completionItemKind);
                     // embed `uriString` into `detail` property in order to resolve it later efficiently.

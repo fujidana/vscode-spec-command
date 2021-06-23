@@ -22,11 +22,11 @@
 	],
 	"activationEvents": [
 		"onLanguage:spec-cmd",
-		"onLanguage:spec-log"
+		"onLanguage:spec-log",
+		"onCommand:vscode-spec.openReferenceManual"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
-		"title": "spec",
 		"languages": [
 			{
 				"id": "spec-cmd",
@@ -76,23 +76,20 @@
 			{
 				"command": "vscode-spec.execSelectionInTerminal",
 				"title": "Run Selction/Line in Active Terminal",
-				"category": "spec"
+				"category": "spec",
+				"icon": "$(play)"
 			},
 			{
 				"command": "vscode-spec.execFileInTerminal",
 				"title": "Run File in Active Terminal",
 				"category": "spec",
-				"icon": {
-					"light": "./resources/light/play.svg",
-					"dark": "./resources/dark/play.svg"
-				}
+				"icon": "$(run-all)"
 			}
 		],
 		"menus": {
 			"commandPalette": [
 				{
-					"command": "vscode-spec.openReferenceManual",
-					"when": "resourceLangId == 'spec-cmd'"
+					"command": "vscode-spec.openReferenceManual"
 				},
 				{
 					"command": "vscode-spec.execSelectionInTerminal",
@@ -112,7 +109,8 @@
 			],
 			"editor/title": [
 				{
-					"command": "vscode-spec.execFileInTerminal",
+					"command": "vscode-spec.execSelectionInTerminal",
+					"alt": "vscode-spec.execFileInTerminal",
 					"when": "editorLangId == 'spec-cmd'",
 					"group": "navigation"
 				}
@@ -259,7 +257,7 @@
 					"type": "string",
 					"default": "",
 					"scope": "resource",
-					"description": "Specifies File path prefix used in \"Run File in Active Terminal\" command."
+					"description": "Specifies a file path prefix used in \"Run File in Active Terminal\" command."
 				}
 			}
 		}

@@ -584,7 +584,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         // seek the identifier
         const symbols: vscode.SymbolInformation[] = [];
         for (const [itemKind, map] of storage.entries()) {
-            const symbolKind = spec.getSymbolKindFromReferenceItemKind(itemKind);
+            const symbolKind = spec.getReferenceItemKindMetadata(itemKind).symbolKind;
             for (const [identifier, item] of map.entries()) {
                 if (item.location) {
                     const location = new vscode.Location(document.uri, spec.convertRange(item.location));
@@ -618,7 +618,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
 
             // find all items from each storage.
             for (const [itemKind, map] of storage.entries()) {
-                const symbolKind = spec.getSymbolKindFromReferenceItemKind(itemKind);
+                const symbolKind = spec.getReferenceItemKindMetadata(itemKind).symbolKind;
                 for (const [identifier, item] of map.entries()) {
                     if (query.length === 0 || regExp.test(identifier)) {
                         if (item.location) {
