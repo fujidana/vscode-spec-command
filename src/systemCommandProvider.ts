@@ -81,15 +81,19 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
         const openReferenceManualCommandCallback = () => {
             const storage = this.storageCollection.get(spec.BUILTIN_URI);
             if (storage) {
-                const quickPickLabels = ['all'];
+                const quickPickLabels = ['$(references) all'];
                 for (const itemKind of storage.keys()) {
-                    quickPickLabels.push(spec.getStringFromReferenceItemKind(itemKind));
+                    const metadata = spec.getReferenceItemKindMetadata(itemKind);
+                    quickPickLabels.push(`$(${metadata.iconIdentifier}) ${metadata.label}`);
                 }
                 vscode.window.showQuickPick(quickPickLabels).then(quickPickLabel => {
                     if (quickPickLabel) {
                         let uri = vscode.Uri.parse(spec.BUILTIN_URI);
-                        if (quickPickLabel !== 'all') {
-                            uri = uri.with({ query: quickPickLabel });
+                        if (quickPickLabel !== '$(references) all') {
+                            const matches = quickPickLabel.match(/^\$\([^\]]*\) (.*)$/);
+                            if (matches) {
+                                uri = uri.with({ query: matches[1] });
+                            }
                         }
                         vscode.window.showTextDocument(uri, { preview: false });
                     }
@@ -186,15 +190,15 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
                 mdText += 'The contents of this page are cited from the _Reference Manual_ section in [PDF version](https://www.certif.com/downloads/css_docs/spec_man.pdf) of the _User manual and Tutorials_, written by [Certified Scientific Software](https://www.certif.com/), except where otherwise noted.\n\n';
 
                 for (const [itemKind, map] of storage.entries()) {
-                    const itemKindString = spec.getStringFromReferenceItemKind(itemKind);
+                    const itemKindLabel = spec.getReferenceItemKindMetadata(itemKind).label;
 
                     // if 'query' is specified, skip maps other than the speficed query.
-                    if (uri.query && uri.query !== itemKindString) {
+                    if (uri.query && uri.query !== itemKindLabel) {
                         continue;
                     }
 
                     // add heading for each category
-                    mdText += `## ${itemKindString}\n\n`;
+                    mdText += `## ${itemKindLabel}\n\n`;
 
                     // add each item
                     for (const [key, item] of map.entries()) {

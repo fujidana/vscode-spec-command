@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/naming-convention */
+
 import * as vscode from 'vscode';
 import { IFileRange, IFilePosition } from './grammar';
 
@@ -45,68 +47,67 @@ export function getReferenceItemKindFromCompletionItemKind(completionItemKind?: 
             return ReferenceItemKind.Undefined;
     }
 }
-export function getCompletionItemKindFromReferenceItemKind(refItemKind: ReferenceItemKind): vscode.CompletionItemKind | undefined {
-    switch (refItemKind) {
-        case ReferenceItemKind.Constant:
-            return vscode.CompletionItemKind.Constant;
-        case ReferenceItemKind.Variable:
-            return vscode.CompletionItemKind.Variable;
-        case ReferenceItemKind.Macro:
-            return vscode.CompletionItemKind.Module;
-        case ReferenceItemKind.Function:
-            return vscode.CompletionItemKind.Function;
-        case ReferenceItemKind.Keyword:
-            return vscode.CompletionItemKind.Keyword;
-        case ReferenceItemKind.Snippet:
-            return vscode.CompletionItemKind.Snippet;
-        case ReferenceItemKind.Enum:
-            return vscode.CompletionItemKind.EnumMember;
-        case ReferenceItemKind.Undefined:
-            return undefined;
-        default:
-            return undefined;
-    }
-}
 
-export function getSymbolKindFromReferenceItemKind(refItemKind: ReferenceItemKind): vscode.SymbolKind {
-    switch (refItemKind) {
-        case ReferenceItemKind.Constant:
-            return vscode.SymbolKind.Constant;
-        case ReferenceItemKind.Variable:
-            return vscode.SymbolKind.Variable;
-        case ReferenceItemKind.Macro:
-            return vscode.SymbolKind.Module;
-        case ReferenceItemKind.Function:
-            return vscode.SymbolKind.Function;
-        // case ReferenceItemKind.Keyword:
-        // case ReferenceItemKind.Snippet:
-        case ReferenceItemKind.Enum:
-            return vscode.SymbolKind.EnumMember;
-        case ReferenceItemKind.Undefined:
-            return vscode.SymbolKind.Null;
-        default:
-            return vscode.SymbolKind.Null;
-    }
-}
+type ReferenceItemKindMetadata = { label: string, iconIdentifier: string, completionItemKind: vscode.CompletionItemKind | undefined, symbolKind: vscode.SymbolKind };
 
-export function getStringFromReferenceItemKind(refItemKind: ReferenceItemKind): string {
+export function getReferenceItemKindMetadata(refItemKind: ReferenceItemKind) : ReferenceItemKindMetadata {
     switch (refItemKind) {
         case ReferenceItemKind.Constant:
-            return "constant";
+            return {
+                label: "constant",
+                iconIdentifier: 'symbol-constant',
+                completionItemKind: vscode.CompletionItemKind.Constant,
+                symbolKind: vscode.SymbolKind.Constant
+            };
         case ReferenceItemKind.Variable:
-            return "variable";
+            return {
+                label: "variable",
+                iconIdentifier: 'symbol-variable',
+                completionItemKind: vscode.CompletionItemKind.Variable,
+                symbolKind: vscode.SymbolKind.Variable
+            };
         case ReferenceItemKind.Macro:
-            return "macro";
+            return {
+                label: "macro",
+                iconIdentifier: 'symbol-module',
+                completionItemKind: vscode.CompletionItemKind.Module,
+                symbolKind: vscode.SymbolKind.Module
+            };
         case ReferenceItemKind.Function:
-            return "function";
+            return {
+                label: "function",
+                iconIdentifier: 'symbol-function',
+                completionItemKind: vscode.CompletionItemKind.Function,
+                symbolKind: vscode.SymbolKind.Function
+            };
         case ReferenceItemKind.Keyword:
-            return "keyword";
+            return {
+                label: "keyword",
+                iconIdentifier: 'symbol-keyword',
+                completionItemKind: vscode.CompletionItemKind.Keyword,
+                symbolKind: vscode.SymbolKind.Null // no corresponding value
+            };
         case ReferenceItemKind.Snippet:
-            return "snippet";
+            return {
+                label: "snippet",
+                iconIdentifier: 'symbol-snippet',
+                completionItemKind: vscode.CompletionItemKind.Snippet,
+                symbolKind: vscode.SymbolKind.Null // no corresponding value
+            };
         case ReferenceItemKind.Enum:
-            return "member";
-        default:
-            return "symbol";
+            return {
+                label: "member",
+                iconIdentifier: 'symbol-enum-member',
+                completionItemKind: vscode.CompletionItemKind.EnumMember,
+                symbolKind: vscode.SymbolKind.EnumMember
+            };
+        case ReferenceItemKind.Undefined:
+            return {
+                label: "unknown symbol",
+                iconIdentifier: 'symbol-null',
+                completionItemKind: undefined,
+                symbolKind: vscode.SymbolKind.Null
+            };
     }
 }
 
