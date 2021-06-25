@@ -63,7 +63,7 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
         this.updateSnippetStorage();
 
         // observe the change in configuration
-        const onDidChangeConfigurationListener = (event: vscode.ConfigurationChangeEvent) => {
+        const configurationChangeListener = (event: vscode.ConfigurationChangeEvent) => {
             if (event.affectsConfiguration('vscode-spec.mnemonic.motors')) {
                 this.updateMnemonicStorage(spec.MOTOR_URI, 'motors');
                 this.updateSnippetStorage();
@@ -78,9 +78,8 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
         };
 
         // register command to show reference manual as a virtual document
-        const openReferenceManualCommandCallback = () => {
-            const storage = this.storageCollection.get(spec.BUILTIN_URI);
-            if (storage) {
+        const openReferenceManualCallback = () => {
+            const showReferenceManual = (storage: spec.ReferenceStorage) => {
                 const quickPickLabels = ['$(references) all'];
                 for (const itemKind of storage.keys()) {
                     const metadata = spec.getReferenceItemKindMetadata(itemKind);
@@ -95,18 +94,45 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
                                 uri = uri.with({ query: matches[1] });
                             }
                         }
-                        vscode.window.showTextDocument(uri, { preview: false });
+                        vscode.window.showTextDocument(uri, { preview: false }).then(editor => {
+                            const flag: boolean = vscode.workspace.getConfiguration('vscode-spec').get('showReferenceManualInPreview', true);
+                            if (flag) {
+                                vscode.commands.executeCommand('markdown.showPreview').then(() => {
+                                    // vscode.window.showTextDocument(editor.document).then(() => {
+                                    //     vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+                                    // });
+                                });
+                            }
+                        });
+                        
                     }
                 });
+            };
+
+            // The API reference database may not be loaded 
+            // in case this command activates the extension.
+            // Therefore, wait until the database is loaded or 0.5 * 5 seconds passes.
+            let trial = 0;
+            const timer = setInterval(() => {
+                const storage = this.storageCollection.get(spec.BUILTIN_URI);
+                if (storage) {
+                    clearInterval(timer);
+                    showReferenceManual(storage);
+                } else if (trial >= 5) {
+                    clearInterval(timer);
+                    vscode.window.showErrorMessage('Timeout. The API reference database is not loaded at the moment.');
+                }
+                trial++;
             }
+            , 50);
         };
 
         context.subscriptions.push(
             // register command handlers
-            vscode.commands.registerCommand('vscode-spec.openReferenceManual', openReferenceManualCommandCallback),
+            vscode.commands.registerCommand('vscode-spec.openReferenceManual', openReferenceManualCallback),
             vscode.workspace.registerTextDocumentContentProvider('spec', this),
             // register event handlers
-            vscode.workspace.onDidChangeConfiguration(onDidChangeConfigurationListener),
+            vscode.workspace.onDidChangeConfiguration(configurationChangeListener),
         );
     }
 
@@ -126,9 +152,9 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
             const regexp = /^([a-zA-Z_][a-zA-Z0-9_]{0,6})\s*(#\s*(.*))?$/;
 
             for (const mneString of mneStrings) {
-                const match = mneString.match(regexp);
-                if (match) {
-                    enumRefMap.set(match[1], { signature: match[1], description: match[3] });
+                const matches = mneString.match(regexp);
+                if (matches) {
+                    enumRefMap.set(matches[1], { signature: matches[1], description: matches[3] });
                 }
             }
         }
@@ -164,12 +190,12 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
         const choiceRegexp = /\${\d+\|[^|]+\|}/g;
 
         for (const snippetString of snippetStrings) {
-            const match = snippetString.match(mainRegexp);
-            if (match) {
-                const snippetKey = match[2];
-                const snippetSignature = match[1].replace(motorRegexp, ':motor').replace(counterRegexp, ':counter').replace(placeHolderRegexp, '$1').replace(choiceRegexp, 'choice');
-                const snippetCode = match[1].replace(motorRegexp, motorChoiceString).replace(counterRegexp, counterChoiceString);
-                const snippetDesription = match[4];
+            const matches = snippetString.match(mainRegexp);
+            if (matches) {
+                const snippetKey = matches[2];
+                const snippetSignature = matches[1].replace(motorRegexp, ':motor').replace(counterRegexp, ':counter').replace(placeHolderRegexp, '$1').replace(choiceRegexp, 'choice');
+                const snippetCode = matches[1].replace(motorRegexp, motorChoiceString).replace(counterRegexp, counterChoiceString);
+                const snippetDesription = matches[4];
 
                 snippetRefMap.set(snippetKey, { signature: snippetSignature, description: snippetDesription, snippet: snippetCode });
             }
