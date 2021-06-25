@@ -138,6 +138,11 @@
 		"configuration": {
 			"title": "spec",
 			"properties": {
+				"vscode-spec.showReferenceManualInPreview": {
+					"type": "boolean",
+					"default": true,
+					"description": "Shows a preview (Webview created by built-in Markdown extension) in addition to a markdown source after \"Open Reference Manual\" command is invoked."
+				},
 				"vscode-spec.editor.hintVolume.hover": {
 					"type": "string",
 					"default": "full",
