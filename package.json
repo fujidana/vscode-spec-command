@@ -22,7 +22,6 @@
 	],
 	"activationEvents": [
 		"onLanguage:spec-cmd",
-		"onLanguage:spec-log",
 		"onCommand:vscode-spec.openReferenceManual"
 	],
 	"main": "./out/extension.js",
@@ -38,15 +37,6 @@
 					".mac"
 				],
 				"configuration": "./language-configuration.json"
-			},
-			{
-				"id": "spec-log",
-				"aliases": [
-					"spec log"
-				],
-				"extensions": [
-					".tlog"
-				]
 			}
 		],
 		"grammars": [
@@ -54,11 +44,6 @@
 				"language": "spec-cmd",
 				"scopeName": "source.spec-cmd",
 				"path": "./syntaxes/specCmd.tmLanguage.json"
-			},
-			{
-				"language": "spec-log",
-				"scopeName": "source.spec-log",
-				"path": "./syntaxes/specLog.tmLanguage.json"
 			}
 		],
 		"snippets": [
@@ -71,7 +56,8 @@
 			{
 				"command": "vscode-spec.openReferenceManual",
 				"title": "Open Reference Manual",
-				"category": "spec"
+				"category": "spec",
+				"icon": "$(references)"
 			},
 			{
 				"command": "vscode-spec.execSelectionInTerminal",
@@ -275,7 +261,7 @@
 		"pretest": "npm run compile && npm run lint",
 		"test": "node ./out/test/runTest.js",
 		"js-yaml:apiReference": "js-yaml ./src/specCmd.apiReference.yaml > ./syntaxes/specCmd.apiReference.json",
-		"js-yaml:tmLanguage": "js-yaml ./src/specCmd.tmLanguage.yaml > ./syntaxes/specCmd.tmLanguage.json; js-yaml ./src/specLog.tmLanguage.yaml > ./syntaxes/specLog.tmLanguage.json; ",
+		"js-yaml:tmLanguage": "js-yaml ./src/specCmd.tmLanguage.yaml > ./syntaxes/specCmd.tmLanguage.json",
 		"pegjs": "peggy --cache --plugin ./node_modules/ts-pegjs/src/tspegjs --extra-options-file ./src/pegconfig.json -o src/grammar.ts src/grammer.pegjs"
 	},
 	"dependencies": {
