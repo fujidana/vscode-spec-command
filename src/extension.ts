@@ -3,14 +3,11 @@
 import * as vscode from 'vscode';
 import { SystemCommandProvider } from './systemCommandProvider';
 import { UserCommandProvider } from './userCommandProvider';
-import { LogProvider } from './logProvider';
 
 // this method is called when your extension is activated
 export function activate(context: vscode.ExtensionContext): void {
     new SystemCommandProvider(context);
     new UserCommandProvider(context);
-
-    new LogProvider(context);
 }
 
 // this method is called when your extension is deactivated
