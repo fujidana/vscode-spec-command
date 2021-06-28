@@ -173,7 +173,7 @@ variables:
       The `"path"` element is the full path name of the file.
       Additional elements may be added in the future.
       For example:
-      
+
       ```
       5.FOURC> for (i in OUTFILES[]["name"])
       6.more>      printf("%10s %s\n",OUTFILES[i]["name"],OUTFILES[i]["path"])
@@ -183,12 +183,15 @@ variables:
       /dev/null /dev/null
       7.FOURC>
       ```
+
       or
+
       ```
       7.FOURC> p OUTFILES[DATAFILE]["path"]
       /private/tmp/data1
       8.FOURC>
       ```
+
       Note, the special built-in name `"pipe"` is not included in `OUTFILES`.
       The special built-in name `"/dev/null"` includes the full path in both `"name"` and `"path"` to work with the standard macros that always refer to that special file by the full path name.
   ROWS:
@@ -579,7 +582,7 @@ functions:
     description: |-
       This function reads successive lines from the ASCII file `file` each time it is called and returns the string so obtained, including the trailing newline.
       If `arg` is the string `"open"`, the function returns zero if the file can opened for reading.
-      Otherwise −1 is returned. 
+      Otherwise −1 is returned.
       If `arg` is `"close"`, the file is closed and zero is returned.
       If `arg` is zero, the first line of the file is returned.
       If only the first argument is present, the next line of the file is read and returned.
@@ -1128,7 +1131,7 @@ functions:
       If the initial optional file argument is given, the output is to the named file or device.
       Otherwise, output is to all "on" output devices, most notably the screen.
       The additional optional `options` arguments are strings that control the formatting.
-      
+
       A format argument can specify a *printf()*-style format for the values.
       The default format is `"%.9g"`, which prints nine digits of precision using fixed point or exponential format, whichever is more appropriate to the value’s magnitude.
       Recognized format characters are `e` or `E` (exponential), `f` (fixed point), `g` or `G` (fixed or exponential based on magnitude), `d` (decimal integer), `u` (unsigned integer), `o` (octal integer), `x` or `X` (hexadecimal integer).
@@ -1153,13 +1156,17 @@ functions:
 
       Finally, the various options can be combined in a single string.
       For example,
+
       ```
       array_dump(data, "%15.4f", "%D=:", "%8W")
       ```
+
       and
+
       ```
       array_dump(data, "%15.4f%D=:%8W")
       ```
+
       work the same.
   array_copy:
     signature: array_copy(dst, src[, ...])
@@ -1188,7 +1195,7 @@ functions:
       array_copy(ubyte_d[16:], long_d)
       ```
 
-      Four floats consume sixteen bytes. Two integers consume eight bytes. 
+      Four floats consume sixteen bytes. Two integers consume eight bytes.
       The subarray notation selects the first sixteen bytes of `ubyte_d` for the first four floats, then skips eight bytes for where the integers will go, then copies the remainder of the floats.
       Since only as much data will be copied as is contained in the source array and since the source arrays are fixed size, it is not necessary to specify the final byte position in the destinations.
 
@@ -1622,7 +1629,7 @@ functions:
       If `mne` is an uninitialized variable, −1 is returned.
   motor_par:
     signature: motor_par(motor, par[, val])
-    description:  |
+    description: |-
       Returns or sets configuration parameters for motor `motor`.
       Recognized values for the string `par` follow.
       Note, not all parameters are meaningful for all motor controllers.
@@ -1761,7 +1768,7 @@ functions:
       - `"high limit"` - move exceeds high limit
       - `"busy"` - motor is busy
       - `"read only"` - motor is configured as read only
-      - `"protected"` -  motor configuration does not allow moving 
+      - `"protected"` -  motor configuration does not allow moving
       - `"disabled"` -  motor has been disabled
       - `"externally disabled"` - shared motor has been disabled
       - `"unusable"` -  motor did not respond to presence test
@@ -1814,7 +1821,7 @@ functions:
         - `"lim-"` — Move to limit switch in negative direction.
         
         Positive and negative direction are with respect to the dial position of the motor.
-        (At present, most motor controllers do not implement the home or limit search feature.) 
+        (At present, most motor controllers do not implement the home or limit search feature.)
         Returns −1 if not configured for motor `motor` or if the motor is protected, unusable or moving, else returns zero.
   get_lim:
     signature: get_lim(motor, flag)
@@ -2203,7 +2210,7 @@ functions:
         Note, to override the default value, this command needs to be issued after reading the hardware *config* file `reconfig`).
         This mode is not supported on `SOCKET` interfaces.
       - `"dtr"` — Returns the current setting or sets or clears the Data Terminal Ready (DTR) control line.
-        Only available on standard serial interfaces. 
+        Only available on standard serial interfaces.
         Reset on hardware reconfiguration.
       - `"rts"` — Returns the current setting or sets or clears the Request To Send (RTS) control line.
         Only available on standard serial interfaces.
@@ -2346,7 +2353,7 @@ functions:
       - `"C"` or `"clear"` — performs a crate clear.
       - `"inhibit"` — set crate inhibit if `arg` is 1 and clears crate inhibit if `arg` is 0.
 
-      During normal operation, you should not need to issue these commands. 
+      During normal operation, you should not need to issue these commands.
       You should probably issue a `reconfig` after sending a crate initialize or clear.
 
   ### Not documented in spec_manA4.pdf. Instaed, cited from https://certif.com/spec_help/esrf.html.
@@ -2956,6 +2963,7 @@ macros:
     description: |-
       Prints the string value of each argument, adding a space between each string.
       If the argument is an associative array, each element of the array is printed in a list, as in:
+
       ```
       21.FOURC> print mA
       mA["0"] = 2
@@ -3148,7 +3156,7 @@ keywords:
   def:
     signature: def name 'string'
     description: |-
-      Defines a macro named `name` to be `string`. 
+      Defines a macro named `name` to be `string`.
       Each time `name` occurs on input, it is replaced with `string`.
       The definition is made immediately, so the macro can be used later in the same statement block in which it is defined and can be redefined within the same statement block.
 
@@ -3214,12 +3222,12 @@ keywords:
   ## Flow Control
 
   ### Break Statement
-  
+
   break:
     signature: break
     description: |-
       The statement `break` terminates the smallest enclosing `while` or `for` loop.
-        
+
   ### Continue Statement
 
   continue:
