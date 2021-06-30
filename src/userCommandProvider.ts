@@ -157,7 +157,7 @@ async function findFilesInWorkspaces() {
 
     if (workspaceFolders) {
         for (const workspaceFolder of workspaceFolders) {
-            const config = vscode.workspace.getConfiguration('vscode-spec.workspace', workspaceFolder);
+            const config = vscode.workspace.getConfiguration('spec-command.workspace', workspaceFolder);
             const inclusivePatternStr = config.get<string>('inclusiveFilePattern', '**/*.mac');
             const exclusivePatternStr = config.get<string>('exclusiveFilePattern', '');
             const diagnoseProblems = config.get<boolean>('diagnoseProblems', false);
@@ -184,7 +184,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
     constructor(context: vscode.ExtensionContext) {
         super(context);
 
-        this.diagnosticCollection = vscode.languages.createDiagnosticCollection('vscode-spec');
+        this.diagnosticCollection = vscode.languages.createDiagnosticCollection('spec-command');
         this.treeCollection = new Map();
 
         // command to run selection in terminal
@@ -224,7 +224,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
             const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
             let path: string;
             if (workspaceFolder) {
-                const config = vscode.workspace.getConfiguration('vscode-spec.command', workspaceFolder.uri);
+                const config = vscode.workspace.getConfiguration('spec-command.command', workspaceFolder.uri);
                 const prefix = config.get<string>('filePathPrefixInTerminal', '');
                 path = prefix + vscode.workspace.asRelativePath(uri, false);
             } else {
@@ -364,7 +364,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
 
         // a hander invoked when the configuration is changed
         const onDidChangeConfigurationListener = (event: vscode.ConfigurationChangeEvent) => {
-            if (event.affectsConfiguration('vscode-spec.workspace')) {
+            if (event.affectsConfiguration('spec-command.workspace')) {
                 this.refreshCollections();
             }
         };
@@ -375,9 +375,9 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
 
         context.subscriptions.push(
             // register command handlers
-            vscode.commands.registerCommand('vscode-spec.execSelectionInTerminal', execSelectionInTerminalCommandCallback),
-            vscode.commands.registerCommand('vscode-spec.execFileInTerminal', execFileInTerminalCommandCallback),
-            // register document-event liasteners
+            vscode.commands.registerCommand('spec-command.execSelectionInTerminal', execSelectionInTerminalCommandCallback),
+            vscode.commands.registerCommand('spec-command.execFileInTerminal', execFileInTerminalCommandCallback),
+            // register document-event listeners
             vscode.workspace.onDidChangeTextDocument(onDidChangeTextDocumentListener),
             vscode.workspace.onDidOpenTextDocument(onDidOpenTextDocumentListener),
             vscode.workspace.onDidSaveTextDocument(onDidSaveTextDocumentListener),

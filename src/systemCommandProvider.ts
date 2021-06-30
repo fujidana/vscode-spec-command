@@ -35,8 +35,8 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
         super(context);
 
         // load the API reference file
-        const apiReferencePath = context.asAbsolutePath('./syntaxes/specCmd.apiReference.json');
-        vscode.workspace.fs.readFile(vscode.Uri.file(apiReferencePath)).then(uint8Array => {
+        const apiReferenceUri = vscode.Uri.joinPath(context.extensionUri, './syntaxes/specCommand.apiReference.json');
+        vscode.workspace.fs.readFile(apiReferenceUri).then(uint8Array => {
             // convert JSON-formatted file contents to a javascript object.
             const apiReference: APIReference = JSON.parse(new TextDecoder('utf-8').decode(uint8Array));
 
@@ -64,15 +64,15 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
 
         // observe the change in configuration
         const configurationChangeListener = (event: vscode.ConfigurationChangeEvent) => {
-            if (event.affectsConfiguration('vscode-spec.mnemonic.motors')) {
+            if (event.affectsConfiguration('spec-command.mnemonic.motors')) {
                 this.updateMnemonicStorage(spec.MOTOR_URI, 'motors');
                 this.updateSnippetStorage();
             }
-            if (event.affectsConfiguration('vscode-spec.mnemonic.counters')) {
+            if (event.affectsConfiguration('spec-command.mnemonic.counters')) {
                 this.updateMnemonicStorage(spec.COUNTER_URI, 'counters');
                 this.updateSnippetStorage();
             }
-            if (event.affectsConfiguration('vscode-spec.editor.codeSnippets')) {
+            if (event.affectsConfiguration('spec-command.editor.codeSnippets')) {
                 this.updateSnippetStorage();
             }
         };
@@ -95,7 +95,7 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
                             }
                         }
                         vscode.window.showTextDocument(uri, { preview: false }).then(editor => {
-                            const flag: boolean = vscode.workspace.getConfiguration('vscode-spec').get('showReferenceManualInPreview', true);
+                            const flag: boolean = vscode.workspace.getConfiguration('spec-command').get('showReferenceManualInPreview', true);
                             if (flag) {
                                 vscode.commands.executeCommand('markdown.showPreview').then(() => {
                                     // vscode.window.showTextDocument(editor.document).then(() => {
@@ -109,9 +109,9 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
                 });
             };
 
-            // The API reference database may not be loaded 
+            // The API reference database may have not been loaded 
             // in case this command activates the extension.
-            // Therefore, wait until the database is loaded or 0.5 * 5 seconds passes.
+            // Therefore, wait until the database is loaded or 0.05 * 5 seconds passes.
             let trial = 0;
             const timer = setInterval(() => {
                 const storage = this.storageCollection.get(spec.BUILTIN_URI);
@@ -129,7 +129,8 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
 
         context.subscriptions.push(
             // register command handlers
-            vscode.commands.registerCommand('vscode-spec.openReferenceManual', openReferenceManualCallback),
+            vscode.commands.registerCommand('spec-command.openReferenceManual', openReferenceManualCallback),
+            // register providers
             vscode.workspace.registerTextDocumentContentProvider('spec', this),
             // register event handlers
             vscode.workspace.onDidChangeConfiguration(configurationChangeListener),
@@ -145,7 +146,7 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
         if (!enumRefMap) { return; }
         enumRefMap.clear();
 
-        const mneStrings: string[] = vscode.workspace.getConfiguration('vscode-spec.mnemonic').get(sectionString, []);
+        const mneStrings: string[] = vscode.workspace.getConfiguration('spec-command.mnemonic').get(sectionString, []);
 
         if (mneStrings.length > 0) {
             // 'tth # two-theta' -> Array ["tth # two-theta", "tth", " # two-theta", "two-theta"]
@@ -170,7 +171,7 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
         if (!snippetRefMap) { return; }
         snippetRefMap.clear();
 
-        const userSnippetStrings: string[] = vscode.workspace.getConfiguration('vscode-spec.editor').get('codeSnippets', []);
+        const userSnippetStrings: string[] = vscode.workspace.getConfiguration('spec-command.editor').get('codeSnippets', []);
         const snippetStrings = SNIPPET_TEMPLATES.concat(userSnippetStrings);
 
         const motorEnumRefMap = this.storageCollection.get(spec.MOTOR_URI)?.get(spec.ReferenceItemKind.Enum);

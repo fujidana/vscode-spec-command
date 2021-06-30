@@ -9,7 +9,7 @@ export function convertPosition(position: IFilePosition): vscode.Position {
 export function convertRange(range: IFileRange): vscode.Range {
     return new vscode.Range(convertPosition(range.start), convertPosition(range.end));
 }
-export const CMD_SELECTOR = [{ scheme: 'file', language: 'spec-cmd' }, { scheme: 'untitled', language: 'spec-cmd' }];
+export const CMD_SELECTOR = [{ scheme: 'file', language: 'spec-command' }, { scheme: 'untitled', language: 'spec-command' }];
 export const BUILTIN_URI = 'spec://system/built-in.md';
 export const MOTOR_URI = 'spec://system/mnemonic-motor.md';
 export const COUNTER_URI = 'spec://system/mnemonic-counter.md';

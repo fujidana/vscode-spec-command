@@ -26,13 +26,8 @@ function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceI
         }
     } else {
         const itemUri = vscode.Uri.parse(itemUriString);
-        if (itemUri.scheme === 'file') {
-            itemUriLabel = vscode.workspace.asRelativePath(itemUri);
-            symbolLabel = outputsMarkdown ? 'user-defined ' + symbolLabel : symbolLabel + ' defined in ' + itemUriLabel;
-        } else {
-            itemUriLabel = itemUriString;
-            symbolLabel = outputsMarkdown ? 'user-defined ' + symbolLabel : symbolLabel + ' defined in ' + itemUriString;
-        }
+        itemUriLabel = (itemUri.scheme === 'file') ? vscode.workspace.asRelativePath(itemUri) : itemUriString;
+        symbolLabel = outputsMarkdown ? 'user-defined ' + symbolLabel : symbolLabel + ' defined in ' + itemUriLabel;
     }
 
     let mainText = `${item.signature} # ${symbolLabel}`;
@@ -52,7 +47,7 @@ function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceI
 }
 
 function truncateString(settingKey: string, description?: string, comments?: string): string | undefined {
-    const config = vscode.workspace.getConfiguration('vscode-spec.editor.hintVolume');
+    const config = vscode.workspace.getConfiguration('spec-command.editor.hintVolume');
     const volume = config.get<string>(settingKey, '');
     let truncatedString;
     if (description) {
