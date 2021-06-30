@@ -1,11 +1,11 @@
 {
 	"publisher": "fujidana",
-	"name": "vscode-spec",
-	"displayName": "spec Language Support",
-	"description": "spec language support for Visual Studio Code",
-	"version": "1.4.0",
+	"name": "spec-command",
+	"displayName": "spec command",
+	"description": "Language support for CSS spec command files",
+	"version": "1.5.0-alpha",
 	"engines": {
-		"vscode": "^1.56.0"
+		"vscode": "^1.57.0"
 	},
 	"categories": [
 		"Programming Languages",
@@ -17,18 +17,17 @@
 		"X-ray diffraction",
 		"synchrotron",
 		"instrument control",
-		"data acquisition",
-		"multi-root ready"
+		"data acquisition"
 	],
 	"activationEvents": [
-		"onLanguage:spec-cmd",
-		"onCommand:vscode-spec.openReferenceManual"
+		"onLanguage:spec-command",
+		"onCommand:spec-command.openReferenceManual"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
 		"languages": [
 			{
-				"id": "spec-cmd",
+				"id": "spec-command",
 				"aliases": [
 					"spec command",
 					"spec macro"
@@ -41,95 +40,95 @@
 		],
 		"grammars": [
 			{
-				"language": "spec-cmd",
-				"scopeName": "source.spec-cmd",
-				"path": "./syntaxes/specCmd.tmLanguage.json"
+				"language": "spec-command",
+				"scopeName": "source.spec-command",
+				"path": "./syntaxes/specCommand.tmLanguage.json"
 			}
 		],
 		"snippets": [
 			{
-				"language": "spec-cmd",
-				"path": "./syntaxes/specCmd.snippets.json"
+				"language": "spec-command",
+				"path": "./syntaxes/specCommand.snippets.json"
 			}
 		],
 		"commands": [
 			{
-				"command": "vscode-spec.openReferenceManual",
+				"command": "spec-command.openReferenceManual",
 				"title": "Open Reference Manual",
-				"category": "spec",
+				"category": "spec command",
 				"icon": "$(references)"
 			},
 			{
-				"command": "vscode-spec.execSelectionInTerminal",
+				"command": "spec-command.execSelectionInTerminal",
 				"title": "Run Selction/Line in Active Terminal",
-				"category": "spec",
+				"category": "spec command",
 				"icon": "$(play)"
 			},
 			{
-				"command": "vscode-spec.execFileInTerminal",
+				"command": "spec-command.execFileInTerminal",
 				"title": "Run File in Active Terminal",
-				"category": "spec",
+				"category": "spec command",
 				"icon": "$(run-all)"
 			}
 		],
 		"menus": {
 			"commandPalette": [
 				{
-					"command": "vscode-spec.openReferenceManual"
+					"command": "spec-command.openReferenceManual"
 				},
 				{
-					"command": "vscode-spec.execSelectionInTerminal",
-					"when": "editorLangId == 'spec-cmd'"
+					"command": "spec-command.execSelectionInTerminal",
+					"when": "editorLangId == 'spec-command'"
 				},
 				{
-					"command": "vscode-spec.execFileInTerminal",
-					"when": "editorLangId == 'spec-cmd'"
+					"command": "spec-command.execFileInTerminal",
+					"when": "editorLangId == 'spec-command'"
 				}
 			],
 			"explorer/context": [
 				{
-					"command": "vscode-spec.execFileInTerminal",
-					"when": "resourceLangId == 'spec-cmd'",
-					"group": "spec"
+					"command": "spec-command.execFileInTerminal",
+					"when": "resourceLangId == 'spec-command'",
+					"group": "9_speccommand"
 				}
 			],
 			"editor/title": [
 				{
-					"command": "vscode-spec.execSelectionInTerminal",
-					"alt": "vscode-spec.execFileInTerminal",
-					"when": "editorLangId == 'spec-cmd'",
+					"command": "spec-command.execSelectionInTerminal",
+					"alt": "spec-command.execFileInTerminal",
+					"when": "editorLangId == 'spec-command'",
 					"group": "navigation"
 				}
 			],
 			"editor/context": [
 				{
-					"command": "vscode-spec.execSelectionInTerminal",
-					"when": "editorTextFocus && editorLangId == 'spec-cmd'",
-					"group": "spec"
+					"command": "spec-command.execSelectionInTerminal",
+					"when": "editorTextFocus && editorLangId == 'spec-command'",
+					"group": "9_speccommand"
 				},
 				{
-					"command": "vscode-spec.execFileInTerminal",
-					"when": "editorTextFocus && editorLangId == 'spec-cmd'",
-					"group": "spec"
+					"command": "spec-command.execFileInTerminal",
+					"when": "editorTextFocus && editorLangId == 'spec-command'",
+					"group": "9_speccommand"
 				}
 			]
 		},
 		"keybindings": [
 			{
-				"command": "vscode-spec.execSelectionInTerminal",
+				"command": "spec-command.execSelectionInTerminal",
 				"key": "shift+enter",
-				"when": "editorTextFocus && editorLangId == 'spec-cmd'"
+				"when": "editorTextFocus && editorLangId == 'spec-command'"
 			}
 		],
 		"configuration": {
-			"title": "spec",
+			"title": "spec command",
 			"properties": {
-				"vscode-spec.showReferenceManualInPreview": {
+				"spec-command.showReferenceManualInPreview": {
 					"type": "boolean",
 					"default": true,
 					"description": "Shows a preview (Webview created by built-in Markdown extension) in addition to a markdown source after \"Open Reference Manual\" command is invoked."
 				},
-				"vscode-spec.editor.hintVolume.hover": {
+				"spec-command.editor.hintVolume.hover": {
 					"type": "string",
 					"default": "full",
 					"description": "Controls the volume of explanatory text in hovers, which is shown when the mouse cursor is on a symbol.",
@@ -139,7 +138,7 @@
 						"full"
 					]
 				},
-				"vscode-spec.editor.hintVolume.completionItem": {
+				"spec-command.editor.hintVolume.completionItem": {
 					"type": "string",
 					"default": "sentence",
 					"description": "Controls the volume of explanatory text in auto completion, which is shown when the user types a symbol.",
@@ -149,7 +148,7 @@
 						"full"
 					]
 				},
-				"vscode-spec.editor.hintVolume.signatureHelp": {
+				"spec-command.editor.hintVolume.signatureHelp": {
 					"type": "string",
 					"default": "sentence",
 					"description": "Controls the volume of explanatory text in signature help, which is shown when the user edits function arguments.",
@@ -159,7 +158,7 @@
 						"full"
 					]
 				},
-				"vscode-spec.editor.codeSnippets": {
+				"spec-command.editor.codeSnippets": {
 					"type": "array",
 					"default": [],
 					"markdownDescription": "Lists code snippet templates that may include a placeholder of motor (`%MOT`) or counter (`%CNT`) mnemonics in TextMate snippet syntax. Read [Snippets in Visual Studio Code](https://code.visualstudio.com/docs/editor/userdefinedsnippets) for other information about the syntax. Example: `mv ${1%MOT} ${2:pos} # absolute move`.",
@@ -168,7 +167,7 @@
 						"pattern": "^(([a-zA-Z_][a-zA-Z0-9_]*)\\s+[^#]+?)\\s*(#\\s*(.*))?$"
 					}
 				},
-				"vscode-spec.mnemonic.motors": {
+				"spec-command.mnemonic.motors": {
 					"type": "array",
 					"default": [],
 					"markdownDescription": "Lists motor mnemonics, which will be used by IntelliSence and code snippets. One can optionally add the description after `#` letter. Example: `tth # Detector's two-theta angle`.",
@@ -177,7 +176,7 @@
 						"pattern": "^([a-zA-Z_][a-zA-Z0-9_]{0,6})\\s*(#\\s*(.*))?$"
 					}
 				},
-				"vscode-spec.mnemonic.counters": {
+				"spec-command.mnemonic.counters": {
 					"type": "array",
 					"default": [
 						"sec # count time in second"
@@ -188,63 +187,25 @@
 						"pattern": "^([a-zA-Z_][a-zA-Z0-9_]{0,6})\\s*(#\\s*(.*))?$"
 					}
 				},
-				"vscode-spec.mnemonic.motor.labels": {
-					"type": "array",
-					"default": [],
-					"description": "Specifies a string list of motor mnemonics",
-					"markdownDeprecationMessage": "**Deprecated**: Please use `#vscode-spec.mnemonic.motors#` instead.",
-					"items": {
-						"type": "string",
-						"pattern": "^[a-zA-Z_][a-zA-Z0-9_]{0,6}$"
-					}
-				},
-				"vscode-spec.mnemonic.motor.descriptions": {
-					"type": "array",
-					"default": [],
-					"description": "Specifies a string list of descriptions corresponding to motor mnemonics",
-					"markdownDeprecationMessage": "**Deprecated**: Please use `#vscode-spec.mnemonic.motors#` instead.",
-					"items": {
-						"type": "string"
-					}
-				},
-				"vscode-spec.mnemonic.counter.labels": {
-					"type": "array",
-					"default": [],
-					"description": "Specifies a string list of counter mnemonics",
-					"markdownDeprecationMessage": "**Deprecated**: Please use `#vscode-spec.mnemonic.counters#` instead.",
-					"items": {
-						"type": "string",
-						"pattern": "^[a-zA-Z_][a-zA-Z0-9_]{0,6}$"
-					}
-				},
-				"vscode-spec.mnemonic.counter.descriptions": {
-					"type": "array",
-					"default": [],
-					"description": "Specifies a string list of descriptions corresponding to counter mnemonics",
-					"markdownDeprecationMessage": "**Deprecated**: Please use `#vscode-spec.mnemonic.counters#` instead.",
-					"items": {
-						"type": "string"
-					}
-				},
-				"vscode-spec.workspace.inclusiveFilePattern": {
+				"spec-command.workspace.inclusiveFilePattern": {
 					"type": "string",
 					"default": "**/*.mac",
 					"scope": "resource",
 					"markdownDescription": "Specifies a glob pattern used to find files in a workspace. Symbols in pattern-matched files becomes available in code navigation. See [VS Code API](https://code.visualstudio.com/api/references/vscode-api#GlobPattern) for the syntax."
 				},
-				"vscode-spec.workspace.exclusiveFilePattern": {
+				"spec-command.workspace.exclusiveFilePattern": {
 					"type": "string",
 					"default": "",
 					"scope": "resource",
 					"markdownDescription": "Specifies a glob pattern used to exclude files in a workspace from being parsed. See [VS Code API](https://code.visualstudio.com/api/references/vscode-api#GlobPattern) for the syntax."
 				},
-				"vscode-spec.workspace.diagnoseProblems": {
+				"spec-command.workspace.diagnoseProblems": {
 					"type": "boolean",
 					"default": false,
 					"scope": "resource",
 					"description": "Controls whether diagnostic results of files in a workspace are listed in 'Problems' view. If disabled, only syntax problems of files opened by editors are listed."
 				},
-				"vscode-spec.command.filePathPrefixInTerminal": {
+				"spec-command.command.filePathPrefixInTerminal": {
 					"type": "string",
 					"default": "",
 					"scope": "resource",
@@ -260,8 +221,8 @@
 		"watch": "tsc -watch -p ./",
 		"pretest": "npm run compile && npm run lint",
 		"test": "node ./out/test/runTest.js",
-		"js-yaml:apiReference": "js-yaml ./src/specCmd.apiReference.yaml > ./syntaxes/specCmd.apiReference.json",
-		"js-yaml:tmLanguage": "js-yaml ./src/specCmd.tmLanguage.yaml > ./syntaxes/specCmd.tmLanguage.json",
+		"js-yaml:apiReference": "js-yaml ./src/specCommand.apiReference.yaml > ./syntaxes/specCommand.apiReference.json",
+		"js-yaml:tmLanguage": "js-yaml ./src/specCommand.tmLanguage.yaml > ./syntaxes/specCommand.tmLanguage.json",
 		"pegjs": "peggy --cache --plugin ./node_modules/ts-pegjs/src/tspegjs --extra-options-file ./src/pegconfig.json -o src/grammar.ts src/grammer.pegjs"
 	},
 	"dependencies": {
@@ -286,11 +247,11 @@
 	},
 	"license": "SEE LICENSE IN LICENSE",
 	"bugs": {
-		"url": "https://github.com/fujidana/vscode-spec/issues"
+		"url": "https://github.com/fujidana/vscode-spec-command/issues"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/fujidana/vscode-spec.git"
+		"url": "https://github.com/fujidana/vscode-spec-command.git"
 	},
-	"homepage": "https://github.com/fujidana/vscode-spec/blob/master/README.md"
+	"homepage": "https://github.com/fujidana/vscode-spec-command/blob/master/README.md"
 }
