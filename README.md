@@ -1,9 +1,9 @@
-# vscode-spec README
+# __spec__ Command File Extension for Visual Studio Code
 
-This VS Code extension provides editing/viewing support to the following files:
+The extension enhances user experiences in editing __spec__ command files, typically loaded by `qdo` after a user writes user-defined macros in it.
 
-* `spec-cmd` (`*.mac`): __spec__ command file, typically loaded by `qdo` after a user writes user-defined macros in it
-* `spec-log` (`*.tlog`): __spec__ log file, created when __spec__ is launched with `-l logfile` option
+The default file extention of __spec__ command files is `.mac` but VS Code provides ways for a user to change the association.
+Check VS Code official documents for further details.
 
 ## What's __spec__?
 
@@ -12,32 +12,32 @@ This VS Code extension provides editing/viewing support to the following files:
 
 _cited from [CSS - Certified Scientific Software](https://www.certif.com) homepage._
 
-This is not the official one developed by Certified Scientific Software.
-Use [GitHub issues](https://github.com/fujidana/vscode-spec/issues) for bug reports and feature requests about the extension.
+Note that the extention is not the official one developed by Certified Scientific Software.
+Use [GitHub issues](https://github.com/fujidana/vscode-spec-command/issues) for bug reports and feature requests about the extension.
 
 ## NOTICE for previous version users
 
-The language identifier of __spec__ command files are changed from `spec` to `spec-macro` at v1.3.0 and again to `spec-cmd` at v1.4.0.
+Recent versions of __spec__ language support (`vscode-spec`) becames to support both __spec__ command files and __spec__ log files.
+However, it may be not a rare cases in which files of either kind are only opened in a workspace.
+VS Code loads the extension into memory at the first time a file of which a kind the extension supports is being opened and thus, building independent extensions based on the file type looks a better implementation mannaer.
+For this reason (and also for another reasons such as ease of maintenance and expandability to new features), the developer has decided to split the extension into two; one is for __spec__ command files (both the exention identifier and language identifier are `spec-command`) and the other is for __spec__ log file (`spec-log`). This document is for the former extension.
 
-The following identifiers in the extension settings are deprecated at v1.2.0:
+If one has configuration items that start with `vscode-spec` in _setting.json_ files, replace them with `spec-command`.
+The original identifier, `vscode-spec`, will be used as an extension pack that bundles both the split extensions.
+
+The language identifier of __spec__ command files was also renamed `spec-command` in v1.5.0 (it was `spec` in the versions earlier than v1.3.0, `spec-macro` in v1.3.0, and `spec-cmd` in v1.4.0).
+If one associates __spec__ command files with different file extension from the default value, replate the identifier in _settings.json_.
+
+Sorry for inconvenence.
+
+The following identifiers in the extension settings are deprecated at v1.2.0 and removed at v1.5.0:
 
 * `vscode-spec.mnemonic.motor.labels`
 * `vscode-spec.mnemonic.motor.descriptions`
 * `vscode-spec.mnemonic.counter.labels`
 * `vscode-spec.mnemonic.motor.descriptions`
 
-and the following identifiers are provided instead:
-
-* `vscode-spec.mnemonic.motors`
-* `vscode-spec.mnemonic.counters`
-
-If you registered motor and counter mnemonics in the extension settings in the older version, please manually copy those values in the deprecated identifiers to the new identifiers.
-Read also __Extension Settings__ section below.
-Sorry for inconvenence.
-
 ## Features
-
-### Features for __spec__ command files
 
 * __Diagnostics__ - syntax check
 * __Syntax highlighting__ - colorizing symbols using a grammer
@@ -50,23 +50,16 @@ Sorry for inconvenence.
   * __Show all symbol definitions within a document__ - symbol definitions in a file, used in: _Go to Symbol in File_ (Ctrl+Shift+O) and the navigation bar below the editor tabs (aka breadcrumb)
   * __Show definitions of a symbol__ - symbol definitions in open files, used in: _Go to Definition_ (F12) and _Peek Definition_ (Alt+F12) in right-click menu
 * __Commands__ - the following commands can be invoked from the command pallate (Ctrl+Shit+P):
-  * "Run Seclection/Line in Terminal" and "Run File in Terminal" commands. These commands expect __spec__ interactive shell has been ready in the active terminal view.
+  * "Run Seclection/Line in Terminal" and "Run File in Terminal" commands. These commands assume __spec__ interactive shell has been ready in the active terminal view.
   * "Open Reference Manuall" command.
 
 This extention treats user-defined symbols declared at the top level (i.e., not in a code block, curly brackets) as global and those in code blocks as local.
 Global symbols are visible beyond a file where the symbol is defined; local symbols are visible only when the cursor is in the same block.
 
+![screenshot of the hover](resources/screenshot.png "hover demo")
+
 The extension was developed with reference to the recent official PDF document about __spec__ release 6 (version 3 of the spec documentation, printed 16 July 2017).
 The help text of built-in symbols are cited from this document, except where otherwise noted.
-
-### Features for __spec__ log files
-
-* __Syntax highlighting__
-* __Code navigation__
-  * __Show all symbol definitions within a document__
-* __Code folding__
-
-Lines of __spec__ prompts such as `1.FOURC>` are picked out for code navigation and folding.
 
 ## Requirements
 
@@ -113,11 +106,11 @@ but the extension shows an alert on the first line because it expects explicit q
 
 This extention contributes the follwing settings, which are configurable from the _Settings_ windw (`Ctrl+,`):
 
-* `vscode-spec.editor.hintVolume.*` - controls the volume of explanatory text shown by IntelliSense features.
-* `vscode-spec.editor.codeSnippets` - provides a place to add code snippet templates that include motor/counter mnemonics in TextMate snippet syntax. Snippets for `mv`, `mvr`, `umv`, `umvr`, `ascan`, `dscan`, `a2scan`, `d2scan`, `a3scan`, `d3scan`, `a4scan`, `d4scan`, and `mesh` are provided by default and thus, users does not need to add it. Read [Snippets in Visual Studio Code](https://code.visualstudio.com/docs/editor/userdefinedsnippets) for other information about the syntax. In addition, `%MOT` and `%CNT` are avaiable as the placeholders of motor/counter mnemonics, respectively. Optionally, a description can be added after a hash sign (`#`). Example: `mv ${1%MOT} ${2:pos} # absolute move`.
-* `vscode-spec.mnemonic.motors`, `vscode-spec.mnemonic.counters` - registers motor/counter mnemonics and optionally their descriptions after `#` letter. They are used by IntelliSense features and code snippets above.  Example: `tth # two-theta angle`.
-* `vscode-spec.workspace.*` - controls the rule to scan files in workspace.
-* `vscode-spec.command.filePathPrefixInTerminal` - specifies file path prefix used in "Run File in Active Terminal" command.
+* `spec-command.editor.hintVolume.*` - controls the volume of explanatory text shown by IntelliSense features.
+* `spec-command.editor.codeSnippets` - provides a place to add code snippet templates that include motor/counter mnemonics in TextMate snippet syntax. Snippets for `mv`, `mvr`, `umv`, `umvr`, `ascan`, `dscan`, `a2scan`, `d2scan`, `a3scan`, `d3scan`, `a4scan`, `d4scan`, and `mesh` are provided by default and thus, users does not need to add it. Read [Snippets in Visual Studio Code](https://code.visualstudio.com/docs/editor/userdefinedsnippets) for other information about the syntax. In addition, `%MOT` and `%CNT` are avaiable as the placeholders of motor/counter mnemonics, respectively. Optionally, a description can be added after a hash sign (`#`). Example: `mv ${1%MOT} ${2:pos} # absolute move`.
+* `spec-command.mnemonic.motors`, `spec-command.mnemonic.counters` - registers motor/counter mnemonics and optionally their descriptions after `#` letter. They are used by IntelliSense features and code snippets above.  Example: `tth # two-theta angle`.
+* `spec-command.workspace.*` - controls the rule to scan files in workspace.
+* `spec-command.command.filePathPrefixInTerminal` - specifies file path prefix used in "Run File in Active Terminal" command.
 
 Read [Visual Studio Code User and Workspace Settings](https://code.visualstudio.com/docs/getstarted/settings) for details about the _Settings_ window.
 
@@ -126,4 +119,4 @@ Read [Visual Studio Code User and Workspace Settings](https://code.visualstudio.
 * Syntax check by this extension has small differences with actual __spec__ interpreters.
 * Statement continuation by putting a backslash at the end of the line is not fully supported in syntax highlighting.
 
-Also read [GitHub issues](https://github.com/fujidana/vscode-spec/issues).
+Also read [GitHub issues](https://github.com/fujidana/vscode-spec-cmmand/issues).
