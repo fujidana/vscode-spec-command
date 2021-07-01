@@ -19,6 +19,15 @@
 		"instrument control",
 		"data acquisition"
 	],
+	"license": "SEE LICENSE IN LICENSE",
+	"bugs": {
+		"url": "https://github.com/fujidana/vscode-spec-command/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/fujidana/vscode-spec-command.git"
+	},
+	"homepage": "https://github.com/fujidana/vscode-spec-command/blob/master/README.md",
 	"activationEvents": [
 		"onLanguage:spec-command",
 		"onCommand:spec-command.openReferenceManual"
@@ -209,9 +218,18 @@
 					"type": "string",
 					"default": "",
 					"scope": "resource",
-					"description": "Specifies a file path prefix used in \"Run File in Active Terminal\" command."
+					"markdownDescription": "Specifies a file path prefix used in \"Run File in Active Terminal\" command. This option is neccessary when the working directory of __spec__ running in a terminal view is different from the workspace folder."
 				}
 			}
+		}
+	},
+	"capabilities": {
+		"untrustedWorkspaces": {
+			"supported": "limited",
+			"description": "The \"spec-command.commandP.filePathrefixInTerminal\" option is disabled in an untrusted workspace in order to protect from code injection when the \"Run File in Active Terminal\" command is called.",
+			"restrictedConfigurations": [
+				"spec-command.commandP.filePathrefixInTerminal"
+			]
 		}
 	},
 	"scripts": {
@@ -244,14 +262,5 @@
 		"ts-pegjs": "^1.0.0",
 		"typescript": "^4.3.2",
 		"vscode-test": "^1.5.2"
-	},
-	"license": "SEE LICENSE IN LICENSE",
-	"bugs": {
-		"url": "https://github.com/fujidana/vscode-spec-command/issues"
-	},
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/fujidana/vscode-spec-command.git"
-	},
-	"homepage": "https://github.com/fujidana/vscode-spec-command/blob/master/README.md"
+	}
 }

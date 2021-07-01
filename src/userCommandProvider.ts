@@ -48,7 +48,7 @@ function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position
                 return estraverse.VisitorOption.Skip;
             }
 
-            const nodeRange = currentNode.loc ? spec.convertRange(<IFileRange>currentNode.loc) : undefined;
+            const nodeRange = currentNode.loc ? spec.convertRange(currentNode.loc as IFileRange) : undefined;
             let refItem: spec.ReferenceItem | undefined;
             const refItems: spec.ReferenceItem[] = [];
 
@@ -71,7 +71,7 @@ function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position
                     // register arguments of function as variables if the cursor is in the function block.
                     for (const param of currentNode.params) {
                         if (param.type === 'Identifier') {
-                            refItem = { signature: param.name, location: <IFileRange>currentNode.loc };
+                            refItem = { signature: param.name, location: currentNode.loc as IFileRange};
                             variableRefMap.set(param.name, refItem);
                         }
                     }
@@ -86,7 +86,7 @@ function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position
                     if (!position || (parentNode && parentNode.type !== 'Program')) {
                         let signatureStr = currentNode.id.name + '(';
                         signatureStr += currentNode.params.map(param => (param.type === 'Identifier') ? param.name : '').join(', ') + ')';
-                        refItem = { signature: signatureStr, location: <IFileRange>currentNode.loc };
+                        refItem = { signature: signatureStr, location: currentNode.loc as IFileRange };
                         functionRefMap.set(currentNode.id.name, refItem);
                         refItems.push(refItem);
                     }
@@ -94,7 +94,7 @@ function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position
                 } else {
                     // register the id as a traditional macro if parameter is null.
                     if (!position || (parentNode && parentNode.type !== 'Program')) {
-                        refItem = { signature: currentNode.id.name, location: <IFileRange>currentNode.loc };
+                        refItem = { signature: currentNode.id.name, location: currentNode.loc as IFileRange };
                         macroRefMap.set(currentNode.id.name, refItem);
                         refItems.push(refItem);
                     }
@@ -108,7 +108,7 @@ function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position
                             if (declarator.init && declarator.init.type === 'Literal') {
                                 signatureStr += ' = ' + declarator.init.raw;
                             }
-                            refItem = { signature: signatureStr, location: <IFileRange>currentNode.loc };
+                            refItem = { signature: signatureStr, location: currentNode.loc as IFileRange};
                             if (currentNode.kind === 'const') {
                                 constantRefMap.set(declarator.id.name, refItem);
                             } else {
@@ -199,6 +199,11 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
 
         // command to run file in terminal
         const execFileInTerminalCommandCallback = (...args: unknown[]) => {
+            // if (!vscode.workspace.isTrusted) {
+            //     vscode.window.showErrorMessage('The command is prohibited in an untrusted workspace.');
+            //     return;
+            // }
+
             // find active terminal.
             const terminal = vscode.window.activeTerminal;
             if (!terminal) {
@@ -224,12 +229,15 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
             const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
             let path: string;
             if (workspaceFolder) {
-                const config = vscode.workspace.getConfiguration('spec-command.command', workspaceFolder.uri);
-                const prefix = config.get<string>('filePathPrefixInTerminal', '');
+                const prefix = vscode.workspace.getConfiguration('spec-command.command', workspaceFolder.uri).get<string>('filePathPrefixInTerminal', '');
                 path = prefix + vscode.workspace.asRelativePath(uri, false);
             } else {
                 path = uri.path;
             }
+
+            // Sanitization of a string surrounded by double quoataions in a POSIX shell
+            // ('\' -> '\\', '"' -> '\"')
+            path = path.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
             // send a command to the active terminal.
             terminal.show(true);
@@ -442,9 +450,9 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
     private parseDocumentContents(contents: string, uri: vscode.Uri, isOpenDocument: boolean, diagnoseProblems: boolean) {
         const uriString = uri.toString();
 
-        let tree;
+        let tree: CustomProgram;
         try {
-            tree = <CustomProgram>parse(contents);
+            tree = parse(contents);
         } catch (error) {
             if (error instanceof SyntaxError) {
                 if (diagnoseProblems) {
