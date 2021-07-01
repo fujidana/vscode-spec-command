@@ -80,19 +80,16 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
         // register command to show reference manual as a virtual document
         const openReferenceManualCallback = () => {
             const showReferenceManual = (storage: spec.ReferenceStorage) => {
-                const quickPickLabels = ['$(references) all'];
+                const quickPickItems = [{ key: 'all', label: '$(references) all' }];
                 for (const itemKind of storage.keys()) {
                     const metadata = spec.getReferenceItemKindMetadata(itemKind);
-                    quickPickLabels.push(`$(${metadata.iconIdentifier}) ${metadata.label}`);
+                    quickPickItems.push({key:metadata.label, label: `$(${metadata.iconIdentifier}) ${metadata.label}`});
                 }
-                vscode.window.showQuickPick(quickPickLabels).then(quickPickLabel => {
-                    if (quickPickLabel) {
+                vscode.window.showQuickPick(quickPickItems).then(quickPickItem => {
+                    if (quickPickItem) {
                         let uri = vscode.Uri.parse(spec.BUILTIN_URI);
-                        if (quickPickLabel !== '$(references) all') {
-                            const matches = quickPickLabel.match(/^\$\([^\]]*\) (.*)$/);
-                            if (matches) {
-                                uri = uri.with({ query: matches[1] });
-                            }
+                        if (quickPickItem.key !== 'all') {
+                            uri = uri.with({ query: quickPickItem.key });
                         }
                         vscode.window.showTextDocument(uri, { preview: false }).then(editor => {
                             const flag: boolean = vscode.workspace.getConfiguration('spec-command').get('showReferenceManualInPreview', true);
