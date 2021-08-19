@@ -2,8 +2,8 @@
 	"publisher": "fujidana",
 	"name": "spec-command",
 	"displayName": "spec command",
-	"description": "Language support for CSS spec command files",
-	"version": "1.5.0",
+	"description": "spec command file support for VS Code",
+	"version": "1.5.1",
 	"engines": {
 		"vscode": "^1.57.0"
 	},

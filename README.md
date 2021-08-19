@@ -1,9 +1,12 @@
 # __spec__ Command File Extension for Visual Studio Code
 
-The extension enhances user experiences in editing __spec__ command files, typically loaded by `qdo` after a user writes user-defined macros in it.
+The extension enhances user experiences in editing __spec__ command files with Visual Studio Code.
+The __spec__ command file referred to here is also called __spec__ macro file or __spec__ script file; it is typically loaded by `qdo` standard macro or `qdofile()` built-in function after a user writes user-defined macros and functions in it.
 
-The default file extention of __spec__ command files is `.mac` but VS Code provides ways for a user to change the association.
-Check VS Code official documents for further details.
+While `qdo` or `qdofile()` does not care about the filename extension, most command files installed with __spec__ are named `*.mac` (e.g., `SPECD/standard.mac`).
+Therefore, this VS Code extension treats `.mac` as the file extension of __spec__ command files (language identifier: `spec-command`).
+However, VS Code provides ways for a user to change the association.
+Read [Language Support in Visual Studio Code](https://code.visualstudio.com/docs/languages/overview) (official document of VS Code) for further details.
 
 ## What's __spec__?
 
@@ -12,18 +15,18 @@ Check VS Code official documents for further details.
 
 _cited from [CSS - Certified Scientific Software](https://www.certif.com) homepage._
 
-Note that the extention is not the official one developed by Certified Scientific Software.
+Note that the extension is not the official one developed by Certified Scientific Software.
 Use [GitHub issues](https://github.com/fujidana/vscode-spec-command/issues) for bug reports and feature requests about the extension.
 
 ## NOTICE for previous version users
 
-Recent versions of __spec__ language support (`vscode-spec`) becames to support both __spec__ command files and __spec__ log files.
+Recent versions of __spec__ language support (`vscode-spec`) supported both __spec__ command files and __spec__ log files.
 However, it may be not a rare cases in which files of either kind are only opened in a workspace.
-VS Code loads the extension into memory at the first time a file of which a kind the extension supports is being opened and thus, building independent extensions based on the file type looks a better implementation mannaer.
-For this reason (and also for another reasons such as ease of maintenance and expandability to new features), the developer has decided to split the extension into two; one is for __spec__ command files (both the exention identifier and language identifier are `spec-command`) and the other is for __spec__ log file (`spec-log`). This document is for the former extension.
+VS Code loads an extension into memory at the first time a file the extension supports is being opened and thus, building independent extensions based on the file type looks a better implementation manner.
+For this reason (and also for another reasons such as ease of maintenance and expandability to new features), the developer has decided to split the extension into two; one is for __spec__ command files (both the exention identifier and language identifier are `spec-command`) and the other is for __spec__ log file (`spec-log`).
 
 If one has configuration items that start with `vscode-spec` in _setting.json_ files, replace them with `spec-command`.
-The original identifier, `vscode-spec`, will be used as an extension pack that bundles both the split extensions.
+The original identifier, `vscode-spec`, is reused as an extension pack that bundles both the split extensions.
 
 The language identifier of __spec__ command files was also renamed `spec-command` in v1.5.0 (it was `spec` in the versions earlier than v1.3.0, `spec-macro` in v1.3.0, and `spec-cmd` in v1.4.0).
 If one associates __spec__ command files with different file extension from the default value, replate the identifier in _settings.json_.
@@ -44,16 +47,16 @@ The following identifiers in the extension settings are deprecated at v1.2.0 and
 * __IntelliSense__ - code completion and hinting
   * __Hovers__
   * __Code completion proposals__ - autocompletion that works during a user types a symbol
-    * __Code snippets__ - templates that make it easier to enter repeating code patterns, such as loops or conditional-statements
+    * __Code snippets__ - templates that make it easier to enter repeating code patterns, such as loops and conditional-statements
   * __Help with function signatures__ - help that appears during a user types an argument in a function call.
 * __Code navigation__
   * __Show all symbol definitions within a document__ - symbol definitions in a file, used in: _Go to Symbol in File_ (Ctrl+Shift+O) and the navigation bar below the editor tabs (aka breadcrumb)
   * __Show definitions of a symbol__ - symbol definitions in open files, used in: _Go to Definition_ (F12) and _Peek Definition_ (Alt+F12) in right-click menu
 * __Commands__ - the following commands can be invoked from the command pallate (Ctrl+Shit+P):
   * "Run Seclection/Line in Terminal" and "Run File in Terminal" commands. These commands assume __spec__ interactive shell has been ready in the active terminal view.
-  * "Open Reference Manuall" command.
+  * "Open Reference Manual" command.
 
-This extention treats user-defined symbols declared at the top level (i.e., not in a code block, curly brackets) as global and those in code blocks as local.
+This extension treats user-defined symbols declared at the top level (i.e., not in a code block, curly brackets) as global and those in code blocks as local.
 Global symbols are visible beyond a file where the symbol is defined; local symbols are visible only when the cursor is in the same block.
 
 ![screenshot of the hover](resources/screenshot.png "hover demo")
@@ -67,7 +70,7 @@ The extension assumes UTF-8 as the file encoding in workspace scan, regardless o
 This does not mean the developer garantees UTF-8 characters are safe for __spec__ interpreters.
 
 The __spec__ grammar is torelant and its behavior is determined only at runtime, which makes it impossible for the extension to mimic spec's interpreter perfectly.
-For example, the extention treats `f(var)` in a __spec__ script as a function call (like most people assume) but there is another possibility:
+For example, the extension treats `f(var)` in a __spec__ script as a function call (like most people assume) but there is another possibility:
 
 ```
 1.SEPC> def f1(var) '{p var}' # function definition
@@ -83,7 +86,7 @@ syntax error on ";"
 (123) f2(456)
 ```
 
-Macros made of an imperfect statement are another examples the extention can not handle well
+Macros made of an imperfect statement are another examples the extension can not handle well
 (`ifd` and `ifp` defined in `SPECD/standard.mac` are exceptionally supported).
 User-defined macros must be made of one or more perfect sentenses.
 
@@ -104,7 +107,7 @@ but the extension shows an alert on the first line because it expects explicit q
 
 ## Extension Settings
 
-This extention contributes the follwing settings, which are configurable from the _Settings_ windw (`Ctrl+,`):
+This extension contributes the follwing settings, which are configurable from the _Settings_ windw (`Ctrl+,`):
 
 * `spec-command.editor.hintVolume.*` - controls the volume of explanatory text shown by IntelliSense features.
 * `spec-command.editor.codeSnippets` - provides a place to add code snippet templates that include motor/counter mnemonics in TextMate snippet syntax. Snippets for `mv`, `mvr`, `umv`, `umvr`, `ascan`, `dscan`, `a2scan`, `d2scan`, `a3scan`, `d3scan`, `a4scan`, `d4scan`, and `mesh` are provided by default and thus, users does not need to add it. Read [Snippets in Visual Studio Code](https://code.visualstudio.com/docs/editor/userdefinedsnippets) for other information about the syntax. In addition, `%MOT` and `%CNT` are avaiable as the placeholders of motor/counter mnemonics, respectively. Optionally, a description can be added after a hash sign (`#`). Example: `mv ${1%MOT} ${2:pos} # absolute move`.

@@ -4,6 +4,12 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+## [1.5.1] - 2021-08-19
+
+### security
+
+- Fix a typo in untrusted workspace settings. Contrary to the expectation, previosuly the `spec-command.command.filePathPrefixInTerminal` option was not disabled in unstrusted workspaces.
+
 ## [1.5.0] - 2021-07-01
 
 ### Add
@@ -26,7 +32,7 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 - Sanitize a file path used in the "Run File in Active Terminal" command in order to protect from code injection.
 - Support _Workspace Trust_.
-  - The `spec-command.command.filePathPrefixInTerminal` option is disabled in an unstrusted workspace.
+  - The `spec-command.command.filePathPrefixInTerminal` option is disabled in unstrusted workspaces.
   - The other features are not prohibited in an unstusted workspace.
 
 ## [1.4.0] - 2021-06-10
@@ -243,7 +249,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
   - syntax highlighting
   - code snippets
 
-[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.5.1...HEAD
+[1.5.1]: https://github.com/fujidana/vscode-spec-command/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/fujidana/vscode-spec-command/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/fujidana/vscode-spec-command/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/fujidana/vscode-spec-command/compare/v1.2.1...v1.3.0
