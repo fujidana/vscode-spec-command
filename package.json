@@ -226,9 +226,9 @@
 	"capabilities": {
 		"untrustedWorkspaces": {
 			"supported": "limited",
-			"description": "The \"spec-command.commandP.filePathrefixInTerminal\" option is disabled in an untrusted workspace in order to protect from code injection when the \"Run File in Active Terminal\" command is called.",
+			"description": "The \"spec-command.command.filePathPrefixInTerminal\" option is disabled in untrusted workspaces in order to protect from code injection when the \"Run File in Active Terminal\" command is called.",
 			"restrictedConfigurations": [
-				"spec-command.commandP.filePathrefixInTerminal"
+				"spec-command.command.filePathPrefixInTerminal"
 			]
 		}
 	},
