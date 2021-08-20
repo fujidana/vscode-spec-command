@@ -202,7 +202,8 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
         if (map === undefined) { return; }
 
         // find the symbol information about the symbol.
-        const item = map.get(completionItem.label);
+        const label = typeof completionItem.label === 'string' ? completionItem.label : completionItem.label.label;
+        const item = map.get(label);
         if (item === undefined) { return; }
 
         // copy completion item.
