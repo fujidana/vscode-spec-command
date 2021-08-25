@@ -200,7 +200,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         // command to run file in terminal
         const execFileInTerminalCommandCallback = (...args: unknown[]) => {
             // if (!vscode.workspace.isTrusted) {
-            //     vscode.window.showErrorMessage('The command is prohibited in an untrusted workspace.');
+            //     vscode.window.showErrorMessage('The command is prohibited in untrusted workspaces.');
             //     return;
             // }
 
@@ -436,10 +436,11 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
                 }
             }
 
+            const textDecoder = new TextDecoder('utf-8');
             for (const [newFileUriString, newFileMetadata] of newFiles) {
                 if (!openedFiles.has(newFileUriString)) {
                     const newFileUri = vscode.Uri.parse(newFileUriString);
-                    const contents = new TextDecoder('utf-8').decode(await vscode.workspace.fs.readFile(newFileUri));
+                    const contents = textDecoder.decode(await vscode.workspace.fs.readFile(newFileUri));
                     this.parseDocumentContents(contents, newFileUri, false, newFileMetadata.diagnoseProblems);
                 }
             }
@@ -510,10 +511,11 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         // parse the other files in workspace folders.
         const filesInWorkspaces = await findFilesInWorkspaces();
 
+        const textDecoder = new TextDecoder('utf-8');
         for (const [fileUriString, fileMetadata] of filesInWorkspaces) {
             if (!openedFiles.has(fileUriString)) {
                 const fileUri = vscode.Uri.parse(fileUriString);
-                const contents = new TextDecoder('utf-8').decode(await vscode.workspace.fs.readFile(fileUri));
+                const contents = textDecoder.decode(await vscode.workspace.fs.readFile(fileUri));
                 this.parseDocumentContents(contents, fileUri, false, fileMetadata.diagnoseProblems);
             }
         }
@@ -522,7 +524,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
     /**
      * Required implementation of vscode.CompletionItemProvider, overriding the super class
      */
-    public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.CompletionItem[] | undefined {
+    public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionItem[]> {
         if (token.isCancellationRequested) { return; }
 
         const tree = this.treeCollection.get(document.uri.toString());
@@ -536,7 +538,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
     /**
      * Required implementation of vscode.HoverProvider, overriding the super class
      */
-    public provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.Hover | undefined {
+    public provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.ProviderResult<vscode.Hover> {
         if (token.isCancellationRequested) { return; }
 
         const tree = this.treeCollection.get(document.uri.toString());
@@ -593,9 +595,9 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         const symbols: vscode.SymbolInformation[] = [];
         for (const [itemKind, map] of storage.entries()) {
             const symbolKind = spec.getReferenceItemKindMetadata(itemKind).symbolKind;
-            for (const [identifier, item] of map.entries()) {
-                if (item.location) {
-                    const location = new vscode.Location(document.uri, spec.convertRange(item.location));
+            for (const [identifier, refItem] of map.entries()) {
+                if (refItem.location) {
+                    const location = new vscode.Location(document.uri, spec.convertRange(refItem.location));
                     symbols.push(new vscode.SymbolInformation(identifier, symbolKind, '', location));
                 }
             }
@@ -627,11 +629,11 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
             // find all items from each storage.
             for (const [itemKind, map] of storage.entries()) {
                 const symbolKind = spec.getReferenceItemKindMetadata(itemKind).symbolKind;
-                for (const [identifier, item] of map.entries()) {
+                for (const [identifier, refItem] of map.entries()) {
                     if (query.length === 0 || regExp.test(identifier)) {
-                        if (item.location) {
+                        if (refItem.location) {
                             const name = (itemKind === spec.ReferenceItemKind.Function) ? identifier + '()' : identifier;
-                            const location = new vscode.Location(uri, spec.convertRange(item.location));
+                            const location = new vscode.Location(uri, spec.convertRange(refItem.location));
                             symbols.push(new vscode.SymbolInformation(name, symbolKind, '', location));
                         }
                     }

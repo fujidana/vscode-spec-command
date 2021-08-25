@@ -146,7 +146,8 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
             for (const [itemKind, map] of storage.entries()) {
                 const completionItemKind = spec.getReferenceItemKindMetadata(itemKind).completionItemKind;
                 for (const [identifier, item] of map.entries()) {
-                    const completionItem = new vscode.CompletionItem(identifier, completionItemKind);
+                    const label: vscode.CompletionItemLabel = { label: identifier };
+                    const completionItem = new vscode.CompletionItem(label, completionItemKind);
                     // embed `uriString` into `detail` property in order to resolve it later efficiently.
                     completionItem.detail = uriString;
                     if (item.snippet) {
@@ -166,7 +167,7 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
     /**
      * Required implementation of vscode.CompletionItemProvider
      */
-    public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.CompletionItem[] | undefined {
+    public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionItem[]> {
         if (token.isCancellationRequested) { return; }
 
         const range = document.getWordRangeAtPosition(position);
@@ -185,41 +186,36 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
     /**
      * Optional implementation of vscode.CompletionItemProvider
      */
-    public resolveCompletionItem(completionItem: vscode.CompletionItem, token: vscode.CancellationToken): vscode.CompletionItem | undefined {
+    public resolveCompletionItem(completionItem: vscode.CompletionItem, token: vscode.CancellationToken): vscode.ProviderResult<vscode.CompletionItem> {
         if (token.isCancellationRequested) { return; }
 
         // The URI is stored in `detail` property in unresolved completion item.
-        const itemKind = spec.getReferenceItemKindFromCompletionItemKind(completionItem.kind);
+        const refItemKind = spec.getReferenceItemKindFromCompletionItemKind(completionItem.kind);
         const refUriString = completionItem.detail;
         if (refUriString === undefined) { return; }
 
-        const storage = this.storageCollection.get(refUriString);
-        if (storage === undefined) { return; }
-
         const activeEditor = vscode.window.activeTextEditor;
-        const documentUriString = (activeEditor) ? activeEditor.document.uri.toString() : '';
-        const map = storage.get(itemKind);
-        if (map === undefined) { return; }
+        const documentUriString = activeEditor ? activeEditor.document.uri.toString() : '';
 
         // find the symbol information about the symbol.
         const label = typeof completionItem.label === 'string' ? completionItem.label : completionItem.label.label;
-        const item = map.get(label);
-        if (item === undefined) { return; }
+        const refItem = this.storageCollection.get(refUriString)?.get(refItemKind)?.get(label);
+        if (refItem === undefined) { return; }
 
         // copy completion item.
         const newCompletionItem = Object.assign({}, completionItem);
 
         // set the detail of the completion item
-        newCompletionItem.detail = getShortDescription(item, itemKind, refUriString, documentUriString, false);
+        newCompletionItem.detail = getShortDescription(refItem, refItemKind, refUriString, documentUriString, false);
 
         // set the description of the completion item
         // if the main description exists, append it.
         
-        const descriptionMarkdown = new vscode.MarkdownString(truncateString('completionItem', item.description, item.comments));
+        const descriptionMarkdown = new vscode.MarkdownString(truncateString('completionItem', refItem.description, refItem.comments));
 
         // if overloaded signature exists, append them.
-        if (item.overloads) {
-            for (const overload of item.overloads) {
+        if (refItem.overloads) {
+            for (const overload of refItem.overloads) {
                 // descriptionMarkdown.appendMarkdown('---');
                 descriptionMarkdown.appendCodeblock(overload.signature);
                 const truncatedString = truncateString('completionItem', overload.description, undefined);
@@ -238,7 +234,7 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
     /**
      * required implementation of vscode.HoverProvider
      */
-    public provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.Hover | undefined {
+    public provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.ProviderResult<vscode.Hover> {
         if (token.isCancellationRequested) { return; }
 
         const range = document.getWordRangeAtPosition(position);
@@ -290,7 +286,7 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
     /**
      * Required implementation of vscode.SignatureHelpProvider
      */
-    public provideSignatureHelp(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.SignatureHelpContext): vscode.SignatureHelp | undefined {
+    public provideSignatureHelp(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.SignatureHelpContext): vscode.ProviderResult<vscode.SignatureHelp> {
         if (token.isCancellationRequested) { return; }
 
         const signatureHint = parseSignatureInEditing(document.lineAt(position.line).text, position.character);

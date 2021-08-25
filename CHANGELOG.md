@@ -8,9 +8,11 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 - Redesign the configuration properties for motor/counter mnemonics
   - Added:
+    - `spec-command.suggest.codeSnippets`
     - `spec-command.suggest.motors`
     - `spec-command.suggest.counters`
   - Deprecated:
+    - `vscode-spec.editor.codeSnippets`
     - `spec-command.mnemonic.motors`
     - `spec-command.mnemonic.counters`
 

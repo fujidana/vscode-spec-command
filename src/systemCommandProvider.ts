@@ -11,21 +11,24 @@ interface APIReference {
     keywords: spec.ReferenceItem[];
 }
 
-const SNIPPET_TEMPLATES: string[] = [
-    'mv ${1%MOT} ${2:pos} # absolute-position motor move',
-    'mvr ${1%MOT} ${2:pos} # relative-position motor move',
-    'umv ${1%MOT} ${2:pos} # absolute-position motor move (live update)',
-    'umvr ${1%MOT} ${2:pos} # relative-position motor move (live update)',
-    'ascan ${1%MOT} ${2:begin} ${3:end} ${4:steps} ${5:sec} # single-motor absolute-position scan',
-    'dscan ${1%MOT} ${2:begin} ${3:end} ${4:steps} ${5:sec} # single-motor relative-position scan',
-    'a2scan ${1%MOT} ${2:begin1} ${3:end1} ${4%MOT} ${5:begin2} ${6:end2} ${7:steps} ${8:sec} # two-motor absolute-position scan',
-    'd2scan ${1%MOT} ${2:begin1} ${3:end1} ${4%MOT} ${5:begin2} ${6:end2} ${7:steps} ${8:sec} # two-motor relative-position scan',
-    'mesh ${1%MOT} ${2:begin1} ${3:end1} ${4:step1} ${5%MOT} ${6:begin2} ${7:end2} ${8:steps2} ${9:sec} # nested two-motor scan that scanned over a grid of points',
-    'a3scan ${1%MOT} ${2:begin1} ${3:end1} ${4%MOT} ${5:begin2} ${6:end2} ${7%MOT} ${8:begin3} ${9:end3} ${10:steps} ${11:sec} # single-motor absolute-position scan',
-    'd3scan ${1%MOT} ${2:begin1} ${3:end1} ${4%MOT} ${5:begin2} ${6:end2} ${7%MOT} ${8:begin3} ${9:end3} ${10:steps} ${11:sec} # single-motor relative-position scan',
-    'a4scan ${1%MOT} ${2:begin1} ${3:end1} ${4%MOT} ${5:begin2} ${6:end2} ${7%MOT} ${8:begin3} ${9:end3} ${10%MOT} ${11:begin4} ${12:end4} ${13:steps} ${14:sec} # four-motor absolute-position scan',
-    'd4scan ${1%MOT} ${2:begin1} ${3:end1} ${4%MOT} ${5:begin2} ${6:end2} ${7%MOT} ${8:begin3} ${9:end3} ${10%MOT} ${11:begin4} ${12:end4} ${13:steps} ${14:sec} # four-motor relative-position scan',
-];
+const SNIPPET_TEMPLATES: Record<string, string> = {
+    mv: 'mv ${1%MOT} ${2:pos} # absolute-position motor move',
+    mvr: 'mvr ${1%MOT} ${2:pos} # relative-position motor move',
+    umv:  'umv ${1%MOT} ${2:pos} # absolute-position motor move (live update)',
+    umvr: 'umvr ${1%MOT} ${2:pos} # relative-position motor move (live update)',
+    ascan: 'ascan ${1%MOT1} ${2:begin} ${3:end} ${4:steps} ${5:sec} # single-motor absolute-position scan',
+    dscan: 'dscan ${1%MOT1} ${2:begin} ${3:end} ${4:steps} ${5:sec} # single-motor relative-position scan',
+    a2scan: 'a2scan ${1%MOT1} ${2:begin1} ${3:end1} ${4%MOT2} ${5:begin2} ${6:end2} ${7:steps} ${8:sec} # two-motor absolute-position scan',
+    d2scan: 'd2scan ${1%MOT1} ${2:begin1} ${3:end1} ${4%MOT2} ${5:begin2} ${6:end2} ${7:steps} ${8:sec} # two-motor relative-position scan',
+    a3scan: 'a3scan ${1%MOT1} ${2:begin1} ${3:end1} ${4%MOT2} ${5:begin2} ${6:end2} ${7%MOT3} ${8:begin3} ${9:end3} ${10:steps} ${11:sec} # single-motor absolute-position scan',
+    d3scan: 'd3scan ${1%MOT1} ${2:begin1} ${3:end1} ${4%MOT2} ${5:begin2} ${6:end2} ${7%MOT3} ${8:begin3} ${9:end3} ${10:steps} ${11:sec} # single-motor relative-position scan',
+    a4scan: 'a4scan ${1%MOT1} ${2:begin1} ${3:end1} ${4%MOT2} ${5:begin2} ${6:end2} ${7%MOT3} ${8:begin3} ${9:end3} ${10%MOT4} ${11:begin4} ${12:end4} ${13:steps} ${14:sec} # four-motor absolute-position scan',
+    d4scan: 'd4scan ${1%MOT1} ${2:begin1} ${3:end1} ${4%MOT2} ${5:begin2} ${6:end2} ${7%MOT3} ${8:begin3} ${9:end3} ${10%MOT4} ${11:begin4} ${12:end4} ${13:steps} ${14:sec} # four-motor relative-position scan',
+    a5scan: 'a5scan ${1%MOT1} ${2:begin1} ${3:end1} ${4%MOT2} ${5:begin2} ${6:end2} ${7%MOT3} ${8:begin3} ${9:end3} ${10%MOT4} ${11:begin4} ${12:end4} ${13%MOT5} ${14:begin5} ${15:end5} ${16:steps} ${17:sec} # five-motor absolute-position scan',
+    d5scan: 'd5scan ${1%MOT1} ${2:begin1} ${3:end1} ${4%MOT2} ${5:begin2} ${6:end2} ${7%MOT3} ${8:begin3} ${9:end3} ${10%MOT4} ${11:begin4} ${12:end4} ${13%MOT5} ${14:begin5} ${15:end5} ${16:steps} ${17:sec} # five-motor relative-position scan',
+    mesh: 'mesh ${1%MOT1} ${2:begin1} ${3:end1} ${4:step1} ${5%MOT2} ${6:begin2} ${7:end2} ${8:steps2} ${9:sec} # nested two-motor absolute-position scan that scanned over a grid of points',
+    dmesh: 'dmesh ${1%MOT1} ${2:begin1} ${3:end1} ${4:step1} ${5%MOT2} ${6:begin2} ${7:end2} ${8:steps2} ${9:sec} # nested two-motor relative-position scan that scanned over a grid of points',
+};
 
 /**
  * Provider for symbols that spec system manages.
@@ -70,7 +73,7 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
                 this.updateMnemonicStorage(spec.COUNTER_URI);
                 this.updateSnippetStorage();
             }
-            if (event.affectsConfiguration('spec-command.editor.codeSnippets')) {
+            if (event.affectsConfiguration('spec-command.suggest.codeSnippets')) {
                 this.updateSnippetStorage();
             }
         };
@@ -158,32 +161,31 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
     private updateSnippetStorage() {
         const refMap: spec.ReferenceMap = new Map();
 
-        const userTemplates: string[] = vscode.workspace.getConfiguration('spec-command.editor').get('codeSnippets', []);
-        const templates = SNIPPET_TEMPLATES.concat(userTemplates);
+        const userTemplates = vscode.workspace.getConfiguration('spec-command.suggest').get<Record<string, string>>('codeSnippets');
+        const templates = (userTemplates && Object.keys(userTemplates).length) ? Object.assign({}, SNIPPET_TEMPLATES, userTemplates) : SNIPPET_TEMPLATES;
 
         const motorRefMap = this.storageCollection.get(spec.MOTOR_URI)?.get(spec.ReferenceItemKind.Enum);
         const counterRefMap = this.storageCollection.get(spec.COUNTER_URI)?.get(spec.ReferenceItemKind.Enum);
         const motorChoiceString = (motorRefMap && motorRefMap.size > 0) ?
             '|' + [...motorRefMap.keys()].join(',') + '|' :
-            ':motor';
+            ':motor$1';
         const counterChoiceString = (counterRefMap && counterRefMap.size > 0) ?
             '|' + [...counterRefMap.keys()].join(',') + '|' :
-            ':counter';
+            ':counter$1';
 
         // 'mv ${1%MOT} ${2:pos} # motor move' -> Array ["mv ${1%MOT} ${2:pos} # motor move", "mv ${1%MOT} ${2:pos}", "mv", "# motor move", "motor move"]
-        const mainRegexp = /^(([a-zA-Z_][a-zA-Z0-9_]*)\s+[^#]+?)\s*(#\s*(.*))?$/;
-        const motorRegexp = /%MOT/g;
-        const counterRegexp = /%CNT/g;
-        const placeHolderRegexp = /\${\d+:([^{}]+)}/g;
-        const choiceRegexp = /\${\d+\|[^|]+\|}/g;
+        const mainRegExp = /^([^#]+?)\s*(?:#\s*(.*))?$/;
+        const motorRegExp = /%MOT(\d*)/g;
+        const counterRegExp = /%CNT(\d*)/g;
+        const placeHolderRegExp = /\${\d+:([^{}]+)}/g;
+        const choiceRegExp = /\${\d+\|[^|]+\|}/g;
 
-        for (const template of templates) {
-            const matches = template.match(mainRegexp);
+        for (const [key, value] of Object.entries(templates)) {
+            const matches = value.match(mainRegExp);
             if (matches) {
-                const key = matches[2];
-                const signature = matches[1].replace(motorRegexp, ':motor').replace(counterRegexp, ':counter').replace(placeHolderRegexp, '$1').replace(choiceRegexp, 'choice');
-                const snippet = matches[1].replace(motorRegexp, motorChoiceString).replace(counterRegexp, counterChoiceString);
-                const description = matches[4];
+                const signature = matches[1].replace(motorRegExp, ':motor$1').replace(counterRegExp, ':counter$1').replace(placeHolderRegExp, '$1').replace(choiceRegExp, 'choice');
+                const snippet = matches[1].replace(motorRegExp, motorChoiceString).replace(counterRegExp, counterChoiceString);
+                const description = matches[2];
                 refMap.set(key, { signature, description, snippet });
             }
         }
