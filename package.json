@@ -3,7 +3,7 @@
 	"name": "spec-command",
 	"displayName": "spec command",
 	"description": "spec command file support for VS Code",
-	"version": "1.6.0-alpha.20210820",
+	"version": "1.6.0-alpha.20210825",
 	"engines": {
 		"vscode": "^1.59.0"
 	},
@@ -135,7 +135,7 @@
 				"spec-command.showReferenceManualInPreview": {
 					"type": "boolean",
 					"default": true,
-					"description": "Shows a preview (Webview created by built-in Markdown extension) in addition to a markdown source after \"Open Reference Manual\" command is invoked."
+					"markdownDescription": "Shows a preview (Webview created by built-in Markdown extension) in addition to a markdown source after [Open Reference Manual](command:spec-command.openReferenceManual) command is invoked."
 				},
 				"spec-command.editor.hintVolume.hover": {
 					"type": "string",
@@ -179,7 +179,8 @@
 				"spec-command.mnemonic.motors": {
 					"type": "array",
 					"default": [],
-					"markdownDescription": "Lists motor mnemonics, which will be used by IntelliSence and code snippets. One can optionally add the description after `#` letter. Example: `tth # Detector's two-theta angle`.",
+					"markdownDescription": "Lists motor mnemonics, which will be used by IntelliSense and code snippets. One can optionally add the description after `#` letter. Example: `tth # Detector's two-theta angle`.",
+					"markdownDeprecationMessage": "**Deprecated**: Please use `#spec-command.suggest.motors#` instead.",
 					"items": {
 						"type": "string",
 						"pattern": "^([a-zA-Z_][a-zA-Z0-9_]{0,6})\\s*(#\\s*(.*))?$"
@@ -190,11 +191,36 @@
 					"default": [
 						"sec # count time in second"
 					],
-					"markdownDescription": "Lists counter mnemonics, which will be used by IntelliSence and code snippets. One can optionally add the descriptions after `#` letter. Example: `sec # count time in second`.",
+					"markdownDescription": "Lists counter mnemonics, which will be used by IntelliSense and code snippets. One can optionally add the descriptions after `#` letter. Example: `sec # count time in second`.",
+					"markdownDeprecationMessage": "**Deprecated**: Please use `#spec-command.suggest.counters#` instead.",
 					"items": {
 						"type": "string",
 						"pattern": "^([a-zA-Z_][a-zA-Z0-9_]{0,6})\\s*(#\\s*(.*))?$"
 					}
+				},
+				"spec-command.suggest.motors": {
+					"type": "object",
+					"markdownDescription": "Lists key-value (mnemonic-explanatory text) pairs of motors, which are used by IntelliSense code suggestion.",
+					"default": {},
+					"patternProperties": {
+						"^[a-zA-Z_][a-zA-Z0-9_]{0,6}$": {
+							"type": "string"
+						}
+					},
+					"additionalProperties": false
+				},
+				"spec-command.suggest.counters": {
+					"type": "object",
+					"markdownDescription": "Lists key-value (mnemonic-explanatory text) pairs of counters, are be used by IntelliSense code suggestion.",
+					"default": {
+						"sec": "count time in second"
+					},
+					"patternProperties": {
+						"^[a-zA-Z_][a-zA-Z0-9_]{0,6}$": {
+							"type": "string"
+						}
+					},
+					"additionalProperties": false
 				},
 				"spec-command.workspace.inclusiveFilePattern": {
 					"type": "string",

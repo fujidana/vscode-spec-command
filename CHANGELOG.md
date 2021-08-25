@@ -4,9 +4,19 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+### Changed
+
+- Redesign the configuration properties for motor/counter mnemonics
+  - Added:
+    - `spec-command.suggest.motors`
+    - `spec-command.suggest.counters`
+  - Deprecated:
+    - `spec-command.mnemonic.motors`
+    - `spec-command.mnemonic.counters`
+
 ## [1.5.1] - 2021-08-19
 
-### security
+### Security
 
 - Fix a typo in untrusted workspace settings. Contrary to the expectation, previosuly the `spec-command.command.filePathPrefixInTerminal` option was not disabled in unstrusted workspaces.
 
@@ -19,10 +29,17 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 ### Changed
 
 - Change the extension identifier from `vscode-spec` to `spec-command` and eliminate features for log files (Another extension, `spec-log`, has succeeded the features.)
-- Change the prefix of the configuration identifiers from `vscode-spec` to `spec-command`
+- Change the prefix of the configuration properties from `vscode-spec` to `spec-command`
 - Change the language identifier of __spec__ command files from `spec-cmd` to `spec-command`.
 - Make "Open Reference Manual" command callable whether __spec__ command file is selected or not.
 - Use references to built-in icons instead of SVG files bundled with the extension for editor toolbar.
+- Remove the following deprecated contriution properties:
+  - `vscode-spec.mnemonic.motor.descriptions`
+  - `vscode-spec.mnemonic.motor.labels`
+  - `vscode-spec.mnemonic.motor.descriptions`
+  - `vscode-spec.mnemonic.counter.labels`
+  - `vscode-spec.mnemonic.motor.descriptions`
+
 
 ### Fixed
 
@@ -51,7 +68,7 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 - Eliminate non-physical files (for example, virtual files in a git repository) from IntelliSense targets.
 - Change the language identifier of __spec__ command files from `spec-macro` to `spec-cmd`.
 - Refine syntax highlighting rules to __spec__ log files.
-- Update Node.js packages, including migration of diagnostic engine from pegjs to peggy.
+- Update Node.js packages, including migration of the diagnostic engine from pegjs to peggy.
 
 ## [1.3.0] - 2021-05-25
 
@@ -81,8 +98,21 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Added
 
-- a setting for user-defined code snippets that may include a placeholder for a motor or counter mnemonic
-- built-in functions documented only in [CSS - spec help pages](https://certif.com/spec_help/index.html) (not in spec_manA4.pdf) into IntelliSence database: hdf5, taco (esrf), tango, epics, etc. into IntelliSense database.
+- a setting for user-defined code snippets that may include a placeholder for a motor or counter mnemonic (configuration parameter: `vscode-spec.editor.codeSnippets`)
+- built-in functions documented only in [CSS - spec help pages](https://certif.com/spec_help/index.html) (not in spec_manA4.pdf) into IntelliSense database: hdf5, taco (esrf), tango, epics, etc. into IntelliSense database.
+
+### Changed
+
+- Redesign the configuration properties for motor/counter mnemonics.
+  - Added:
+    - `vscode-spec.mnemonic.motors`
+    - `vscode-spec.mnemonic.conters`
+  - Deprecated:
+    - `vscode-spec.mnemonic.motor.descriptions`
+    - `vscode-spec.mnemonic.motor.labels`
+    - `vscode-spec.mnemonic.motor.descriptions`
+    - `vscode-spec.mnemonic.counter.labels`
+    - `vscode-spec.mnemonic.motor.descriptions`
 
 ## [1.1.4] - 2020-10-05
 
@@ -109,8 +139,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Fixed
 
-- a bug that caused duplicated user-defined symbols in IntelliSence. This occurred when a file whose URI scheme is not `file` (e.g., a virtual file in a `git` repository) was opened.
-- a bug that prevented updating IntelliSence database after file rename
+- a bug that caused duplicated user-defined symbols in IntelliSense. This occurred when a file whose URI scheme is not `file` (e.g., a virtual file in a `git` repository) was opened.
+- a bug that prevented updating IntelliSense database after file rename
 
 ## [1.1.1] - 2020-04-07
 
@@ -138,7 +168,7 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 ### Changed
 
 - Redesign configuration settings:
-  - change the identifier prefix from `spec` to `vscode-spec` (so as to match the extension ID)
+  - change the property prefix from `spec` to `vscode-spec` (so as to match the extension ID)
   - improve support for multi-root workspaces
   - contribute settings to filter files in workspaces. Now all `*.mac` files in workspaces are scanned to pick up global symbols but are not diagnosed by default.
   - contribute a path prefix setting for "Run File in Terminal" command

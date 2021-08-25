@@ -21,7 +21,7 @@ Use [GitHub issues](https://github.com/fujidana/vscode-spec-command/issues) for 
 ## NOTICE for previous version users
 
 Recent versions of __spec__ language support (`vscode-spec`) supported both __spec__ command files and __spec__ log files.
-However, it may be not a rare cases in which files of either kind are only opened in a workspace.
+However, it may be not a rare case in which files of either kind are only opened in a workspace.
 VS Code loads an extension into memory at the first time a file the extension supports is being opened and thus, building independent extensions based on the file type looks a better implementation manner.
 For this reason (and also for another reasons such as ease of maintenance and expandability to new features), the developer has decided to split the extension into two; one is for __spec__ command files (both the exention identifier and language identifier are `spec-command`) and the other is for __spec__ log file (`spec-log`).
 
@@ -111,7 +111,7 @@ This extension contributes the follwing settings, which are configurable from th
 
 * `spec-command.editor.hintVolume.*` - controls the volume of explanatory text shown by IntelliSense features.
 * `spec-command.editor.codeSnippets` - provides a place to add code snippet templates that include motor/counter mnemonics in TextMate snippet syntax. Snippets for `mv`, `mvr`, `umv`, `umvr`, `ascan`, `dscan`, `a2scan`, `d2scan`, `a3scan`, `d3scan`, `a4scan`, `d4scan`, and `mesh` are provided by default and thus, users does not need to add it. Read [Snippets in Visual Studio Code](https://code.visualstudio.com/docs/editor/userdefinedsnippets) for other information about the syntax. In addition, `%MOT` and `%CNT` are avaiable as the placeholders of motor/counter mnemonics, respectively. Optionally, a description can be added after a hash sign (`#`). Example: `mv ${1%MOT} ${2:pos} # absolute move`.
-* `spec-command.mnemonic.motors`, `spec-command.mnemonic.counters` - registers motor/counter mnemonics and optionally their descriptions after `#` letter. They are used by IntelliSense features and code snippets above.  Example: `tth # two-theta angle`.
+* `spec-command.suggest.motors`, `spec-command.suggest.counters` - registers motor/counter mnemonics and  their explanatory texts as the keys and the values. They are used by IntelliSense features including code snippets above.
 * `spec-command.workspace.*` - controls the rule to scan files in workspace.
 * `spec-command.command.filePathPrefixInTerminal` - specifies file path prefix used in "Run File in Active Terminal" command.
 

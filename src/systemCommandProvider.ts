@@ -24,8 +24,9 @@ const SNIPPET_TEMPLATES: string[] = [
     'a3scan ${1%MOT} ${2:begin1} ${3:end1} ${4%MOT} ${5:begin2} ${6:end2} ${7%MOT} ${8:begin3} ${9:end3} ${10:steps} ${11:sec} # single-motor absolute-position scan',
     'd3scan ${1%MOT} ${2:begin1} ${3:end1} ${4%MOT} ${5:begin2} ${6:end2} ${7%MOT} ${8:begin3} ${9:end3} ${10:steps} ${11:sec} # single-motor relative-position scan',
     'a4scan ${1%MOT} ${2:begin1} ${3:end1} ${4%MOT} ${5:begin2} ${6:end2} ${7%MOT} ${8:begin3} ${9:end3} ${10%MOT} ${11:begin4} ${12:end4} ${13:steps} ${14:sec} # four-motor absolute-position scan',
-    'd4scan ${1%MOT} ${2:begin1} ${3:end1} ${4%MOT} ${5:begin2} ${6:end2} ${7%MOT} ${8:begin3} ${9:end3} ${10%MOT} ${11:begin4} ${12:end4} ${13:steps} ${14:sec} # four-motor relative-position sca',
+    'd4scan ${1%MOT} ${2:begin1} ${3:end1} ${4%MOT} ${5:begin2} ${6:end2} ${7%MOT} ${8:begin3} ${9:end3} ${10%MOT} ${11:begin4} ${12:end4} ${13:steps} ${14:sec} # four-motor relative-position scan',
 ];
+
 /**
  * Provider for symbols that spec system manages.
  * This class manages built-in symbols and motor mnemonics user added in VS Code configuraion.
@@ -55,21 +56,18 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
         });
 
         // register motor and counter mnemonic storages and snippet storage.
-        this.storageCollection.set(spec.MOTOR_URI, new Map([[spec.ReferenceItemKind.Enum, new Map()]]));
-        this.storageCollection.set(spec.COUNTER_URI, new Map([[spec.ReferenceItemKind.Enum, new Map()]]));
-        this.storageCollection.set(spec.SNIPPET_URI, new Map([[spec.ReferenceItemKind.Snippet, new Map()]]));
-        this.updateMnemonicStorage(spec.MOTOR_URI, 'motors');
-        this.updateMnemonicStorage(spec.COUNTER_URI, 'counters');
+        this.updateMnemonicStorage(spec.MOTOR_URI);
+        this.updateMnemonicStorage(spec.COUNTER_URI);
         this.updateSnippetStorage();
 
         // observe the change in configuration
         const configurationChangeListener = (event: vscode.ConfigurationChangeEvent) => {
-            if (event.affectsConfiguration('spec-command.mnemonic.motors')) {
-                this.updateMnemonicStorage(spec.MOTOR_URI, 'motors');
+            if (event.affectsConfiguration('spec-command.suggest.motors')) {
+                this.updateMnemonicStorage(spec.MOTOR_URI);
                 this.updateSnippetStorage();
             }
-            if (event.affectsConfiguration('spec-command.mnemonic.counters')) {
-                this.updateMnemonicStorage(spec.COUNTER_URI, 'counters');
+            if (event.affectsConfiguration('spec-command.suggest.counters')) {
+                this.updateMnemonicStorage(spec.COUNTER_URI);
                 this.updateSnippetStorage();
             }
             if (event.affectsConfiguration('spec-command.editor.codeSnippets')) {
@@ -83,7 +81,7 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
                 const quickPickItems = [{ key: 'all', label: '$(references) all' }];
                 for (const itemKind of storage.keys()) {
                     const metadata = spec.getReferenceItemKindMetadata(itemKind);
-                    quickPickItems.push({key:metadata.label, label: `$(${metadata.iconIdentifier}) ${metadata.label}`});
+                    quickPickItems.push({ key: metadata.label, label: `$(${metadata.iconIdentifier}) ${metadata.label}` });
                 }
                 vscode.window.showQuickPick(quickPickItems).then(quickPickItem => {
                     if (quickPickItem) {
@@ -101,7 +99,6 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
                                 });
                             }
                         });
-                        
                     }
                 });
             };
@@ -120,8 +117,7 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
                     vscode.window.showErrorMessage('Timeout. The API reference database is not loaded at the moment.');
                 }
                 trial++;
-            }
-            , 50);
+            }, 50);
         };
 
         context.subscriptions.push(
@@ -138,24 +134,20 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
      * Update the contents of motor or counter mnemonic storage.
      * Invoked when initialization completed or configuration modified. 
      */
-    private updateMnemonicStorage(uriString: string, sectionString: string) {
-        const enumRefMap = this.storageCollection.get(uriString)?.get(spec.ReferenceItemKind.Enum);
-        if (!enumRefMap) { return; }
-        enumRefMap.clear();
+    private updateMnemonicStorage(uriString: string) {
+        const refMap: spec.ReferenceMap = new Map();
+        const sectionString = (uriString === spec.MOTOR_URI) ? 'motors' : 'counters';
 
-        const mneStrings: string[] = vscode.workspace.getConfiguration('spec-command.mnemonic').get(sectionString, []);
-
-        if (mneStrings.length > 0) {
-            // 'tth # two-theta' -> Array ["tth # two-theta", "tth", " # two-theta", "two-theta"]
-            const regexp = /^([a-zA-Z_][a-zA-Z0-9_]{0,6})\s*(#\s*(.*))?$/;
-
-            for (const mneString of mneStrings) {
-                const matches = mneString.match(regexp);
-                if (matches) {
-                    enumRefMap.set(matches[1], { signature: matches[1], description: matches[3] });
+        const record = vscode.workspace.getConfiguration('spec-command.suggest').get<Record<string, string>>(sectionString);
+        if (record) {
+            const regExp = /^[a-zA-Z_][a-zA-Z0-9_]{0,6}$/;
+            for (const [key, value] of Object.entries(record)) {
+                if (regExp.test(key)) {
+                    refMap.set(key, { signature: key, description: value });
                 }
             }
         }
+        this.storageCollection.set(uriString, new Map([[spec.ReferenceItemKind.Enum, refMap]]));
         this.updateCompletionItemsForUriString(uriString);
     }
 
@@ -164,20 +156,18 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
      * Invoked when initialization completed or configuration modified. 
      */
     private updateSnippetStorage() {
-        const snippetRefMap = this.storageCollection.get(spec.SNIPPET_URI)?.get(spec.ReferenceItemKind.Snippet);
-        if (!snippetRefMap) { return; }
-        snippetRefMap.clear();
+        const refMap: spec.ReferenceMap = new Map();
 
-        const userSnippetStrings: string[] = vscode.workspace.getConfiguration('spec-command.editor').get('codeSnippets', []);
-        const snippetStrings = SNIPPET_TEMPLATES.concat(userSnippetStrings);
+        const userTemplates: string[] = vscode.workspace.getConfiguration('spec-command.editor').get('codeSnippets', []);
+        const templates = SNIPPET_TEMPLATES.concat(userTemplates);
 
-        const motorEnumRefMap = this.storageCollection.get(spec.MOTOR_URI)?.get(spec.ReferenceItemKind.Enum);
-        const counterEnumRefMap = this.storageCollection.get(spec.COUNTER_URI)?.get(spec.ReferenceItemKind.Enum);
-        const motorChoiceString = (motorEnumRefMap && motorEnumRefMap.size > 0) ?
-            '|' + Array.from(motorEnumRefMap.keys()).join(',') + '|' :
+        const motorRefMap = this.storageCollection.get(spec.MOTOR_URI)?.get(spec.ReferenceItemKind.Enum);
+        const counterRefMap = this.storageCollection.get(spec.COUNTER_URI)?.get(spec.ReferenceItemKind.Enum);
+        const motorChoiceString = (motorRefMap && motorRefMap.size > 0) ?
+            '|' + [...motorRefMap.keys()].join(',') + '|' :
             ':motor';
-        const counterChoiceString = (counterEnumRefMap && counterEnumRefMap.size > 0) ?
-            '|' + Array.from(counterEnumRefMap.keys()).join(',') + '|' :
+        const counterChoiceString = (counterRefMap && counterRefMap.size > 0) ?
+            '|' + [...counterRefMap.keys()].join(',') + '|' :
             ':counter';
 
         // 'mv ${1%MOT} ${2:pos} # motor move' -> Array ["mv ${1%MOT} ${2:pos} # motor move", "mv ${1%MOT} ${2:pos}", "mv", "# motor move", "motor move"]
@@ -187,17 +177,17 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
         const placeHolderRegexp = /\${\d+:([^{}]+)}/g;
         const choiceRegexp = /\${\d+\|[^|]+\|}/g;
 
-        for (const snippetString of snippetStrings) {
-            const matches = snippetString.match(mainRegexp);
+        for (const template of templates) {
+            const matches = template.match(mainRegexp);
             if (matches) {
-                const snippetKey = matches[2];
-                const snippetSignature = matches[1].replace(motorRegexp, ':motor').replace(counterRegexp, ':counter').replace(placeHolderRegexp, '$1').replace(choiceRegexp, 'choice');
-                const snippetCode = matches[1].replace(motorRegexp, motorChoiceString).replace(counterRegexp, counterChoiceString);
-                const snippetDesription = matches[4];
-
-                snippetRefMap.set(snippetKey, { signature: snippetSignature, description: snippetDesription, snippet: snippetCode });
+                const key = matches[2];
+                const signature = matches[1].replace(motorRegexp, ':motor').replace(counterRegexp, ':counter').replace(placeHolderRegexp, '$1').replace(choiceRegexp, 'choice');
+                const snippet = matches[1].replace(motorRegexp, motorChoiceString).replace(counterRegexp, counterChoiceString);
+                const description = matches[4];
+                refMap.set(key, { signature, description, snippet });
             }
         }
+        this.storageCollection.set(spec.SNIPPET_URI, new Map([[spec.ReferenceItemKind.Snippet, refMap]]));
         this.updateCompletionItemsForUriString(spec.SNIPPET_URI);
     }
 
