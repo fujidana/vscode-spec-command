@@ -1,6 +1,10 @@
 import * as vscode from 'vscode';
 import * as spec from './spec';
 
+interface SuppressMessagesConfig {
+    'completionItemLabelDetail': boolean
+    'completionItemLabelDescription': boolean
+}
 
 function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceItemKind, itemUriString: string, documentUriString: string, outputsMarkdown: true): vscode.MarkdownString;
 function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceItemKind, itemUriString: string, documentUriString: string, outputsMarkdown: false): string;
@@ -142,21 +146,27 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
     protected updateCompletionItemsForUriString(uriString: string) : vscode.CompletionItem[] | undefined {
         const storage = this.storageCollection.get(uriString);
         if (storage) {
-            let filePath: string | undefined;
+            const config = vscode.workspace.getConfiguration('spec-command.suggest').get<Partial<SuppressMessagesConfig>>('suppressMessages');
+            let description: string | undefined;
 
-            if (uriString === spec.BUILTIN_URI) {
-                filePath = 'built-in';
-            } else if (uriString === spec.MOTOR_URI) {
-                filePath = 'motor';
-            } else if (uriString === spec.COUNTER_URI) {
-                filePath = 'counter';
-            } else if (uriString === spec.SNIPPET_URI) {
-                filePath = 'snippet';
-            } else if (uriString === spec.ACTIVE_FILE_URI || uriString === vscode.window.activeTextEditor?.document.uri.toString()) {
-                filePath = 'this file';
-            } else {
-                const itemUri = vscode.Uri.parse(uriString);
-                filePath = (itemUri.scheme === 'file') ? vscode.workspace.asRelativePath(itemUri) : uriString;
+            const suppressDetail = config?.completionItemLabelDetail !== undefined && config.completionItemLabelDescription === true;
+            const suppressDescription = config?.completionItemLabelDescription !== undefined && config.completionItemLabelDescription === true;
+
+            if (!suppressDescription) {
+                if (uriString === spec.BUILTIN_URI) {
+                    description = 'built-in';
+                } else if (uriString === spec.MOTOR_URI) {
+                    description = 'motor';
+                } else if (uriString === spec.COUNTER_URI) {
+                    description = 'counter';
+                } else if (uriString === spec.SNIPPET_URI) {
+                    description = 'snippet';
+                } else if (uriString === spec.ACTIVE_FILE_URI || uriString === vscode.window.activeTextEditor?.document.uri.toString()) {
+                    description = 'this file';
+                } else {
+                    const itemUri = vscode.Uri.parse(uriString);
+                    description = (itemUri.scheme === 'file') ? vscode.workspace.asRelativePath(itemUri) : uriString;
+                }
             }
 
             const completionItems: vscode.CompletionItem[] = [];
@@ -164,8 +174,8 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
                 const metadata = spec.getReferenceItemKindMetadata(itemKind);
                 const completionItemKind = metadata.completionItemKind;
                 for (const [identifier, item] of map.entries()) {
-                    const signatue = item.signature.startsWith(identifier) ? item.signature.substr(identifier.length) : undefined;
-                    const label: vscode.CompletionItemLabel = { label: identifier, detail: signatue, description: filePath };
+                    const detail = (!suppressDetail && item.signature.startsWith(identifier)) ? item.signature.substr(identifier.length) : undefined;
+                    const label: vscode.CompletionItemLabel = { label: identifier, detail: detail, description: description };
                     const completionItem = new vscode.CompletionItem(label, completionItemKind);
                     // embed `uriString` into `detail` property in order to resolve it later efficiently.
                     completionItem.detail = uriString;

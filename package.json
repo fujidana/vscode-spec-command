@@ -177,6 +177,27 @@
 						"pattern": "^(([a-zA-Z_][a-zA-Z0-9_]*)\\s+[^#]+?)\\s*(#\\s*(.*))?$"
 					}
 				},
+				"spec-command.suggest.suppressMessages": {
+					"type": "object",
+					"markdownDescription": "Suppresses messages shown in code completion.",
+					"default": {
+						"completionItemLabelDetail": false,
+						"completionItemLabelDescription": false
+					},
+					"properties": {
+						"completionItemLabelDetail": {
+							"type": "boolean",
+							"default": false,
+							"description": "Suppresses the detail of unresolved completion item labels, where parameters of functions are typically shown."
+						},
+						"completionItemLabelDescription": {
+							"type": "boolean",
+							"default": false,
+							"description": "Suppresses the description of unresolved completion item labels, where file paths are typically shown."
+						}
+					},
+					"additionalProperties": false
+				},
 				"spec-command.mnemonic.motors": {
 					"type": "array",
 					"default": [],
