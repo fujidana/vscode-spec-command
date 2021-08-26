@@ -142,11 +142,30 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
     protected updateCompletionItemsForUriString(uriString: string) : vscode.CompletionItem[] | undefined {
         const storage = this.storageCollection.get(uriString);
         if (storage) {
+            let filePath: string | undefined;
+
+            if (uriString === spec.BUILTIN_URI) {
+                filePath = 'built-in';
+            } else if (uriString === spec.MOTOR_URI) {
+                filePath = 'motor';
+            } else if (uriString === spec.COUNTER_URI) {
+                filePath = 'counter';
+            } else if (uriString === spec.SNIPPET_URI) {
+                filePath = 'snippet';
+            } else if (uriString === spec.ACTIVE_FILE_URI || uriString === vscode.window.activeTextEditor?.document.uri.toString()) {
+                filePath = 'this file';
+            } else {
+                const itemUri = vscode.Uri.parse(uriString);
+                filePath = (itemUri.scheme === 'file') ? vscode.workspace.asRelativePath(itemUri) : uriString;
+            }
+
             const completionItems: vscode.CompletionItem[] = [];
             for (const [itemKind, map] of storage.entries()) {
-                const completionItemKind = spec.getReferenceItemKindMetadata(itemKind).completionItemKind;
+                const metadata = spec.getReferenceItemKindMetadata(itemKind);
+                const completionItemKind = metadata.completionItemKind;
                 for (const [identifier, item] of map.entries()) {
-                    const label: vscode.CompletionItemLabel = { label: identifier };
+                    const signatue = item.signature.startsWith(identifier) ? item.signature.substr(identifier.length) : undefined;
+                    const label: vscode.CompletionItemLabel = { label: identifier, detail: signatue, description: filePath };
                     const completionItem = new vscode.CompletionItem(label, completionItemKind);
                     // embed `uriString` into `detail` property in order to resolve it later efficiently.
                     completionItem.detail = uriString;
