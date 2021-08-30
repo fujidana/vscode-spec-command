@@ -130,11 +130,20 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
     protected readonly completionItemCollection = new Map<string, vscode.CompletionItem[]>();
 
     constructor(context: vscode.ExtensionContext) {
+        const configurationChangeListener = (event: vscode.ConfigurationChangeEvent) => {
+            if (event.affectsConfiguration('spec-command.suggest.suppressMessages')) {
+                for (const uriString of this.storageCollection.keys()) {
+                    this.updateCompletionItemsForUriString(uriString);
+                }
+            }
+        };
+
         // register providers
         context.subscriptions.push(
             vscode.languages.registerCompletionItemProvider(spec.CMD_SELECTOR, this),
-            vscode.languages.registerSignatureHelpProvider(spec.CMD_SELECTOR, this, '(', ')', ','),
             vscode.languages.registerHoverProvider(spec.CMD_SELECTOR, this),
+            vscode.languages.registerSignatureHelpProvider(spec.CMD_SELECTOR, this, '(', ')', ','),
+            vscode.workspace.onDidChangeConfiguration(configurationChangeListener),
         );
     }
 
