@@ -71,7 +71,7 @@ function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position
                     // register arguments of function as variables if the cursor is in the function block.
                     for (const param of currentNode.params) {
                         if (param.type === 'Identifier') {
-                            refItem = { signature: param.name, location: currentNode.loc as IFileRange};
+                            refItem = { signature: param.name, location: currentNode.loc as IFileRange };
                             variableRefMap.set(param.name, refItem);
                         }
                     }
@@ -108,7 +108,7 @@ function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position
                             if (declarator.init && declarator.init.type === 'Literal') {
                                 signatureStr += ' = ' + declarator.init.raw;
                             }
-                            refItem = { signature: signatureStr, location: currentNode.loc as IFileRange};
+                            refItem = { signature: signatureStr, location: currentNode.loc as IFileRange };
                             if (currentNode.kind === 'const') {
                                 constantRefMap.set(declarator.id.name, refItem);
                             } else {
@@ -157,15 +157,24 @@ async function findFilesInWorkspaces() {
 
     if (workspaceFolders) {
         for (const workspaceFolder of workspaceFolders) {
-            const config = vscode.workspace.getConfiguration('spec-command.workspace', workspaceFolder);
-            const inclusivePatternStr = config.get<string>('inclusiveFilePattern', '**/*.mac');
-            const exclusivePatternStr = config.get<string>('exclusiveFilePattern', '');
-            const diagnoseProblems = config.get<boolean>('diagnoseProblems', false);
-            const inclusivePattern = new vscode.RelativePattern(workspaceFolder, inclusivePatternStr);
-            const exclusivePattern = (exclusivePatternStr.length > 0) ? new vscode.RelativePattern(workspaceFolder, exclusivePatternStr) : undefined;
-            const uris = await vscode.workspace.findFiles(inclusivePattern, exclusivePattern);
-            for (const uri of uris) {
-                map.set(uri.toString(), { diagnoseProblems });
+            const diagnoseProblems = vscode.workspace.getConfiguration('spec-command.workspace', workspaceFolder).get<boolean>('diagnoseProblems', false);
+
+            // refer to `files.associations` configuration property
+            const additionalAssociations = vscode.workspace.getConfiguration('files', workspaceFolder).get<Record<string, string>>('associations');
+            // merge the key-value pairs. If a user defines '*.mac' key, its value overwrites the default setting.
+            const associations = Object.assign({ '*.mac': 'spec-command' }, additionalAssociations);
+
+            for (const [key, value] of Object.entries(associations)) {
+                const inclusivePattern = new vscode.RelativePattern(workspaceFolder, (key.includes('/') ? key : `**/${key}`));
+                if (value === 'spec-command') {
+                    for (const uri of await vscode.workspace.findFiles(inclusivePattern)) {
+                        map.set(uri.toString(), { diagnoseProblems });
+                    }
+                } else {
+                    for (const uri of await vscode.workspace.findFiles(inclusivePattern)) {
+                        map.delete(uri.toString());
+                    }
+                }
             }
         }
     }
@@ -372,7 +381,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
 
         // a hander invoked when the configuration is changed
         const onDidChangeConfigurationListener = (event: vscode.ConfigurationChangeEvent) => {
-            if (event.affectsConfiguration('spec-command.workspace')) {
+            if (event.affectsConfiguration('spec-command.workspace') || event.affectsConfiguration('files.associations')) {
                 this.refreshCollections();
             }
         };

@@ -4,24 +4,24 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+### Added
+
+- Shows more information (function arguments and file paths) in a list of auto completion items. This can be disabled with `spec-command.suggest.suppressMessages` key in the _Setting_ editor.
+
 ### Changed
 
-- Redesign the configuration properties to control the text volume of IntelliSense features. The old three properties shown below have been bundled in a single property, for space-saving in __Settings_ editor.
-  - Added:
-    - `spec-command.suggest.suppressMessages`
-  - Deprecated:
-    - `spec-command.editor.hintVolume.completionItem`
-    - `spec-command.editor.hintVolume.signatureHelp`
-    - `spec-command.editor.hintVolume.hover`
-- Redesign the configuration properties for motor/counter mnemonics. Using a new VS code feature, a user can set the properties as key-value pairs in _Settings_ editor (the previous properties consist of string arrays).
-  - Added:
-    - `spec-command.suggest.codeSnippets`
-    - `spec-command.suggest.motors`
-    - `spec-command.suggest.counters`
-  - Deprecated:
-    - `vscode-spec.editor.codeSnippets`
-    - `spec-command.mnemonic.motors`
-    - `spec-command.mnemonic.counters`
+- Redesign the configuration properties, leveraging recent updates on the Settings editor of VS Code.
+  - Deprecate the following properties and instead refer to the built-in VS Code properties to find files in current workspaces:
+    - ~~`spec-command.workspace.inclusiveFilePattern`~~ -> `files.associations`
+    - ~~`spec-command.workspace.exclusiveFilePattern`~~ -> `files.exclude`
+  - Bundle the following three properties that controls the hint volume into a single property, `spec-command.suggest.suppressMessages`:
+    - ~~`spec-command.editor.hintVolume.completionItem`~~
+    - ~~`spec-command.editor.hintVolume.signatureHelp`~~
+    - ~~`spec-command.editor.hintVolume.hover`~~
+  - Rename the folowing three properties and use key-value pairs instead of strings:
+    - ~~`spec-command.editor.codeSnippets`~~ -> `spec-command.suggest.codeSnippets`
+    - ~~`spec-command.mnemonic.motors`~~ -> `spec-command.suggest.motors`
+    - ~~`spec-command.mnemonic.counters`~~ -> `spec-command.suggest.counters`
 
 ## [1.5.1] - 2021-08-19
 

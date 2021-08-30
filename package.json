@@ -280,13 +280,15 @@
 					"type": "string",
 					"default": "**/*.mac",
 					"scope": "resource",
-					"markdownDescription": "Specifies a glob pattern used to find files in a workspace. Symbols in pattern-matched files becomes available in code navigation. See [VS Code API](https://code.visualstudio.com/api/references/vscode-api#GlobPattern) for the syntax."
+					"markdownDescription": "Specifies a glob pattern used to find files in a workspace. Symbols in pattern-matched files becomes available in code navigation. See [VS Code API](https://code.visualstudio.com/api/references/vscode-api#GlobPattern) for the syntax.",
+					"markdownDeprecationMessage": "**Deprecated**: Please use the built-in `#files.associations#` property, instead."
 				},
 				"spec-command.workspace.exclusiveFilePattern": {
 					"type": "string",
 					"default": "",
 					"scope": "resource",
-					"markdownDescription": "Specifies a glob pattern used to exclude files in a workspace from being parsed. See [VS Code API](https://code.visualstudio.com/api/references/vscode-api#GlobPattern) for the syntax."
+					"markdownDescription": "Specifies a glob pattern used to exclude files in a workspace from being parsed. See [VS Code API](https://code.visualstudio.com/api/references/vscode-api#GlobPattern) for the syntax.",
+					"markdownDeprecationMessage": "**Deprecated**: Please use the built-in `#files.exclude#` property, instead."
 				},
 				"spec-command.workspace.diagnoseProblems": {
 					"type": "boolean",
