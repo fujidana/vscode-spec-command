@@ -254,7 +254,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         };
 
         // a hander invoked when the document is changed
-        const onDidChangeTextDocumentListener = (event: vscode.TextDocumentChangeEvent) => {
+        const textDocumentChangeListener = (event: vscode.TextDocumentChangeEvent) => {
             const document = event.document;
             if (vscode.languages.match(spec.CMD_SELECTOR, document)) {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
@@ -264,14 +264,14 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
 
         // a hander invoked when the document is opened
         // this is also invoked after the user manually changed the language id
-        const onDidOpenTextDocumentListener = (document: vscode.TextDocument) => {
+        const textDocumentOpenListener = (document: vscode.TextDocument) => {
             if (vscode.languages.match(spec.CMD_SELECTOR, document)) {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
             }
         };
 
         // a hander invoked when the document is saved
-        const onDidSaveTextDocumentListener = (document: vscode.TextDocument) => {
+        const textDocumentSaveListener = (document: vscode.TextDocument) => {
             if (vscode.languages.match(spec.CMD_SELECTOR, document)) {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
             }
@@ -279,7 +279,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
 
         // a hander invoked when the document is closed
         // this is also invoked after the user manually changed the language id
-        const onDidCloseTextDocumentListener = async (document: vscode.TextDocument) => {
+        const textDocumentCloseListener = async (document: vscode.TextDocument) => {
             if (vscode.languages.match(spec.CMD_SELECTOR, document)) {
                 const uriString = document.uri.toString();
 
@@ -304,7 +304,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         };
 
         // // a hander invoked after files are created
-        // const onDidCreateFilesListener = async (event: vscode.FileCreateEvent) => {
+        // const fileCreateListener = async (event: vscode.FileCreateEvent) => {
         //     const filesInWorkspaces = await findFilesInWorkspaces();
 
         //     const newFiles: Map<string, { diagnoseProblems: boolean }> = new Map();
@@ -313,7 +313,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         // };
 
         // a hander invoked after files are renamed
-        const onDidRenameFilesListener = async (event: vscode.FileRenameEvent) => {
+        const fileRenameListener = async (event: vscode.FileRenameEvent) => {
             const filesInWorkspaces = await findFilesInWorkspaces();
             const oldFiles: Set<string> = new Set();
             const newFiles: Map<string, { diagnoseProblems: boolean }> = new Map();
@@ -349,7 +349,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         };
 
         // a hander invoked before files are deleted
-        const onWillDeleteFilesListener = async (event: vscode.FileWillDeleteEvent) => {
+        const fileWillDeleteListener = async (event: vscode.FileWillDeleteEvent) => {
             for (const oldUri of event.files) {
                 const promise = vscode.workspace.fs.stat(oldUri).then(
                     stat => {
@@ -372,7 +372,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
             }
         };
 
-        // const onDidChangeActiveTextEditorListener = (editor: vscode.TextEditor | undefined) => {
+        // const activeTextEditorChangeListener = (editor: vscode.TextEditor | undefined) => {
         //     if (editor) {
         //         const document = editor.document;
         //         this.parseDocumentContents(document.getText(), document.uri, true, true);
@@ -380,13 +380,13 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         // };
 
         // a hander invoked when the configuration is changed
-        const onDidChangeConfigurationListener = (event: vscode.ConfigurationChangeEvent) => {
+        const configurationChangeListener = (event: vscode.ConfigurationChangeEvent) => {
             if (event.affectsConfiguration('spec-command.workspace') || event.affectsConfiguration('files.associations') || event.affectsConfiguration('files.encoding')) {
                 this.refreshCollections();
             }
         };
 
-        const onDidChangeWorkspaceFoldersListener = (event: vscode.WorkspaceFoldersChangeEvent) => {
+        const workspaceFoldersChangeListener = (event: vscode.WorkspaceFoldersChangeEvent) => {
             this.refreshCollections();
         };
 
@@ -395,18 +395,18 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
             vscode.commands.registerCommand('spec-command.execSelectionInTerminal', execSelectionInTerminalCommandCallback),
             vscode.commands.registerCommand('spec-command.execFileInTerminal', execFileInTerminalCommandCallback),
             // register document-event listeners
-            vscode.workspace.onDidChangeTextDocument(onDidChangeTextDocumentListener),
-            vscode.workspace.onDidOpenTextDocument(onDidOpenTextDocumentListener),
-            vscode.workspace.onDidSaveTextDocument(onDidSaveTextDocumentListener),
-            vscode.workspace.onDidCloseTextDocument(onDidCloseTextDocumentListener),
-            // vscode.window.onDidChangeActiveTextEditor(onDidChangeActiveTextEditorListener),
+            vscode.workspace.onDidChangeTextDocument(textDocumentChangeListener),
+            vscode.workspace.onDidOpenTextDocument(textDocumentOpenListener),
+            vscode.workspace.onDidSaveTextDocument(textDocumentSaveListener),
+            vscode.workspace.onDidCloseTextDocument(textDocumentCloseListener),
+            // vscode.window.onDidChangeActiveTextEditor(activeTextEditorChangeListener),
             // register file-event listeners
-            // vscode.workspace.onDidCreateFiles(onDidCreateFilesListener),
-            vscode.workspace.onDidRenameFiles(onDidRenameFilesListener),
-            vscode.workspace.onWillDeleteFiles(onWillDeleteFilesListener),
+            // vscode.workspace.onDidCreateFiles(FileCreateListener),
+            vscode.workspace.onDidRenameFiles(fileRenameListener),
+            vscode.workspace.onWillDeleteFiles(fileWillDeleteListener),
             // register other event listeners
-            vscode.workspace.onDidChangeConfiguration(onDidChangeConfigurationListener),
-            vscode.workspace.onDidChangeWorkspaceFolders(onDidChangeWorkspaceFoldersListener),
+            vscode.workspace.onDidChangeConfiguration(configurationChangeListener),
+            vscode.workspace.onDidChangeWorkspaceFolders(workspaceFoldersChangeListener),
             // register providers
             vscode.languages.registerDefinitionProvider(spec.CMD_SELECTOR, this),
             vscode.languages.registerDocumentSymbolProvider(spec.CMD_SELECTOR, this),
