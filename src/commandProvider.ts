@@ -2,8 +2,11 @@ import * as vscode from 'vscode';
 import * as spec from './spec';
 
 interface SuppressMessagesConfig {
-    'completionItemLabelDetail': boolean
-    'completionItemLabelDescription': boolean
+    'completionItem.label.detail': boolean
+    'completionItem.label.description': boolean
+    'completionItem.documentation': boolean
+    'signatureHelp.signatures.documentation': boolean
+    'hover.contents': boolean
 }
 
 function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceItemKind, itemUriString: string, documentUriString: string, outputsMarkdown: true): vscode.MarkdownString;
@@ -50,26 +53,22 @@ function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceI
     }
 }
 
-function truncateString(settingKey: string, description?: string, comments?: string): string | undefined {
-    const config = vscode.workspace.getConfiguration('spec-command.editor.hintVolume');
-    const volume = config.get<string>(settingKey, '');
+function truncateString(truncationLevel: 0 | 1 | 2, description?: string, comments?: string): string | undefined {
     let truncatedString;
     if (description) {
-        if (volume === 'full') {
+        if (truncationLevel === 0) {
             truncatedString = description;
-        } else if (volume === 'paragraph') {
+        } else if (truncationLevel === 1) {
             const endIndex = description.indexOf('\n\n');
             truncatedString = (endIndex >= 0) ? description.substr(0, endIndex) + '\n\n...' : description;
-        } else if (volume === 'sentence') {
+        } else if (truncationLevel >= 2) {
             const endIndex = description.search(/\.\s/g);
             truncatedString = (endIndex >= 0) ? description.substr(0, endIndex) + '. ...' : description;
         }
     }
 
-    if (comments) {
-        if (volume === 'full' || volume === 'paragraph') {
-            truncatedString = (truncatedString) ? truncatedString + '\n\n' + comments : comments;
-        }
+    if (comments && truncationLevel < 2) {
+        truncatedString = truncatedString ? truncatedString + '\n\n' + comments : comments;
     }
 
     return truncatedString;
@@ -92,7 +91,7 @@ function parseSignatureInEditing(line: string, position: number) {
     // flatten paired parentheses:
     // from "parentfunc(sonfunc(a, b, c), daughterFunc(d, e"
     // to   "parentfunc(sonfunc_________, daughterFunc(d, e"
-    for (;;) {
+    for (; ;) {
         const newstr = substr.replace(/\([^()]*\)/g, substr => '_'.repeat(substr.length));
         if (newstr === substr) {
             substr = newstr;
@@ -143,14 +142,14 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
      * Generate completion items from the registered storage and cache it in the map using `uri` as the key.
      * Subclass must invoke it when the storage contents are changed. 
      */
-    protected updateCompletionItemsForUriString(uriString: string) : vscode.CompletionItem[] | undefined {
+    protected updateCompletionItemsForUriString(uriString: string): vscode.CompletionItem[] | undefined {
         const storage = this.storageCollection.get(uriString);
         if (storage) {
             const config = vscode.workspace.getConfiguration('spec-command.suggest').get<Partial<SuppressMessagesConfig>>('suppressMessages');
             let description: string | undefined;
 
-            const suppressDetail = config?.completionItemLabelDetail !== undefined && config.completionItemLabelDescription === true;
-            const suppressDescription = config?.completionItemLabelDescription !== undefined && config.completionItemLabelDescription === true;
+            const suppressDetail = config && config['completionItem.label.detail'] !== undefined && config['completionItem.label.detail'] === true;
+            const suppressDescription = config && config['completionItem.label.description'] !== undefined && config['completionItem.label.description'] === true;
 
             if (!suppressDescription) {
                 if (uriString === spec.BUILTIN_URI) {
@@ -226,6 +225,9 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
         const activeEditor = vscode.window.activeTextEditor;
         const documentUriString = activeEditor ? activeEditor.document.uri.toString() : '';
 
+        const config = vscode.workspace.getConfiguration('spec-command.suggest').get<Partial<SuppressMessagesConfig>>('suppressMessages');
+        const truncationlevel = (config && config['completionItem.documentation'] !== undefined && config['completionItem.documentation'] === true) ? 2 : 1;
+
         // find the symbol information about the symbol.
         const label = typeof completionItem.label === 'string' ? completionItem.label : completionItem.label.label;
         const refItem = this.storageCollection.get(refUriString)?.get(refItemKind)?.get(label);
@@ -239,15 +241,15 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
 
         // set the description of the completion item
         // if the main description exists, append it.
-        
-        const descriptionMarkdown = new vscode.MarkdownString(truncateString('completionItem', refItem.description, refItem.comments));
+
+        const descriptionMarkdown = new vscode.MarkdownString(truncateString(truncationlevel, refItem.description, refItem.comments));
 
         // if overloaded signature exists, append them.
         if (refItem.overloads) {
             for (const overload of refItem.overloads) {
                 // descriptionMarkdown.appendMarkdown('---');
                 descriptionMarkdown.appendCodeblock(overload.signature);
-                const truncatedString = truncateString('completionItem', overload.description, undefined);
+                const truncatedString = truncateString(truncationlevel, overload.description, undefined);
                 if (truncatedString) {
                     descriptionMarkdown.appendMarkdown(truncatedString);
                 }
@@ -266,6 +268,9 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
     public provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.ProviderResult<vscode.Hover> {
         if (token.isCancellationRequested) { return; }
 
+        const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages');
+        const truncationLevel = (config && config['hover.contents'] !== undefined && config['hover.contents'] === true) ? 1 : 0;
+
         const range = document.getWordRangeAtPosition(position);
         if (range === undefined) { return; }
 
@@ -283,7 +288,7 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
                     let mainMarkdown = getShortDescription(item, itemKind, refUriString, document.uri.toString(), true);
 
                     // prepare the second line: the description (if it exists)
-                    const truncatedString = truncateString('hover', item.description, item.comments);
+                    const truncatedString = truncateString(truncationLevel, item.description, item.comments);
                     if (truncatedString) {
                         mainMarkdown = mainMarkdown.appendMarkdown(truncatedString);
                     }
@@ -298,7 +303,7 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
                     if (item.overloads) {
                         for (const overload of item.overloads) {
                             let overloadMarkdown = new vscode.MarkdownString().appendCodeblock(overload.signature);
-                            const truncatedString2 = truncateString('hover', overload.description, undefined);
+                            const truncatedString2 = truncateString(truncationLevel, overload.description, undefined);
                             if (truncatedString2) {
                                 overloadMarkdown = overloadMarkdown.appendMarkdown(truncatedString2);
                             }
@@ -321,6 +326,9 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
         const signatureHint = parseSignatureInEditing(document.lineAt(position.line).text, position.character);
         if (signatureHint === undefined) { return; }
 
+        const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages');
+        const truncationLevel = (config && config['signatureHelp.signatures.documentation'] !== undefined && config['signatureHelp.signatures.documentation'] === true) ? 1 : 0;
+
         for (const storage of this.storageCollection.values()) {
             const map = storage.get(spec.ReferenceItemKind.Function);
             let item: spec.ReferenceItem | undefined;
@@ -331,7 +339,7 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
                 for (const overload of overloads) {
                     // assume that usage.signature must exist.
                     const signatureInformation = new vscode.SignatureInformation(overload.signature);
-                    const truncatedString = truncateString('signatureHelp', overload.description, undefined);
+                    const truncatedString = truncateString(truncationLevel, overload.description, undefined);
                     if (truncatedString) {
                         signatureInformation.documentation = new vscode.MarkdownString(truncatedString);
                     }

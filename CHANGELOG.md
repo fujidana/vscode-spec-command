@@ -6,7 +6,14 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Changed
 
-- Redesign the configuration properties for motor/counter mnemonics
+- Redesign the configuration properties to control the text volume of IntelliSense features. The old three properties shown below have been bundled in a single property, for space-saving in __Settings_ editor.
+  - Added:
+    - `spec-command.suggest.suppressMessages`
+  - Deprecated:
+    - `spec-command.editor.hintVolume.completionItem`
+    - `spec-command.editor.hintVolume.signatureHelp`
+    - `spec-command.editor.hintVolume.hover`
+- Redesign the configuration properties for motor/counter mnemonics. Using a new VS code feature, a user can set the properties as key-value pairs in _Settings_ editor (the previous properties consist of string arrays).
   - Added:
     - `spec-command.suggest.codeSnippets`
     - `spec-command.suggest.motors`

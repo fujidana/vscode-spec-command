@@ -109,7 +109,7 @@ but the extension shows an alert on the first line because it expects explicit q
 
 This extension contributes the follwing settings, which are configurable from the _Settings_ windw (`Ctrl+,`):
 
-* `spec-command.editor.hintVolume.*` - controls the volume of explanatory text shown by IntelliSense features.
+* `spec-command.suggest.suppressMessages` - controls whether the explanatory text shown by IntelliSense features is hidden or truncated.
 * `spec-command.suggest.codeSnippets` - provides a place to add code snippet templates that can include special placeholders for motor (`%MOT`) and counter (`%CNT`) mnemonics. Optionally, descriptive text can be appended after a hash sign (`#`). For detailed syntax including other placeholders and choices, read [Snippets in Visual Studio Code](https://code.visualstudio.com/docs/editor/userdefinedsnippets). Examples are as follows (Snippets for `mv`, `mvr`, `umv`, `umvr`, `ascan`, `dscan`, `a2scan`, `d2scan`, `a3scan`, `d3scan`, `a4scan`, `d4scan`,  `a5scan`, `d5scan`, `mesh`, and `dmesh` are defined by the extension and thus, a user does not need to add them manually, except when he/she wants to override default snippet templates.):
   * `{"mv": "mv ${1%MOT} ${2:pos} # absolute move"}`
   * `{"d2scan": "d2scan ${1%MOT1} ${2:begin1} ${3:end1} ${4%MOT2} ${5:begin2} ${6:end2} ${7:steps} ${8:sec} # two-motor relative-position scan"}`

@@ -3,7 +3,7 @@
 	"name": "spec-command",
 	"displayName": "spec command",
 	"description": "spec command file support for VS Code",
-	"version": "1.6.0-alpha.20210826",
+	"version": "1.6.0-alpha.20210830",
 	"engines": {
 		"vscode": "^1.59.0"
 	},
@@ -141,6 +141,7 @@
 					"type": "string",
 					"default": "full",
 					"description": "Controls the volume of explanatory text in hovers, which is shown when the mouse cursor is on a symbol.",
+					"markdownDeprecationMessage": "**Deprecated**: Please use `#spec-command.suggest.suppressMessages#` instead.",
 					"enum": [
 						"sentence",
 						"paragraph",
@@ -151,6 +152,7 @@
 					"type": "string",
 					"default": "sentence",
 					"description": "Controls the volume of explanatory text in auto completion, which is shown when the user types a symbol.",
+					"markdownDeprecationMessage": "**Deprecated**: Please use `#spec-command.suggest.suppressMessages#` instead.",
 					"enum": [
 						"sentence",
 						"paragraph",
@@ -161,6 +163,7 @@
 					"type": "string",
 					"default": "sentence",
 					"description": "Controls the volume of explanatory text in signature help, which is shown when the user edits function arguments.",
+					"markdownDeprecationMessage": "**Deprecated**: Please use `#spec-command.suggest.suppressMessages#` instead.",
 					"enum": [
 						"sentence",
 						"paragraph",
@@ -181,19 +184,37 @@
 					"type": "object",
 					"markdownDescription": "Suppresses messages shown in code completion.",
 					"default": {
-						"completionItemLabelDetail": false,
-						"completionItemLabelDescription": false
+						"completionItem.label.detail": false,
+						"completionItem.label.description": false,
+						"completionItem.documentation": false,
+						"signatureHelp.signatures.documentation": false,
+						"hover.contents": false
 					},
 					"properties": {
-						"completionItemLabelDetail": {
+						"completionItem.label.detail": {
 							"type": "boolean",
 							"default": false,
-							"description": "Suppresses the detail of unresolved completion item labels, where parameters of functions are typically shown."
+							"description": "Hides the detail of unresolved completion item labels, where parameters of functions are typically shown."
 						},
-						"completionItemLabelDescription": {
+						"completionItem.label.description": {
 							"type": "boolean",
 							"default": false,
-							"description": "Suppresses the description of unresolved completion item labels, where file paths are typically shown."
+							"description": "Hides the description of unresolved completion item labels, where file paths are typically shown."
+						},
+						"completionItem.documentation": {
+							"type": "boolean",
+							"default": false,
+							"description": "Truncates explanatory text of a selected item of auto completion suggestions to a sentence."
+						},
+						"signatureHelp.signatures.documentation": {
+							"type": "boolean",
+							"default": false,
+							"description": "Truncates explanatory text in a signature help, which is shown when the user edits function arguments, to a paragraph."
+						},
+						"hover.contents": {
+							"type": "boolean",
+							"default": false,
+							"description": "Truncates explanatory text in a hover, which is shown when the mouse cursor is on a symbol, to a paragraph."
 						}
 					},
 					"additionalProperties": false
