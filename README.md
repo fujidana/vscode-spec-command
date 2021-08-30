@@ -20,25 +20,10 @@ Use [GitHub issues](https://github.com/fujidana/vscode-spec-command/issues) for 
 
 ## NOTICE for previous version users
 
-Recent versions of __spec__ language support (`vscode-spec`) supported both __spec__ command files and __spec__ log files.
-However, it may be not a rare case in which files of either kind are only opened in a workspace.
-VS Code loads an extension into memory at the first time a file the extension supports is being opened and thus, building independent extensions based on the file type looks a better implementation manner.
-For this reason (and also for another reasons such as ease of maintenance and expandability to new features), the developer has decided to split the extension into two; one is for __spec__ command files (both the exention identifier and language identifier are `spec-command`) and the other is for __spec__ log file (`spec-log`).
-
-If one has configuration items that start with `vscode-spec` in _setting.json_ files, replace them with `spec-command`.
-The original identifier, `vscode-spec`, is reused as an extension pack that bundles both the split extensions.
-
-The language identifier of __spec__ command files was also renamed `spec-command` in v1.5.0 (it was `spec` in the versions earlier than v1.3.0, `spec-macro` in v1.3.0, and `spec-cmd` in v1.4.0).
-If one associates __spec__ command files with different file extension from the default value, replate the identifier in _settings.json_.
-
+The keys of most configuration properties were changed in v1.6.0.
+If you have customized the extension behavior, migrate your setting values via the Settings editor or direct access to JSON files.
+See [CHANGELOG.md](CHANGELOG.md) for details.
 Sorry for inconvenence.
-
-The following identifiers in the extension settings are deprecated at v1.2.0 and removed at v1.5.0:
-
-* `vscode-spec.mnemonic.motor.labels`
-* `vscode-spec.mnemonic.motor.descriptions`
-* `vscode-spec.mnemonic.counter.labels`
-* `vscode-spec.mnemonic.motor.descriptions`
 
 ## Features
 

@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
-import { TextDecoder } from 'util';
 import * as estree from "estree";
 import * as estraverse from "estraverse";
 import * as spec from "./spec";
 import { CommandProvider } from "./commandProvider";
 import { SyntaxError, parse, IFileRange } from './grammar';
+import { getTextDecorder } from './textEncoding';
 
 /**
  * Extention-specific keys for estraverse (not exist in the original Parser AST.)
@@ -381,7 +381,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
 
         // a hander invoked when the configuration is changed
         const onDidChangeConfigurationListener = (event: vscode.ConfigurationChangeEvent) => {
-            if (event.affectsConfiguration('spec-command.workspace') || event.affectsConfiguration('files.associations')) {
+            if (event.affectsConfiguration('spec-command.workspace') || event.affectsConfiguration('files.associations') || event.affectsConfiguration('files.encoding')) {
                 this.refreshCollections();
             }
         };
@@ -445,7 +445,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
                 }
             }
 
-            const textDecoder = new TextDecoder('utf-8');
+            const textDecoder = getTextDecorder({ languageId: 'spec-command' });
             for (const [newFileUriString, newFileMetadata] of newFiles) {
                 if (!openedFiles.has(newFileUriString)) {
                     const newFileUri = vscode.Uri.parse(newFileUriString);
@@ -520,7 +520,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         // parse the other files in workspace folders.
         const filesInWorkspaces = await findFilesInWorkspaces();
 
-        const textDecoder = new TextDecoder('utf-8');
+        const textDecoder = getTextDecorder({ languageId: 'spec-command' });
         for (const [fileUriString, fileMetadata] of filesInWorkspaces) {
             if (!openedFiles.has(fileUriString)) {
                 const fileUri = vscode.Uri.parse(fileUriString);

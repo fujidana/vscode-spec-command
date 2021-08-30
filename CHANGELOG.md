@@ -7,11 +7,12 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 ### Added
 
 - Shows more information (function arguments and file paths) in a list of auto completion items. This can be disabled with `spec-command.suggest.suppressMessages` key in the _Setting_ editor.
+- Refers to `files.encoding` configuraition property for the file encoding used in workspace file scan. Previously it was fixed to `utf-8`.
 
 ### Changed
 
 - Redesign the configuration properties, leveraging recent updates on the Settings editor of VS Code.
-  - Deprecate the following properties and instead refer to the built-in VS Code properties to find files in current workspaces:
+  - Deprecate the following properties and instead refer to the built-in VS Code properties to filter files in current workspaces:
     - ~~`spec-command.workspace.inclusiveFilePattern`~~ -> `files.associations`
     - ~~`spec-command.workspace.exclusiveFilePattern`~~ -> `files.exclude`
   - Bundle the following three properties that controls the hint volume into a single property, `spec-command.suggest.suppressMessages`:
