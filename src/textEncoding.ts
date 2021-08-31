@@ -2,158 +2,71 @@ import { TextDecoder } from 'util';
 import * as vscode from 'vscode';
 
 /**
- * @param uri URI
+ * Conversion table from VS Code's "files.encoding" values to TextDecoder's encoding parameters.
+ * The table was prrepared for encodings available in VS Code v1.58.0.
+ */
+const ENCODING_DICTIONARY: Record<string, string | undefined> = {
+    utf8: 'utf-8', // UTF-8
+    utf8bom: 'utf-8',
+    utf16le: 'utf-16le', // UTF-16 LE
+    utf16be: 'utf-16be', // UTF-16 BE
+    windows1252: 'windows-1252', // Western (Windows 1252)
+    iso88591: 'iso-8859-1', // Western (ISO 8859-1), alias of 'windows-1252'?
+    iso88593: 'iso-8859-3', // Western (ISO 8859-3)
+    iso885915: 'iso-8859-15', // Western (ISO 8859-15)
+    macroman: 'macintosh', // Western (Mac Roman)
+    cp437: undefined, // DOS (CP 437)
+    windows1256: 'windows-1256', // Arabic (Windows 1256)
+    iso88596: 'iso-8859-6', // Arabic (ISO 8859-6)
+    windows1257: 'windows-1257', // Baltic (Windows 1257)
+    iso88594: 'iso-8859-4', // Baltic (ISO 8859-4)
+    iso885914: 'iso-8859-14', // Celtic (ISO 8859-14)
+    windows1250: 'windows-1250', // Central European (Windows 1250)
+    iso88592: 'iso-8859-2', // Central European (ISO 8859-2)
+    cp852: undefined, // Central European (CP 852)
+    windows1251: 'windows-1251', // Cyrillic (Windows 1251)
+    cp866: 'ibm866', // Cyrillic (CP 866)
+    iso88595: 'iso-8859-5', // Cyrillic (ISO 8859-5)
+    koi8r: 'koi8-r', // Cyrillic (KOI8-R)
+    koi8u: 'koi8-up', // Cyrillic (KOI8-U)
+    iso885913: 'iso-8859-13', // Estonian (ISO 8859-13)
+    windows1253: 'windows-1253', // Greek (Windows 1253)
+    iso88597: 'iso-8859-7', // Greek (ISO 8859-7)
+    windows1255: 'windows-1255', // Hebrew (Windows 1255)
+    iso88598: 'iso-8859-8', // Hebrew (ISO 8859-8)
+    iso885910: 'iso-8859-10', // Nordic (ISO 8859-10)
+    iso885916: 'iso-8859-16', // Romanian (ISO 8859-16)
+    windows1254: 'windows-1254', // Turkish (Windows 1254)
+    iso88599: 'iso-8859-9', // Turkish (ISO 8859-9)
+    windows1258: 'windows-1258', // Vietnamese (Windows 1258)
+    gbk: 'gbk', // Simplified Chinese (GBK)
+    gb18030: 'gb18030', // Simplified Chinese (GB18030)
+    cp950: 'big5', // Traditional Chinese (Big5)
+    big5hkscs: 'big5-hkscs', // Traditional Chinese (Big5-HKSCS), alias of 'big5'?
+    shiftjis: 'shift-jis', // Japanese (Shift JIS)
+    eucjp: 'euc-jp', // Japanese (EUC-JP)
+    euckr: 'euc-kr',// Korean (EUC-KR)
+    windows874: 'windows-874', // Thai (Windows 874)
+    iso885911: 'iso-8859-11', // Latin/Thai (ISO 8859-11), alias of ''windows-874'?
+    koi8ru: 'koi8-ru', // Cyrillic (KOI8-RU)
+    koi8t: undefined, // Tajik (KOI8-T)
+    gb2312: 'gb2312', // Simplified Chinese (GB 2312), alias of 'gbk'?
+    cp865: undefined, // Nordic DOS (CP 865)
+    cp850: undefined, // Western European DOS (CP 850)
+};
+
+/**
+ * @param scope configuration scope. In case the file encoding is set on file-type basis, provide a `{ uri?: vscode.Uri | undefined, languageId: string }` object.
  * @returns TextDecoder object
  * 
- * Create a TextDecoder object referring to a text encoding defined in the configuration properties 'files.encoding'.
+ * Create a TextDecoder object referring to a text encoding defined in the configuration property 'files.encoding'.
  * Since the encoding string in VS Code and TextDecoder are not identical, the property value is converted internally.
- * https://encoding.spec.whatwg.org/#names-and-labels.
  */
 export function getTextDecorder(scope?: vscode.ConfigurationScope): TextDecoder {
     // get 'files.encoding' property value
-    const encoding = vscode.workspace.getConfiguration('files', scope).get<string>('encoding');
+    const vscodeEncoding = vscode.workspace.getConfiguration('files', scope).get<string>('encoding');
+    const textDecoderEncoding = vscodeEncoding && vscodeEncoding in ENCODING_DICTIONARY ? ENCODING_DICTIONARY[vscodeEncoding] : undefined;
 
-    // convert encoding value in VS Code to that in TextDecoder/TextEncoder
-    let encoding2: string | undefined;
-    let bom: boolean | undefined;
-    switch (encoding) {
-        case 'utf8':
-            encoding2 = 'utf-8';
-            break;
-        case 'utf8bom':
-            encoding2 = 'utf-8';
-            bom = false;
-            break;
-        case 'utf16le':
-            encoding2 = 'utf-16le';
-            break;
-        case 'utf16be':
-            encoding2 = 'utf-16be';
-            break;
-        case 'windows1252':
-            encoding2 = 'windows-1252';
-            break;
-        case 'iso88591':
-            encoding2 = 'iso-8859-1';
-            break;
-        case 'iso88593':
-            encoding2 = 'iso-8859-3';
-            break;
-        case 'iso885915':
-            encoding2 = 'iso-8859-15';
-            break;
-        case 'macroman':
-            encoding2 = 'x-mac-roman';
-            break;
-        // case 'cp437':
-        case 'windows1256':
-            encoding2 = 'windows-1256';
-            break;
-        case 'iso88596':
-            encoding2 = 'iso-8859-6';
-            break;
-        case 'windows1257':
-            encoding2 = 'windows-1257';
-            break;
-        case 'iso88594':
-            encoding2 = 'iso-8859-4';
-            break;
-        case 'iso885914':
-            encoding2 = 'iso-8859-14';
-            break;
-        case 'windows1250':
-            encoding2 = 'windows-1250';
-            break;
-        case 'iso88592':
-            encoding2 = 'iso-8859-2';
-            break;
-        // case 'cp852':
-        case 'windows1251':
-            encoding2 = 'windows-1251';
-            break;
-        case 'cp866':
-            encoding2 = 'cp866';
-            break;
-        case 'iso88595':
-            encoding2 = 'iso-8859-5';
-            break;
-        case 'koi8r':
-            encoding2 = 'koi8-r';
-            break;
-        case 'koi8u':
-            encoding2 = 'koi8-u';
-            break;
-        case 'iso885913':
-            encoding2 = 'iso-8859-13';
-            break;
-        case 'windows1253':
-            encoding2 = 'windows-1253';
-            break;
-        case 'iso88597':
-            encoding2 = 'iso-8859-7';
-            break;
-        case 'windows1255':
-            encoding2 = 'windows-1255';
-            break;
-        case 'iso88598':
-            encoding2 = 'iso-8859-8';
-            break;
-        case 'iso885910':
-            encoding2 = 'iso-8859-10';
-            break;
-        case 'iso885916':
-            encoding2 = 'iso-8859-16';
-            break;
-        case 'windows1254':
-            encoding2 = 'windows-1254';
-            break;
-        case 'iso88599':
-            encoding2 = 'iso-8859-9';
-            break;
-        case 'windows1258':
-            encoding2 = 'windows-1258';
-            break;
-        case 'gbk':
-            encoding2 = 'x-gbk';
-            break;
-        case 'gb18030':
-            encoding2 = 'gb18030';
-            break;
-        // case 'cp950':
-        case 'big5hkscs':
-            encoding2 = 'big5-hkscs';
-            break;
-        case 'shiftjis':
-            encoding2 = 'shift-jis';
-            break;
-        case 'eucjp':
-            encoding2 = 'euc-jp';
-            break;
-        case 'euckr':
-            encoding2 = 'euc-kr';
-            break;
-        case 'windows874':
-            encoding2 = 'windows-874';
-            break;
-        case 'iso885911':
-            encoding2 = 'iso-8859-11';
-            break;
-        case 'koi8ru':
-            encoding2 = 'koi8-ru';
-            break;
-        // case 'koi8t':
-        case 'gb2312':
-            encoding2 = 'gb2312';
-            break;
-        // case 'cp865':
-        // case 'cp850':
-        default:
-            break;
-    }
-
-    if (bom !== undefined) {
-        return new TextDecoder(encoding2, { ignoreBOM: bom });
-    } else {
-        return new TextDecoder(encoding2);
-    }
+    // If encoding is undefined, TextDecoder uses UTF-8 as its encoding.
+    return new TextDecoder(textDecoderEncoding);
 }
