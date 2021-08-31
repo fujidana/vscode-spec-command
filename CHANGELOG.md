@@ -4,10 +4,12 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+## [1.6.0] -- 2021-08-31
+
 ### Added
 
-- Shows more information (function arguments and file paths) in a list of auto completion items. This can be disabled with `spec-command.suggest.suppressMessages` key in the _Setting_ editor.
-- Refers to `files.encoding` configuraition property for the file encoding used in workspace file scan. Previously it was fixed to `utf-8`.
+- Show more information (function arguments and file paths) in a list of auto completion items. This can be disabled by the `spec-command.suggest.suppressMessages` configuration property in the Settings editor.
+- Refer to `files.encoding` configuraition property for the file encoding used in workspace file scan. Previously it was fixed to `"utf-8"`.
 
 ### Changed
 
@@ -291,7 +293,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
   - syntax highlighting
   - code snippets
 
-[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.5.1...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/fujidana/vscode-spec-command/compare/v1.5.1...v1.6.0
 [1.5.1]: https://github.com/fujidana/vscode-spec-command/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/fujidana/vscode-spec-command/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/fujidana/vscode-spec-command/compare/v1.3.0...v1.4.0

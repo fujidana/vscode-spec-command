@@ -18,7 +18,7 @@ _cited from [CSS - Certified Scientific Software](https://www.certif.com) homepa
 Note that the extension is not the official one developed by Certified Scientific Software.
 Use [GitHub issues](https://github.com/fujidana/vscode-spec-command/issues) for bug reports and feature requests about the extension.
 
-## NOTICE for previous version users
+## Notice for previous version users
 
 The keys of most configuration properties were changed in v1.6.0.
 If you have customized the extension behavior, migrate your setting values via the Settings editor or direct access to JSON files.
@@ -50,9 +50,6 @@ The extension was developed with reference to the recent official PDF document a
 The help text of built-in symbols are cited from this document, except where otherwise noted.
 
 ## Requirements
-
-The extension assumes UTF-8 as the file encoding in workspace scan, regardless of user settings or selection in current editor.
-This does not mean the developer garantees UTF-8 characters are safe for __spec__ interpreters.
 
 The __spec__ grammar is torelant and its behavior is determined only at runtime, which makes it impossible for the extension to mimic spec's interpreter perfectly.
 For example, the extension treats `f(var)` in a __spec__ script as a function call (like most people assume) but there is another possibility:
@@ -94,13 +91,18 @@ but the extension shows an alert on the first line because it expects explicit q
 
 This extension contributes the follwing settings, which are configurable from the _Settings_ windw (`Ctrl+,`):
 
-* `spec-command.suggest.suppressMessages` - controls whether the explanatory text shown by IntelliSense features is hidden or truncated.
+* `spec-command.suggest.suppressMessages` - controls whether the explanatory text shown by IntelliSense features is suppressed or not.
 * `spec-command.suggest.codeSnippets` - provides a place to add code snippet templates that can include special placeholders for motor (`%MOT`) and counter (`%CNT`) mnemonics. Optionally, descriptive text can be appended after a hash sign (`#`). For detailed syntax including other placeholders and choices, read [Snippets in Visual Studio Code](https://code.visualstudio.com/docs/editor/userdefinedsnippets). Examples are as follows (Snippets for `mv`, `mvr`, `umv`, `umvr`, `ascan`, `dscan`, `a2scan`, `d2scan`, `a3scan`, `d3scan`, `a4scan`, `d4scan`,  `a5scan`, `d5scan`, `mesh`, and `dmesh` are defined by the extension and thus, a user does not need to add them manually, except when he/she wants to override default snippet templates.):
   * `{"mv": "mv ${1%MOT} ${2:pos} # absolute move"}`
   * `{"d2scan": "d2scan ${1%MOT1} ${2:begin1} ${3:end1} ${4%MOT2} ${5:begin2} ${6:end2} ${7:steps} ${8:sec} # two-motor relative-position scan"}`
 * `spec-command.suggest.motors`, `spec-command.suggest.counters` - registers motor/counter mnemonics and  their explanatory texts as the keys and the values. They are used by IntelliSense features including code snippets above.
-* `spec-command.workspace.*` - controls the rule to scan files in workspace.
+* `spec-command.workspace.diagnoseProblems` - controls whther problems of files in workspaces are reported.
 * `spec-command.terminal.filePathPrefix` - specifies file path prefix used in "Run File in Active Terminal" command.
+
+The extension referred to the following built-in settings:
+
+* `files.associations`, `files.exclude`: file patterns to filter target files for symbol search in workspaces
+* `files.encoding`: text encoding used in opening files for symbol search in workspaces.
 
 Read [Visual Studio Code User and Workspace Settings](https://code.visualstudio.com/docs/getstarted/settings) for details about the _Settings_ window.
 
@@ -108,5 +110,6 @@ Read [Visual Studio Code User and Workspace Settings](https://code.visualstudio.
 
 * Syntax check by this extension has small differences with actual __spec__ interpreters.
 * Statement continuation by putting a backslash at the end of the line is not fully supported in syntax highlighting.
+* Several text encodings are not supported in symbol serach in workspaces. See GitHub issue #6 for more details.
 
 Also read [GitHub issues](https://github.com/fujidana/vscode-spec-cmmand/issues).
