@@ -100,7 +100,7 @@ This extension contributes the follwing settings, which are configurable from th
   * `{"d2scan": "d2scan ${1%MOT1} ${2:begin1} ${3:end1} ${4%MOT2} ${5:begin2} ${6:end2} ${7:steps} ${8:sec} # two-motor relative-position scan"}`
 * `spec-command.suggest.motors`, `spec-command.suggest.counters` - registers motor/counter mnemonics and  their explanatory texts as the keys and the values. They are used by IntelliSense features including code snippets above.
 * `spec-command.workspace.*` - controls the rule to scan files in workspace.
-* `spec-command.command.filePathPrefixInTerminal` - specifies file path prefix used in "Run File in Active Terminal" command.
+* `spec-command.terminal.filePathPrefix` - specifies file path prefix used in "Run File in Active Terminal" command.
 
 Read [Visual Studio Code User and Workspace Settings](https://code.visualstudio.com/docs/getstarted/settings) for details about the _Settings_ window.
 

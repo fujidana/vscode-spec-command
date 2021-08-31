@@ -19,10 +19,12 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
     - ~~`spec-command.editor.hintVolume.completionItem`~~
     - ~~`spec-command.editor.hintVolume.signatureHelp`~~
     - ~~`spec-command.editor.hintVolume.hover`~~
-  - Rename the folowing three properties and use key-value pairs instead of strings:
+  - Rename the following three properties and use key-value pairs instead of strings:
     - ~~`spec-command.editor.codeSnippets`~~ -> `spec-command.suggest.codeSnippets`
     - ~~`spec-command.mnemonic.motors`~~ -> `spec-command.suggest.motors`
     - ~~`spec-command.mnemonic.counters`~~ -> `spec-command.suggest.counters`
+  - Rename the following property:
+    - ~~`spec-command.command.filePathPrefixInTerminal`~~ -> `spec-command.terminal.filePathPrefix`
 
 ## [1.5.1] - 2021-08-19
 

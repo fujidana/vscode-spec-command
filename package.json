@@ -296,11 +296,18 @@
 					"scope": "resource",
 					"description": "Controls whether diagnostic results of files in a workspace are listed in 'Problems' view. If disabled, only syntax problems of files opened by editors are listed."
 				},
+				"spec-command.terminal.filePathPrefix": {
+					"type": "string",
+					"default": "",
+					"scope": "resource",
+					"markdownDescription": "Specifies a file path prefix used in [Run File in Active Terminal](command:spec-command.execFileInTerminal) command. This option is useful for case in which the working directory of __spec__ running in a terminal view is different from the workspace folder."
+				},
 				"spec-command.command.filePathPrefixInTerminal": {
 					"type": "string",
 					"default": "",
 					"scope": "resource",
-					"markdownDescription": "Specifies a file path prefix used in \"Run File in Active Terminal\" command. This option is neccessary when the working directory of __spec__ running in a terminal view is different from the workspace folder."
+					"markdownDescription": "Specifies a file path prefix used in [Run File in Active Terminal](command:spec-command.execFileInTerminal) command. This option is useful for case in which the working directory of __spec__ running in a terminal view is different from the workspace folder.",
+					"markdownDeprecationMessage": "**Deprecated**: Please use `#spec-command.terminal.filePathPrefix#` instead."
 				}
 			}
 		}
@@ -308,9 +315,9 @@
 	"capabilities": {
 		"untrustedWorkspaces": {
 			"supported": "limited",
-			"description": "The \"spec-command.command.filePathPrefixInTerminal\" option is disabled in untrusted workspaces in order to protect from code injection when the \"Run File in Active Terminal\" command is called.",
+			"description": "The \"spec-command.terminal.filePathPrefix\" configuration property is disabled in untrusted workspaces in order to protect from code injection when the \"Run File in Active Terminal\" command is called.",
 			"restrictedConfigurations": [
-				"spec-command.command.filePathPrefixInTerminal"
+				"spec-command.terminal.filePathPrefix"
 			]
 		}
 	},

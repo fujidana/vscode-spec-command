@@ -238,7 +238,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
             const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
             let path: string;
             if (workspaceFolder) {
-                const prefix = vscode.workspace.getConfiguration('spec-command.command', workspaceFolder.uri).get<string>('filePathPrefixInTerminal', '');
+                const prefix = vscode.workspace.getConfiguration('spec-command.terminal', workspaceFolder.uri).get<string>('filePathPrefix', '');
                 path = prefix + vscode.workspace.asRelativePath(uri, false);
             } else {
                 path = uri.path;
