@@ -243,7 +243,7 @@
 				},
 				"spec-command.suggest.codeSnippets": {
 					"type": "object",
-					"markdownDescription": "Lists key-value pairs of code snippets, which are used by IntelliSense code suggestion. The key is a snippet name on which IntelliSense substring matching is performed. The value is a snippet template that may contain special placeholders for motors (`%MOT`) and counters (`%CNT`), in addition to built-in tabstops, placeholders, choise and variables described in [Snippets in Visual Studio Code](https://code.visualstudio.com/docs/editor/userdefinedsnippets#_snippet-syntax); descriptive text can follow after a hash sign (`#`). Example: \n\n- `mv ${1%MOT} ${2:pos} # absolute move`\n- `d2scan ${1%MOT1} ${2:begin1} ${3:end1} ${4%MOT2} ${5:begin2} ${6:end2} ${7:steps} ${8:sec} # two-motor relative-position scan`",
+					"markdownDescription": "Lists key-value pairs of code snippets for IntelliSense code suggestion. The key is a snippet name on which IntelliSense substring matching is performed. The value is a snippet template that may contain special placeholders for motors (`%MOT`) and counters (`%CNT`), in addition to built-in tabstops, placeholders, choise and variables described in [Snippets in Visual Studio Code](https://code.visualstudio.com/docs/editor/userdefinedsnippets#_snippet-syntax); descriptive text can follow after a hash sign (`#`). Examples: \n\n- `mv ${1%MOT} ${2:pos} # absolute move`\n- `d2scan ${1%MOT1} ${2:begin1} ${3:end1} ${4%MOT2} ${5:begin2} ${6:end2} ${7:steps} ${8:sec} # two-motor relative-position scan`",
 					"default": {},
 					"patternProperties": {
 						"^[a-zA-Z_][a-zA-Z0-9_\\-]*$": {
@@ -254,7 +254,7 @@
 				},
 				"spec-command.suggest.motors": {
 					"type": "object",
-					"markdownDescription": "Lists key-value (mnemonic-explanatory text) pairs of motors, which are used by IntelliSense code suggestion.",
+					"markdownDescription": "Lists key-value (mnemonic-explanatory text) pairs of motors for IntelliSense code suggestion.",
 					"default": {},
 					"patternProperties": {
 						"^[a-zA-Z_][a-zA-Z0-9_]{0,6}$": {
@@ -265,7 +265,7 @@
 				},
 				"spec-command.suggest.counters": {
 					"type": "object",
-					"markdownDescription": "Lists key-value (mnemonic-explanatory text) pairs of counters, are be used by IntelliSense code suggestion.",
+					"markdownDescription": "Lists key-value (mnemonic-explanatory text) pairs of counters for IntelliSense code suggestion.",
 					"default": {
 						"sec": "count time in second"
 					},
