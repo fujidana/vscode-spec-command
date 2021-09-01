@@ -4,7 +4,7 @@ import * as estraverse from "estraverse";
 import * as spec from "./spec";
 import { CommandProvider } from "./commandProvider";
 import { SyntaxError, parse, IFileRange } from './grammar';
-import { getTextDecorder } from './textEncoding';
+import { getTextDecoder } from './textEncoding';
 
 /**
  * Extention-specific keys for estraverse (not exist in the original Parser AST.)
@@ -445,7 +445,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
                 }
             }
 
-            const textDecoder = getTextDecorder({ languageId: 'spec-command' });
+            const textDecoder = getTextDecoder({ languageId: 'spec-command' });
             for (const [newFileUriString, newFileMetadata] of newFiles) {
                 if (!openedFiles.has(newFileUriString)) {
                     const newFileUri = vscode.Uri.parse(newFileUriString);
@@ -520,7 +520,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         // parse the other files in workspace folders.
         const filesInWorkspaces = await findFilesInWorkspaces();
 
-        const textDecoder = getTextDecorder({ languageId: 'spec-command' });
+        const textDecoder = getTextDecoder({ languageId: 'spec-command' });
         for (const [fileUriString, fileMetadata] of filesInWorkspaces) {
             if (!openedFiles.has(fileUriString)) {
                 const fileUri = vscode.Uri.parse(fileUriString);

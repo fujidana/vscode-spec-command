@@ -56,13 +56,14 @@ const ENCODING_DICTIONARY: Record<string, string | undefined> = {
 };
 
 /**
- * @param scope configuration scope. In case the file encoding is set on file-type basis, provide a `{ uri?: vscode.Uri | undefined, languageId: string }` object.
+ * @param scope configuration scope. To include language-specific settings in searching paths of the configurations, provide a `{ uri?: vscode.Uri | undefined, languageId: string }` object.
  * @returns TextDecoder object
  * 
- * Create a TextDecoder object referring to a text encoding defined in the configuration property 'files.encoding'.
+ * Create a TextDecoder object, referring to a text encoding defined in the configuration property 'files.encoding'.
  * Since the encoding string in VS Code and TextDecoder are not identical, the property value is converted internally.
+ * Currently the convertion table lacks the TextDecoder's encodings corresponding to VS Code's `cp437`, `cp852`, `koi8t`, `cp865`, and `cp850`; for them `utf8` is used instead.
  */
-export function getTextDecorder(scope?: vscode.ConfigurationScope): TextDecoder {
+export function getTextDecoder(scope?: vscode.ConfigurationScope): TextDecoder {
     // get 'files.encoding' property value
     const vscodeEncoding = vscode.workspace.getConfiguration('files', scope).get<string>('encoding');
     const textDecoderEncoding = vscodeEncoding && vscodeEncoding in ENCODING_DICTIONARY ? ENCODING_DICTIONARY[vscodeEncoding] : undefined;
