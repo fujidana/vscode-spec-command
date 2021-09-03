@@ -2510,7 +2510,7 @@ functions:
     - signature: tango_io(dev, "??")
       description: |-
         Lists the command properties for *dev* in a more verbose format, showing not only the input and output data types, but also the command description, as supplied by the TANGO server.
-    - signature: tango_io(dev, cmd [, argin [, argout])
+    - signature: tango_io(dev, cmd[, argin [, argout])
       description: |-
         Allows general access to TANGO devices.
         If *cmd* returns a scalar, the *argout* argument is optional.
@@ -2615,7 +2615,7 @@ functions:
         - 4 — WARNING
 
         The `"time_stamp"` element contains the time in seconds and milliseconds from the UNIX epoch.
-    - signature: tango_get(dev, at1, argout1, at2, argout2 [, ... ]] [, extras])
+    - signature: tango_get(dev, at1, argout1, at2, argout2 [, ... ] [, extras])
       description: |-
         Reads multiple device attributes.
         An *argout* argument must be provided for each attribute, whether scalar or array.
@@ -2644,7 +2644,7 @@ functions:
       description: |-
         Sets the connection timeout for *dev* in seconds.
         Returns -1 on error, otherwise returns the new timeout value.
-    - signature: tango_put(dev, attr1, argin1 [, attr2, argin2 [, ...]])
+    - signature: tango_put(dev, attr1, argin1[, attr2, argin2 [, ...]])
       description: |-
         Writes one or more device attributes.
         Each attribute is followed by its value. Attributes can be scalar or arrays.
@@ -2658,7 +2658,7 @@ functions:
   ### Not documented in spec_manA4.pdf. Instaed, cited from https://certif.com/spec_help/epics.html.
   
   epics_get:
-    signature: epics_get(ca_name [, type] [, count])
+    signature: epics_get(ca_name[, type][, count])
     comments: 'cited from [CSS spec help pages: epics](https://certif.com/spec_help/epics.html).'
     description: |-
       Returns the result of a channel-access get of the process variable *ca_name*, as in `print epics_get("ioc:m1.VAL")`.
@@ -2674,7 +2674,7 @@ functions:
       If a `"monitor"` has been set for the process variable using the `"monitor_set"` option below, the returned result will be the most recent value as set by the monitor call back.
       Otherwise (or if there has been no monitor call back), **spec** will access the process variable value using the standard channel access `ca_array_get()`.
   epics_put:
-    signature: epics_put(ca_name, value [, wait_time])
+    signature: epics_put(ca_name, value[, wait_time])
     comments: 'cited from [CSS spec help pages: epics](https://certif.com/spec_help/epics.html).'
     description: |-
       Does a channel-access put of *value*, which can be either a string or a number, to the process variable *ca_name*.
@@ -2755,7 +2755,7 @@ functions:
       description: |-
         Writes the string s to the device.
         Returns the number of bytes written.
-    - signature: vxi11_put(name, d, [cnt])
+    - signature: vxi11_put(name, d[, cnt])
       description: |-
         Writes the contents of the data array *d* to the device.
         By default, the entire array (or subarray, if specified) will be sent.
@@ -2774,10 +2774,10 @@ functions:
     - signature: vxi11_par("info")
       description: |-
         Returns a string that lists the current open clients.
-    - signature: vxi11_par("timeout" [, t])
+    - signature: vxi11_par("timeout"[, t])
       description: |-
         Returns or sets the default timeout for the RPC calls. The units are seconds.
-    - signature: vxi11_par("name", "timeout" [, t])
+    - signature: vxi11_par("name", "timeout"[, t])
       description: |-
         Returns or sets the timeout for the named device.
         This value overrides the global default.
@@ -2802,7 +2802,7 @@ functions:
     signature: h5_file(...)
     comments: 'cited from [CSS spec help pages: hdf5](https://certif.com/spec_help/hdf5.html).'
     overloads:
-    - signature: h5_file(filename, "open" [,"cache=bytes[[:slots]:policy]"])
+    - signature: h5_file(filename, "open"[, "cache=bytes[[:slots]:policy]"])
       description: |-
         Opens *filename* if it exists or creates it if it doesn't.
         The HDF5 file remains open across calls, although all objects and resources created by `h5_attr()` and `h5_data()` are closed and released when those functions return.
@@ -2825,7 +2825,7 @@ functions:
     signature: h5_attr(...)
     comments: 'cited from [CSS spec help pages: hdf5](https://certif.com/spec_help/hdf5.html).'
     overloads:
-    - signature: h5_attr(group_path, attribute_name, attribute_value [, option ...])
+    - signature: h5_attr(group_path, attribute_name, attribute_value[, option ...])
       description: |-
         Creates a new attribute with the name *attribute_name* and the value *attribute_value*.
         The *options* can be a **spec** data type as in the table above.
