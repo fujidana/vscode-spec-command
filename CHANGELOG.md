@@ -4,15 +4,19 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+### Changed
+
+- Migrate the extension to use webpack.
+
 ## [1.6.0] -- 2021-08-31
 
 ### Added
 
 - Show more information (function arguments and file paths) in a list of auto completion items. This can be disabled by the `spec-command.suggest.suppressMessages` configuration property in the Settings editor.
-- Refer to `files.encoding` configuraition property for the file encoding used in workspace file scan. Previously it was fixed to `"utf-8"`.
 
 ### Changed
 
+- Refer to `files.encoding` configuraition property for the file encoding used in workspace file scan. Previously it was fixed to `"utf-8"`.
 - Redesign the configuration properties, leveraging recent updates on the Settings editor of VS Code.
   - Deprecate the following properties and instead refer to the built-in VS Code properties to filter files in current workspaces:
     - ~~`spec-command.workspace.inclusiveFilePattern`~~ -> `files.associations`
@@ -36,7 +40,7 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [1.5.0] - 2021-07-01
 
-### Add
+### Added
 
 - Show a preview when "Open Reference Manual" command is invoked. This feature can be disabled from the configuration.
 
@@ -53,7 +57,6 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
   - `vscode-spec.mnemonic.motor.descriptions`
   - `vscode-spec.mnemonic.counter.labels`
   - `vscode-spec.mnemonic.motor.descriptions`
-
 
 ### Fixed
 

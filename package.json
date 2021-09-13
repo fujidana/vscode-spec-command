@@ -3,7 +3,7 @@
 	"name": "spec-command",
 	"displayName": "spec command",
 	"description": "spec command file support for VS Code",
-	"version": "1.6.0",
+	"version": "1.6.1-alpha.20210903",
 	"engines": {
 		"vscode": "^1.59.0"
 	},
@@ -32,7 +32,7 @@
 		"onLanguage:spec-command",
 		"onCommand:spec-command.openReferenceManual"
 	],
-	"main": "./out/extension.js",
+	"main": "./dist/extension.js",
 	"contributes": {
 		"languages": [
 			{
@@ -322,11 +322,14 @@
 		}
 	},
 	"scripts": {
-		"vscode:prepublish": "npm-run-all -s pegjs js-yaml:* compile",
-		"compile": "tsc -p ./",
+		"vscode:prepublish": "npm-run-all -s pegjs js-yaml:* package",
+		"compile": "webpack",
+		"watch": "webpack --watch",
+		"package": "webpack --mode production --devtool hidden-source-map",
+		"test-compile": "tsc -p ./",
+		"test-watch": "tsc -watch -p ./",
+		"pretest": "npm run test-compile && npm run lint",
 		"lint": "eslint src --ext ts",
-		"watch": "tsc -watch -p ./",
-		"pretest": "npm run compile && npm run lint",
 		"test": "node ./out/test/runTest.js",
 		"js-yaml:snippets": "js-yaml ./src/specCommand.snippets.yaml > ./syntaxes/specCommand.snippets.json",
 		"js-yaml:apiReference": "js-yaml ./src/specCommand.apiReference.yaml > ./syntaxes/specCommand.apiReference.json",
@@ -351,6 +354,9 @@
 		"npm-run-all": "^4.1.5",
 		"ts-pegjs": "^1.0.0",
 		"typescript": "^4.3.2",
-		"vscode-test": "^1.5.2"
+		"vscode-test": "^1.5.2",
+		"ts-loader": "^9.2.2",
+		"webpack": "^5.38.1",
+		"webpack-cli": "^4.7.0"
 	}
 }
