@@ -6,6 +6,7 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Changed
 
+- Adapt for a web extension.
 - Migrate the extension to use webpack.
 
 ## [1.6.0] -- 2021-08-31
