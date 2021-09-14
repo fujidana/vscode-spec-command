@@ -1,7 +1,33 @@
 import * as vscode from 'vscode';
-import { TextDecoder } from "util";
 import * as spec from "./spec";
 import { CommandProvider } from "./commandProvider";
+
+/**
+ * TextDecoder object.
+ * 
+ * While in web browsers this is a global object, in Node.js this is 
+ * in the 'util' module. 
+ * Though the Node.js documentataion says the object is globally available
+ *  (since 11.0.0),
+ * https://nodejs.org/api/util.html#util_new_textdecoder_encoding_options
+ * "@types/node" provides the type definition only in 'util' module.
+ * To make this extension web-ready, stop using
+ * `import { TextDecoder } from 'util'`
+ * and instead refer to a global object.
+ */
+ declare class TextDecoder {
+    readonly encoding: string;
+    readonly fatal: boolean;
+    readonly ignoreBOM: boolean;
+    constructor(
+        encoding?: string,
+        options?: { fatal?: boolean | undefined; ignoreBOM?: boolean | undefined }
+    );
+    decode(
+        input?: NodeJS.ArrayBufferView | ArrayBuffer | null,
+        options?: { stream?: boolean | undefined }
+    ): string;
+}
 
 interface APIReference {
     constants: spec.ReferenceItem[];
@@ -39,7 +65,7 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
         super(context);
 
         // load the API reference file
-        const apiReferenceUri = vscode.Uri.joinPath(context.extensionUri, './syntaxes/specCommand.apiReference.json');
+        const apiReferenceUri = vscode.Uri.joinPath(context.extensionUri, 'syntaxes', 'specCommand.apiReference.json');
         vscode.workspace.fs.readFile(apiReferenceUri).then(uint8Array => {
             // convert JSON-formatted file contents to a javascript object.
             const apiReference: APIReference = JSON.parse(new TextDecoder('utf-8').decode(uint8Array));

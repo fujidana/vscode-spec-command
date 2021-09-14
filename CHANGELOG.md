@@ -4,11 +4,15 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+### Fixed
+
+- database of build-in symbols not loaded when the extension is loaded as a web extension.
+
 ## [1.7.0] -- 2021-09-14
 
 ### Changed
 
-- Adapt for a web extension.
+- Adapt for a web extension. The extension becomes available in Visual Studio Codespaces (VS Code for the Web).
 - Migrate the extension to use webpack.
 
 ## [1.6.0] -- 2021-08-31
