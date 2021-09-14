@@ -4,6 +4,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+## [1.7.0] -- 2021-09-14
+
 ### Changed
 
 - Adapt for a web extension.
@@ -297,7 +299,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
   - syntax highlighting
   - code snippets
 
-[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/fujidana/vscode-spec-command/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/fujidana/vscode-spec-command/compare/v1.5.1...v1.6.0
 [1.5.1]: https://github.com/fujidana/vscode-spec-command/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/fujidana/vscode-spec-command/compare/v1.4.0...v1.5.0
