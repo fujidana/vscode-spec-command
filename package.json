@@ -88,17 +88,17 @@
 				},
 				{
 					"command": "spec-command.execSelectionInTerminal",
-					"when": "editorLangId == 'spec-command'"
+					"when": "shellExecutionSupported && editorLangId == 'spec-command'"
 				},
 				{
 					"command": "spec-command.execFileInTerminal",
-					"when": "editorLangId == 'spec-command'"
+					"when": "shellExecutionSupported && editorLangId == 'spec-command'"
 				}
 			],
 			"explorer/context": [
 				{
 					"command": "spec-command.execFileInTerminal",
-					"when": "resourceLangId == 'spec-command'",
+					"when": "shellExecutionSupported && resourceLangId == 'spec-command'",
 					"group": "9_speccommand"
 				}
 			],
@@ -106,19 +106,19 @@
 				{
 					"command": "spec-command.execSelectionInTerminal",
 					"alt": "spec-command.execFileInTerminal",
-					"when": "editorLangId == 'spec-command'",
+					"when": "shellExecutionSupported && editorLangId == 'spec-command'",
 					"group": "navigation"
 				}
 			],
 			"editor/context": [
 				{
 					"command": "spec-command.execSelectionInTerminal",
-					"when": "editorTextFocus && editorLangId == 'spec-command'",
+					"when": "shellExecutionSupported && editorTextFocus && editorLangId == 'spec-command'",
 					"group": "9_speccommand"
 				},
 				{
 					"command": "spec-command.execFileInTerminal",
-					"when": "editorTextFocus && editorLangId == 'spec-command'",
+					"when": "shellExecutionSupported && editorTextFocus && editorLangId == 'spec-command'",
 					"group": "9_speccommand"
 				}
 			]
@@ -127,7 +127,7 @@
 			{
 				"command": "spec-command.execSelectionInTerminal",
 				"key": "shift+enter",
-				"when": "editorTextFocus && editorLangId == 'spec-command'"
+				"when": "shellExecutionSupported && editorTextFocus && editorLangId == 'spec-command'"
 			}
 		],
 		"configuration": {
