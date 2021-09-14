@@ -33,7 +33,8 @@ function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceI
         }
     } else {
         const itemUri = vscode.Uri.parse(itemUriString);
-        itemUriLabel = (itemUri.scheme === 'file') ? vscode.workspace.asRelativePath(itemUri) : itemUriString;
+        // itemUriLabel = (itemUri.scheme === 'file') ? vscode.workspace.asRelativePath(itemUri) : itemUriString;
+        itemUriLabel = vscode.workspace.asRelativePath(itemUri);
         symbolLabel = outputsMarkdown ? 'user-defined ' + symbolLabel : symbolLabel + ' defined in ' + itemUriLabel;
     }
 
@@ -149,7 +150,7 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
 
     /**
      * Generate completion items from the registered storage and cache it in the map using `uri` as the key.
-     * Subclass must invoke it when the storage contents are changed. 
+     * Subclass must invoke it when the storage contents are changed.
      */
     protected updateCompletionItemsForUriString(uriString: string): vscode.CompletionItem[] | undefined {
         const storage = this.storageCollection.get(uriString);
@@ -169,11 +170,13 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
                     description = 'counter';
                 } else if (uriString === spec.SNIPPET_URI) {
                     description = 'snippet';
-                } else if (uriString === spec.ACTIVE_FILE_URI || uriString === vscode.window.activeTextEditor?.document.uri.toString()) {
-                    description = 'this file';
+                } else if (uriString === spec.ACTIVE_FILE_URI) {
+                // } else if (uriString === spec.ACTIVE_FILE_URI || uriString === vscode.window.activeTextEditor?.document.uri.toString()) {
+                    description = 'local';
                 } else {
                     const itemUri = vscode.Uri.parse(uriString);
-                    description = (itemUri.scheme === 'file') ? vscode.workspace.asRelativePath(itemUri) : uriString;
+                    // description = (itemUri.scheme === 'file') ? vscode.workspace.asRelativePath(itemUri) : uriString;
+                    description = vscode.workspace.asRelativePath(itemUri);
                 }
             }
 

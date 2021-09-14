@@ -256,7 +256,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         // a hander invoked when the document is changed
         const textDocumentChangeListener = (event: vscode.TextDocumentChangeEvent) => {
             const document = event.document;
-            if (vscode.languages.match(spec.CMD_SELECTOR, document)) {
+            if (vscode.languages.match(spec.CMD_SELECTOR, document) && document.uri.scheme !== 'git') {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
                 // this.diagnoseOpenDocments();
             }
@@ -265,14 +265,14 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         // a hander invoked when the document is opened
         // this is also invoked after the user manually changed the language id
         const textDocumentOpenListener = (document: vscode.TextDocument) => {
-            if (vscode.languages.match(spec.CMD_SELECTOR, document)) {
+            if (vscode.languages.match(spec.CMD_SELECTOR, document) && document.uri.scheme !== 'git') {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
             }
         };
 
         // a hander invoked when the document is saved
         const textDocumentSaveListener = (document: vscode.TextDocument) => {
-            if (vscode.languages.match(spec.CMD_SELECTOR, document)) {
+            if (vscode.languages.match(spec.CMD_SELECTOR, document) && document.uri.scheme !== 'git') {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
             }
         };
@@ -440,7 +440,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
             // onDidOpenTextDocument and onDidCloseTextDocument events.
             const openedFiles = new Set<string>();
             for (const document of vscode.workspace.textDocuments) {
-                if (vscode.languages.match(spec.CMD_SELECTOR, document)) {
+                if (vscode.languages.match(spec.CMD_SELECTOR, document) && document.uri.scheme !== 'git') {
                     openedFiles.add(document.uri.toString());
                 }
             }
@@ -511,7 +511,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         // parse documents opened by editors
         const openedFiles = new Set<string>();
         for (const document of vscode.workspace.textDocuments) {
-            if (vscode.languages.match(spec.CMD_SELECTOR, document)) {
+            if (vscode.languages.match(spec.CMD_SELECTOR, document) && document.uri.scheme !== 'git') {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
                 openedFiles.add(document.uri.toString());
             }

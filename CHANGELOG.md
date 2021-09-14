@@ -6,7 +6,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Fixed
 
-- database of build-in symbols not loaded when the extension is loaded as a web extension.
+- syntax parser not analyzing files in virtual workspaces (i.e., files whose URI scheme is not `"file:"`)
+- error in loading the database of build-in symbols when invoked as an web extension
 
 ## [1.7.0] -- 2021-09-14
 
