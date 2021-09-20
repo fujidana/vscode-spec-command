@@ -153,32 +153,31 @@ function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position
 
 async function findFilesInWorkspaces() {
     const workspaceFolders = vscode.workspace.workspaceFolders;
-    const map: Map<string, { diagnoseProblems: boolean }> = new Map();
+    const uriStringSet = new Set<string>();
 
     if (workspaceFolders) {
         for (const workspaceFolder of workspaceFolders) {
-            const diagnoseProblems = vscode.workspace.getConfiguration('spec-command.workspace', workspaceFolder).get<boolean>('diagnoseProblems', false);
-
             // refer to `files.associations` configuration property
-            const additionalAssociations = vscode.workspace.getConfiguration('files', workspaceFolder).get<Record<string, string>>('associations');
-            // merge the key-value pairs. If a user defines '*.mac' key, its value overwrites the default setting.
-            const associations = Object.assign({ '*.mac': 'spec-command' }, additionalAssociations);
+            const associations = Object.assign(
+                <Record<string, string>>{ '*.mac': 'spec-command' },
+                vscode.workspace.getConfiguration('files', workspaceFolder).get<Record<string, string>>('associations')
+            );
 
             for (const [key, value] of Object.entries(associations)) {
                 const inclusivePattern = new vscode.RelativePattern(workspaceFolder, (key.includes('/') ? key : `**/${key}`));
                 if (value === 'spec-command') {
                     for (const uri of await vscode.workspace.findFiles(inclusivePattern)) {
-                        map.set(uri.toString(), { diagnoseProblems });
+                        uriStringSet.add(uri.toString());
                     }
                 } else {
                     for (const uri of await vscode.workspace.findFiles(inclusivePattern)) {
-                        map.delete(uri.toString());
+                        uriStringSet.delete(uri.toString());
                     }
                 }
             }
         }
     }
-    return map;
+    return uriStringSet;
 }
 
 /**
@@ -238,7 +237,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
             const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
             let path: string;
             if (workspaceFolder) {
-                const prefix = vscode.workspace.getConfiguration('spec-command.terminal', workspaceFolder.uri).get<string>('filePathPrefix', '');
+                const prefix = vscode.workspace.getConfiguration('spec-command.terminal', workspaceFolder).get<string>('filePathPrefix', '');
                 path = prefix + vscode.workspace.asRelativePath(uri, false);
             } else {
                 path = uri.path;
@@ -281,24 +280,24 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         // this is also invoked after the user manually changed the language id
         const textDocumentCloseListener = async (document: vscode.TextDocument) => {
             if (vscode.languages.match(spec.CMD_SELECTOR, document)) {
-                const uriString = document.uri.toString();
+                const documentUriString = document.uri.toString();
 
-                this.treeCollection.delete(uriString);
+                this.treeCollection.delete(documentUriString);
 
                 // check whether the file is in a workspace folder. If not in a folder, delete from the database.
                 const filesInWorkspaces = await findFilesInWorkspaces();
-                const fileMetadata = filesInWorkspaces.get(document.uri.toString());
-                if (fileMetadata) {
-                    // if file also exists in a workspace folder,
+                if (filesInWorkspaces.has(documentUriString)) {
+                    // if file also exists in a workspace folder...
                     // clear diagnostics if setting for workspace.diagnoseProblem is false. 
-                    if (!fileMetadata.diagnoseProblems) {
+                    const diagnoseInWorkspace = vscode.workspace.getConfiguration('spec-command.workspace', document).get<boolean>('diagnoseProblems', false);
+                    if (!diagnoseInWorkspace) {
                         this.diagnosticCollection.delete(document.uri);
                     }
                 } else {
                     // if file does not exist in a workspace folder, clear all.
-                    this.storageCollection.delete(uriString);
+                    this.storageCollection.delete(documentUriString);
                     this.diagnosticCollection.delete(document.uri);
-                    this.completionItemCollection.delete(uriString);
+                    this.completionItemCollection.delete(documentUriString);
                 }
             }
         };
@@ -306,46 +305,44 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         // // a hander invoked after files are created
         // const fileCreateListener = async (event: vscode.FileCreateEvent) => {
         //     const filesInWorkspaces = await findFilesInWorkspaces();
-
-        //     const newFiles: Map<string, { diagnoseProblems: boolean }> = new Map();
-        //     for (const newFileUri of event.files) {
+        //     const newUriStringSet = new Set<string>();
+        //     for (const newUri of event.files) {
         //     }
         // };
 
         // a hander invoked after files are renamed
         const fileRenameListener = async (event: vscode.FileRenameEvent) => {
             const filesInWorkspaces = await findFilesInWorkspaces();
-            const oldFiles: Set<string> = new Set();
-            const newFiles: Map<string, { diagnoseProblems: boolean }> = new Map();
+            const oldUriStringSet = new Set<string>();
+            const newUriStringSet = new Set<string>();
 
             for (const { oldUri, newUri } of event.files) {
                 const stat = await vscode.workspace.fs.stat(newUri);
 
                 if (stat.type === vscode.FileType.File) {
-                    oldFiles.add(oldUri.toString());
-                    const newFileMetadata = filesInWorkspaces.get(newUri.toString());
-                    if (newFileMetadata) {
-                        newFiles.set(newUri.toString(), newFileMetadata);
+                    oldUriStringSet.add(oldUri.toString());
+                    if (filesInWorkspaces.has(newUri.toString())) {
+                        newUriStringSet.add(newUri.toString());
                     }
                 } else if (stat.type === vscode.FileType.Directory) {
                     const oldDirUriString = oldUri.toString() + "/";
 
                     for (const fileUriString of this.storageCollection.keys()) {
                         if (fileUriString.startsWith(oldDirUriString)) {
-                            oldFiles.add(fileUriString);
+                            oldUriStringSet.add(fileUriString);
                         }
                     }
 
                     const newDirUriString = newUri.toString() + "/";
-                    for (const [fileUriString, fileMetadata] of filesInWorkspaces) {
+                    for (const fileUriString of filesInWorkspaces) {
                         if (fileUriString.startsWith(newDirUriString)) {
-                            newFiles.set(fileUriString, fileMetadata);
+                            newUriStringSet.add(fileUriString);
                         }
                     }
                 }
             }
 
-            this.applyFileOperation(oldFiles, newFiles);
+            this.applyFileOperation(oldUriStringSet, newUriStringSet);
         };
 
         // a hander invoked before files are deleted
@@ -353,19 +350,19 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
             for (const oldUri of event.files) {
                 const promise = vscode.workspace.fs.stat(oldUri).then(
                     stat => {
-                        const oldFiles: Set<string> = new Set();
+                        const oldUriStringSet = new Set<string>();
                         if (stat.type === vscode.FileType.File) {
-                            oldFiles.add(oldUri.toString());
+                            oldUriStringSet.add(oldUri.toString());
                         } else if (stat.type === vscode.FileType.Directory) {
                             const oldDirUriString = oldUri.toString() + "/";
 
                             for (const fileUriString of this.storageCollection.keys()) {
                                 if (fileUriString.startsWith(oldDirUriString)) {
-                                    oldFiles.add(fileUriString);
+                                    oldUriStringSet.add(fileUriString);
                                 }
                             }
                         }
-                        this.applyFileOperation(oldFiles);
+                        this.applyFileOperation(oldUriStringSet);
                     }
                 );
                 event.waitUntil(promise);
@@ -401,7 +398,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
             vscode.workspace.onDidCloseTextDocument(textDocumentCloseListener),
             // vscode.window.onDidChangeActiveTextEditor(activeTextEditorChangeListener),
             // register file-event listeners
-            // vscode.workspace.onDidCreateFiles(FileCreateListener),
+            // vscode.workspace.onDidCreateFiles(fileCreateListener),
             vscode.workspace.onDidRenameFiles(fileRenameListener),
             vscode.workspace.onWillDeleteFiles(fileWillDeleteListener),
             // register other event listeners
@@ -420,37 +417,37 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
     }
 
     // update the metadata database.
-    // All metadata for files in oldFiles are removed. Mismatched files are just ignored.
+    // All metadata for oldFiles are removed. Mismatched files are just ignored.
     // All metadata for newFiles are created thus the file paths should be filtered beforehand
     // based on the configuration settings.
-    private async applyFileOperation(oldFiles?: Set<string>, newFiles?: Map<string, { diagnoseProblems: boolean }>) {
+    private async applyFileOperation(oldUriStringSet?: Set<string>, newUriStringSet?: Set<string>) {
         // unregister metadata for old URIs.
-        if (oldFiles) {
-            for (const oldFileUriString of oldFiles) {
-                this.storageCollection.delete(oldFileUriString);
-                this.diagnosticCollection.delete(vscode.Uri.parse(oldFileUriString));
-                this.completionItemCollection.delete(oldFileUriString);
+        if (oldUriStringSet) {
+            for (const oldUriString of oldUriStringSet) {
+                this.storageCollection.delete(oldUriString);
+                this.diagnosticCollection.delete(vscode.Uri.parse(oldUriString));
+                this.completionItemCollection.delete(oldUriString);
             }
         }
 
         // register metadata for new URIs.
-        if (newFiles) {
+        if (newUriStringSet) {
             // make a list of opened documents.
             // Do nothing for these files because they are handled by
             // onDidOpenTextDocument and onDidCloseTextDocument events.
-            const openedFiles = new Set<string>();
+            const documentUriStringSet = new Set<string>();
             for (const document of vscode.workspace.textDocuments) {
                 if (vscode.languages.match(spec.CMD_SELECTOR, document) && document.uri.scheme !== 'git') {
-                    openedFiles.add(document.uri.toString());
+                    documentUriStringSet.add(document.uri.toString());
                 }
             }
-
-            const textDecoder = getTextDecoder({ languageId: 'spec-command' });
-            for (const [newFileUriString, newFileMetadata] of newFiles) {
-                if (!openedFiles.has(newFileUriString)) {
-                    const newFileUri = vscode.Uri.parse(newFileUriString);
-                    const contents = textDecoder.decode(await vscode.workspace.fs.readFile(newFileUri));
-                    this.parseDocumentContents(contents, newFileUri, false, newFileMetadata.diagnoseProblems);
+            for (const newUriString of newUriStringSet) {
+                if (!documentUriStringSet.has(newUriString)) {
+                    const newUri = vscode.Uri.parse(newUriString);
+                    const textDecoder = getTextDecoder({ languageId: 'spec-command', uri: newUri });
+                    const contents = textDecoder.decode(await vscode.workspace.fs.readFile(newUri));
+                    const diagnoseInWorkspace = vscode.workspace.getConfiguration('spec-command.workspace', newUri).get<boolean>('diagnoseProblems', false);
+                    this.parseDocumentContents(contents, newUri, false, diagnoseInWorkspace);
                 }
             }
         }
@@ -509,23 +506,24 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         this.completionItemCollection.clear();
 
         // parse documents opened by editors
-        const openedFiles = new Set<string>();
+        const documentUriStringSet = new Set<string>();
         for (const document of vscode.workspace.textDocuments) {
             if (vscode.languages.match(spec.CMD_SELECTOR, document) && document.uri.scheme !== 'git') {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
-                openedFiles.add(document.uri.toString());
+                documentUriStringSet.add(document.uri.toString());
             }
         }
 
         // parse the other files in workspace folders.
         const filesInWorkspaces = await findFilesInWorkspaces();
 
-        const textDecoder = getTextDecoder({ languageId: 'spec-command' });
-        for (const [fileUriString, fileMetadata] of filesInWorkspaces) {
-            if (!openedFiles.has(fileUriString)) {
-                const fileUri = vscode.Uri.parse(fileUriString);
-                const contents = textDecoder.decode(await vscode.workspace.fs.readFile(fileUri));
-                this.parseDocumentContents(contents, fileUri, false, fileMetadata.diagnoseProblems);
+        for (const uriString of filesInWorkspaces) {
+            if (!documentUriStringSet.has(uriString)) {
+                const uri = vscode.Uri.parse(uriString);
+                const textDecoder = getTextDecoder({ languageId: 'spec-command', uri: uri });
+                const contents = textDecoder.decode(await vscode.workspace.fs.readFile(uri));
+                const diagnoseInWorkspace = vscode.workspace.getConfiguration('spec-command.workspace', uri).get<boolean>('diagnoseProblems', false);
+                this.parseDocumentContents(contents, uri, false, diagnoseInWorkspace);
             }
         }
     }

@@ -4,6 +4,10 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+### Fixed
+
+- `files.encoding` value in Folder Settings not being reffered to in a multi-root workspace
+
 ## [1.7.1] -- 2021-09-14
 
 ### Fixed
