@@ -4,6 +4,13 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+### Changed
+
+- Make the following settings configurable in Folder Settings window in a multi-root workspace:
+  - `spec-command.suggest.codeSnippets`
+  - `spec-command.suggest.motors`
+  - `spec-command.suggest.counters`
+
 ### Fixed
 
 - `files.encoding` value in Folder Settings not being reffered to in a multi-root workspace

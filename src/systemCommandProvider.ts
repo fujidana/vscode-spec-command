@@ -15,7 +15,7 @@ import { CommandProvider } from "./commandProvider";
  * `import { TextDecoder } from 'util'`
  * and instead refer to a global object.
  */
- declare class TextDecoder {
+declare class TextDecoder {
     readonly encoding: string;
     readonly fatal: boolean;
     readonly ignoreBOM: boolean;
@@ -40,7 +40,7 @@ interface APIReference {
 const SNIPPET_TEMPLATES: Record<string, string> = {
     mv: 'mv ${1%MOT} ${2:pos} # absolute-position motor move',
     mvr: 'mvr ${1%MOT} ${2:pos} # relative-position motor move',
-    umv:  'umv ${1%MOT} ${2:pos} # absolute-position motor move (live update)',
+    umv: 'umv ${1%MOT} ${2:pos} # absolute-position motor move (live update)',
     umvr: 'umvr ${1%MOT} ${2:pos} # relative-position motor move (live update)',
     ascan: 'ascan ${1%MOT1} ${2:begin} ${3:end} ${4:steps} ${5:sec} # single-motor absolute-position scan',
     dscan: 'dscan ${1%MOT1} ${2:begin} ${3:end} ${4:steps} ${5:sec} # single-motor relative-position scan',
@@ -61,6 +61,8 @@ const SNIPPET_TEMPLATES: Record<string, string> = {
  * This class manages built-in symbols and motor mnemonics user added in VS Code configuraion.
  */
 export class SystemCommandProvider extends CommandProvider implements vscode.TextDocumentContentProvider {
+    private activeWorkspaceFolder: vscode.WorkspaceFolder | undefined;
+
     constructor(context: vscode.ExtensionContext) {
         super(context);
 
@@ -85,21 +87,34 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
         });
 
         // register motor and counter mnemonic storages and snippet storage.
-        this.updateMnemonicStorage(spec.MOTOR_URI);
-        this.updateMnemonicStorage(spec.COUNTER_URI);
+        const editor = vscode.window.activeTextEditor;
+        this.activeWorkspaceFolder = editor ? vscode.workspace.getWorkspaceFolder(editor.document.uri) : undefined;
+        this.updateMnemonicStorage('motors');
+        this.updateMnemonicStorage('counters');
         this.updateSnippetStorage();
+
+        //
+        const activeTextEditorChangeListener = (event: vscode.TextEditor | undefined) => {
+           const newActiveWorkspaceFolder = event ? vscode.workspace.getWorkspaceFolder(event.document.uri) : undefined;
+           if (this.activeWorkspaceFolder !== newActiveWorkspaceFolder) {
+               this.activeWorkspaceFolder = newActiveWorkspaceFolder;
+               this.updateMnemonicStorage('motors');
+               this.updateMnemonicStorage('counters');
+               this.updateSnippetStorage();
+           }
+        };
 
         // observe the change in configuration
         const configurationChangeListener = (event: vscode.ConfigurationChangeEvent) => {
-            if (event.affectsConfiguration('spec-command.suggest.motors')) {
-                this.updateMnemonicStorage(spec.MOTOR_URI);
+            if (event.affectsConfiguration('spec-command.suggest.motors', this.activeWorkspaceFolder)) {
+                this.updateMnemonicStorage('motors');
                 this.updateSnippetStorage();
             }
-            if (event.affectsConfiguration('spec-command.suggest.counters')) {
-                this.updateMnemonicStorage(spec.COUNTER_URI);
+            if (event.affectsConfiguration('spec-command.suggest.counters', this.activeWorkspaceFolder)) {
+                this.updateMnemonicStorage('counters');
                 this.updateSnippetStorage();
             }
-            if (event.affectsConfiguration('spec-command.suggest.codeSnippets')) {
+            if (event.affectsConfiguration('spec-command.suggest.codeSnippets', this.activeWorkspaceFolder)) {
                 this.updateSnippetStorage();
             }
         };
@@ -155,6 +170,7 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
             // register providers
             vscode.workspace.registerTextDocumentContentProvider('spec', this),
             // register event handlers
+            vscode.window.onDidChangeActiveTextEditor(activeTextEditorChangeListener),
             vscode.workspace.onDidChangeConfiguration(configurationChangeListener),
         );
     }
@@ -163,11 +179,11 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
      * Update the contents of motor or counter mnemonic storage.
      * Invoked when initialization completed or configuration modified. 
      */
-    private updateMnemonicStorage(uriString: string) {
+    private updateMnemonicStorage(kind: 'motors' | 'counters') {
+        const uriString = kind === 'motors' ? spec.MOTOR_URI : spec.COUNTER_URI;
         const refMap: spec.ReferenceMap = new Map();
-        const sectionString = (uriString === spec.MOTOR_URI) ? 'motors' : 'counters';
 
-        const record = vscode.workspace.getConfiguration('spec-command.suggest').get<Record<string, string>>(sectionString);
+        const record = vscode.workspace.getConfiguration('spec-command.suggest', this.activeWorkspaceFolder).get<Record<string, string>>(kind);
         if (record) {
             const regExp = /^[a-zA-Z_][a-zA-Z0-9_]{0,6}$/;
             for (const [key, value] of Object.entries(record)) {
@@ -187,7 +203,7 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
     private updateSnippetStorage() {
         const refMap: spec.ReferenceMap = new Map();
 
-        const userTemplates = vscode.workspace.getConfiguration('spec-command.suggest').get<Record<string, string>>('codeSnippets');
+        const userTemplates = vscode.workspace.getConfiguration('spec-command.suggest', this.activeWorkspaceFolder).get<Record<string, string>>('codeSnippets');
         const templates = (userTemplates && Object.keys(userTemplates).length) ? Object.assign({}, SNIPPET_TEMPLATES, userTemplates) : SNIPPET_TEMPLATES;
 
         const motorRefMap = this.storageCollection.get(spec.MOTOR_URI)?.get(spec.ReferenceItemKind.Enum);
