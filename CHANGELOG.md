@@ -4,6 +4,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+## [1.7.2] -- 2021-12-07
+
 ### Changed
 
 - Make the following settings configurable in Folder Settings window in a multi-root workspace:
@@ -317,7 +319,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
   - syntax highlighting
   - code snippets
 
-[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.1...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.2...HEAD
+[1.7.2]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.1...v1.7.2
 [1.7.1]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.0...v1.7.1
 [1.7.0]: https://github.com/fujidana/vscode-spec-command/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/fujidana/vscode-spec-command/compare/v1.5.1...v1.6.0
