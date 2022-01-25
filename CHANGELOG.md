@@ -4,6 +4,10 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+### Fixed
+
+- improper syntax highlighting rule that treats `\$` in a string literal as invalid
+
 ## [1.7.2] -- 2021-12-07
 
 ### Changed
