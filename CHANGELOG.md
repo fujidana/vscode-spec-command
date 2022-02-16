@@ -4,6 +4,12 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+## [1.7.3] -- 2022-02-16
+
+### Changed
+
+- Update Node.js packages.
+
 ### Fixed
 
 - improper syntax highlighting rule that treats `\$` in a string literal as invalid
@@ -323,7 +329,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
   - syntax highlighting
   - code snippets
 
-[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.2...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.3...HEAD
+[1.7.3]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.2...v1.7.3
 [1.7.2]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.1...v1.7.2
 [1.7.1]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.0...v1.7.1
 [1.7.0]: https://github.com/fujidana/vscode-spec-command/compare/v1.6.0...v1.7.0
