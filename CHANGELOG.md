@@ -4,6 +4,15 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+### Added
+
+- Add support for "Surround With Snippet" command to built-in sunippets.
+
+### Changed
+
+- Update Node.js packages.
+- Raise the minimum VS Code version to 1.65.0.
+
 ## [1.7.3] -- 2022-02-16
 
 ### Changed
@@ -12,7 +21,7 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Fixed
 
-- improper syntax highlighting rule that treats `\$` in a string literal as invalid
+- improper syntax highlighting rule that treated `\$` in a string literal as invalid
 
 ## [1.7.2] -- 2021-12-07
 

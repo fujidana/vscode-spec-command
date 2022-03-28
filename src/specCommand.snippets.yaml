@@ -8,7 +8,7 @@ macro-with-fixed-arguments:
     - "\t\teprintf(\"Usage: %s ${3:arg1 ...}\\n\", \"\\$0\")"
     - "\t\texit"
     - "\t}"
-    - "\t$0"
+    - "\t$TM_SELECTED_TEXT$0"
     - "}'"
   description:
     traditional macro definition using fixed number of arguments
@@ -20,7 +20,7 @@ macro-with-variable-arguments:
     - "def ${1:macro_name} '{"
     - "\tlocal ${2:arg_num}, ${3:arg_array}[]"
     - "\t${2:arg_num} = split(\"$@\", ${3:arg_array}, \"\\a\")"
-    - "\t$0"
+    - "\t$TM_SELECTED_TEXT$0"
     - "}'"
   description:
     traditional macro definition using variable number of arguments
@@ -30,7 +30,8 @@ macro-function:
   body:
     - "\"\"\"${3:comment}\"\"\""
     - "def ${1:func_name}(${2:arg1, ...}) '{"
-    - "\t$0return 0"
+    - "\t$TM_SELECTED_TEXT$0"
+    - "\treturn 0"
     - "}'"
   description:
     macro function definition
@@ -53,7 +54,7 @@ if:
     - if
   body:
     - "if (${1:condition}) {"
-    - "\t$0"
+    - "\t$TM_SELECTED_TEXT$0"
     - "}"
   description:
     if statement
@@ -62,7 +63,7 @@ else:
     - else
   body:
     - "else {"
-    - "\t$0"
+    - "\t$TM_SELECTED_TEXT$0"
     - "}"
   description:
     else clause
@@ -70,9 +71,9 @@ else-if:
   prefix:
     - else-if
   body:
-  - "else if (${1:condition}) {"
-  - "\t$0"
-  - "}"
+    - "else if (${1:condition}) {"
+    - "\t$TM_SELECTED_TEXT$0"
+    - "}"
   description:
     else clause with a nested if statement
 while:
@@ -80,7 +81,7 @@ while:
     - while
   body:
     - "while (${1:condition}) {"
-    - "\t$0"
+    - "\t$TM_SELECTED_TEXT$0"
     - "}"
   description:
     while loop
@@ -90,7 +91,7 @@ for:
   body:
     - "local ${1:i}"
     - "for (${1:i} = 0; ${1:i} < ${2:n}; ${1:i}++) {"
-    - "\t$0"
+    - "\t$TM_SELECTED_TEXT$0"
     - "}"
   description:
     for loop
@@ -101,7 +102,7 @@ for-in:
     - "local ${1:key}, ${2:value}"
     - "for (${1:key} in ${3:assoc_array}) {"
     - "\t${2:value} = ${3:assoc_array}[${1:key}]"
-    - "\t$0"
+    - "\t$TM_SELECTED_TEXT$0"
     - "}"
   description:
     for-in loop
