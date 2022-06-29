@@ -10,5 +10,5 @@ webpack.config.js
 vsc-extension-quickstart.md
 **/tsconfig.json
 **/.eslintrc.json
-dist/test/**
 dist/**/*.map
+dist/test/**
