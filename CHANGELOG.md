@@ -4,14 +4,16 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+## [1.7.4] -- 2022-06-29
+
 ### Added
 
-- Add support for "Surround With Snippet" command to built-in sunippets.
+- support for "Surround With Snippet" command
 
 ### Changed
 
 - Update Node.js packages.
-- Raise the minimum VS Code version to 1.65.0.
+- Raise the minimum VS Code version to 1.68.0.
 
 ## [1.7.3] -- 2022-02-16
 
@@ -45,9 +47,12 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [1.7.0] -- 2021-09-14
 
-### Changed
+### Added
 
 - Adapt for a web extension. The extension becomes available in Visual Studio Codespaces (VS Code for the Web).
+
+### Changed
+
 - Migrate the extension to use webpack.
 
 ## [1.6.0] -- 2021-08-31
@@ -338,7 +343,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
   - syntax highlighting
   - code snippets
 
-[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.3...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.4...HEAD
+[1.7.4]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.3...v1.7.4
 [1.7.3]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.2...v1.7.3
 [1.7.2]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.1...v1.7.2
 [1.7.1]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.0...v1.7.1

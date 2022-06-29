@@ -3,7 +3,7 @@
 	"name": "spec-command",
 	"displayName": "spec command",
 	"description": "spec command file support for VS Code",
-	"version": "1.7.4-alpha.20220629",
+	"version": "1.7.4",
 	"engines": {
 		"vscode": "^1.68.0"
 	},
