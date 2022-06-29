@@ -174,7 +174,7 @@
    *
    */
   function testIfEscapedCharIsAvailable(escapedChar: string): boolean {
-    return _quoteStack.every(quote => quote.length !== 2 || quote.substr(1, 1) !== escapedChar);
+    return _quoteStack.every(quote => quote.length !== 2 || quote.substring(1, 2) !== escapedChar);
   }
 
   /**
