@@ -4,6 +4,12 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+### Changed
+
+- Migrate the package manager to `pnpm`.
+- Update Node.js packages.
+- Raise the minimum VS Code version to 1.70.0.
+
 ## [1.7.4] -- 2022-06-29
 
 ### Added
