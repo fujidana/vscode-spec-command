@@ -6,9 +6,11 @@ import { IFileRange, IFilePosition } from './grammar';
 export function convertPosition(position: IFilePosition): vscode.Position {
     return new vscode.Position(position.line - 1, position.column - 1);
 }
+
 export function convertRange(range: IFileRange): vscode.Range {
     return new vscode.Range(convertPosition(range.start), convertPosition(range.end));
 }
+
 export const CMD_SELECTOR = { language: 'spec-command' };
 // export const CMD_SELECTOR = [{ scheme: 'file', language: 'spec-command' }, { scheme: 'untitled', language: 'spec-command' }];
 export const BUILTIN_URI = 'spec://system/built-in.md';
@@ -21,32 +23,12 @@ export const enum ReferenceItemKind {
     Undefined = 0,
     Constant,
     Variable,
+    Array,
     Macro,
     Function,
     Keyword,
     Snippet,
     Enum,
-}
-
-export function getReferenceItemKindFromCompletionItemKind(completionItemKind?: vscode.CompletionItemKind): ReferenceItemKind {
-    switch (completionItemKind) {
-        case vscode.CompletionItemKind.Constant:
-            return ReferenceItemKind.Constant;
-        case vscode.CompletionItemKind.Variable:
-            return ReferenceItemKind.Variable;
-        case vscode.CompletionItemKind.Module:
-            return ReferenceItemKind.Macro;
-        case vscode.CompletionItemKind.Function:
-            return ReferenceItemKind.Function;
-        case vscode.CompletionItemKind.Keyword:
-            return ReferenceItemKind.Keyword;
-        case vscode.CompletionItemKind.Snippet:
-            return ReferenceItemKind.Snippet;
-        case vscode.CompletionItemKind.EnumMember:
-            return ReferenceItemKind.Enum;
-        default:
-            return ReferenceItemKind.Undefined;
-    }
 }
 
 type ReferenceItemKindMetadata = { label: string, iconIdentifier: string, completionItemKind: vscode.CompletionItemKind | undefined, symbolKind: vscode.SymbolKind };
@@ -67,7 +49,14 @@ export function getReferenceItemKindMetadata(refItemKind: ReferenceItemKind) : R
                 completionItemKind: vscode.CompletionItemKind.Variable,
                 symbolKind: vscode.SymbolKind.Variable
             };
-        case ReferenceItemKind.Macro:
+            case ReferenceItemKind.Array:
+                return {
+                    label: "data-array",
+                    iconIdentifier: 'symbol-array',
+                    completionItemKind: vscode.CompletionItemKind.Variable,
+                    symbolKind: vscode.SymbolKind.Array
+                };
+            case ReferenceItemKind.Macro:
             return {
                 label: "macro",
                 iconIdentifier: 'symbol-module',
@@ -110,6 +99,17 @@ export function getReferenceItemKindMetadata(refItemKind: ReferenceItemKind) : R
                 symbolKind: vscode.SymbolKind.Null
             };
     }
+}
+
+export class CompletionItem extends vscode.CompletionItem {
+    readonly uriString: string;
+    readonly refItemKind: ReferenceItemKind;
+
+    constructor(label: string | vscode.CompletionItemLabel, uriString: string, refItemKind: ReferenceItemKind) {
+        super(label, getReferenceItemKindMetadata(refItemKind).completionItemKind);
+        this.uriString = uriString;
+        this.refItemKind = refItemKind;
+    };
 }
 
 // 'overloads' parameter is for built-in macros and functions.

@@ -56,21 +56,28 @@ function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceI
     }
 }
 
-function truncateString(truncationLevel: 0 | 1 | 2, description?: string, comments?: string): string | undefined {
+
+const enum TruncationLevel {
+    full = 0,
+    paragraph,
+    line
+}
+
+function truncateString(level: TruncationLevel, description?: string, comments?: string): string | undefined {
     let truncatedString;
     if (description) {
-        if (truncationLevel === 0) {
+        if (level === TruncationLevel.full) {
             truncatedString = description;
-        } else if (truncationLevel === 1) {
+        } else if (level === TruncationLevel.paragraph) {
             const endIndex = description.indexOf('\n\n');
             truncatedString = (endIndex >= 0) ? description.substring(0, endIndex) + '\n\n...' : description;
-        } else if (truncationLevel >= 2) {
+        } else if (level === TruncationLevel.line) {
             const endIndex = description.search(/\.\s/g);
             truncatedString = (endIndex >= 0) ? description.substring(0, endIndex) + '. ...' : description;
         }
     }
 
-    if (comments && truncationLevel < 2) {
+    if (comments && level !== TruncationLevel.line) {
         truncatedString = truncatedString ? truncatedString + '\n\n' + comments : comments;
     }
 
@@ -78,14 +85,14 @@ function truncateString(truncationLevel: 0 | 1 | 2, description?: string, commen
 }
 
 function getParameterInformation(signature: string): vscode.ParameterInformation[] | undefined {
-    const parStart = signature.indexOf('(');
-    const parEnd = signature.lastIndexOf(')');
-    if (parStart < 0 || parEnd < 0) {
+    const parenStart = signature.indexOf('(');
+    const parenEnd = signature.lastIndexOf(')');
+    if (parenStart < 0 || parenEnd < 0) {
         return undefined;
     }
     // const selectorName = signature.substring(0, parStart).trim();
-    const argumentList = signature.substring(parStart + 1, parEnd).replace(/[[\]]/g, '').split(',');
-    return argumentList.map(argStr => new vscode.ParameterInformation(argStr.trim()));
+    const parameters = signature.substring(parenStart + 1, parenEnd).trim().replace(/[[\]]/g, '').split(/\s*,\s*/);
+    return parameters.map(parameter => new vscode.ParameterInformation(parameter));
 }
 
 function parseSignatureInEditing(line: string, position: number) {
@@ -120,7 +127,7 @@ function parseSignatureInEditing(line: string, position: number) {
 /**
  * Provider class
  */
-export class CommandProvider implements vscode.CompletionItemProvider, vscode.HoverProvider, vscode.SignatureHelpProvider {
+export class CommandProvider implements vscode.CompletionItemProvider<spec.CompletionItem>, vscode.HoverProvider, vscode.SignatureHelpProvider {
 
     // vscode.Uri objects can not be used as a key for a Map object because these 
     // objects having the same string representation can be recognized different,
@@ -130,7 +137,7 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
     // object is used as a key.
 
     protected readonly storageCollection = new Map<string, spec.ReferenceStorage>();
-    protected readonly completionItemCollection = new Map<string, vscode.CompletionItem[]>();
+    protected readonly completionItemCollection = new Map<string, spec.CompletionItem[]>();
 
     constructor(context: vscode.ExtensionContext) {
         const configurationChangeListener = (event: vscode.ConfigurationChangeEvent) => {
@@ -160,8 +167,8 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
             const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages');
             let description: string | undefined;
 
-            const suppressDetail = config && 'completionItem.label.detail' in config && config['completionItem.label.detail'] === true;
-            const suppressDescription = config && 'completionItem.label.description' in config && config['completionItem.label.description'] === true;
+            const suppressDetail = config !== undefined && 'completionItem.label.detail' in config && config['completionItem.label.detail'] === true;
+            const suppressDescription = config !== undefined && 'completionItem.label.description' in config && config['completionItem.label.description'] === true;
 
             if (!suppressDescription) {
                 if (uriString === spec.BUILTIN_URI) {
@@ -182,16 +189,12 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
                 }
             }
 
-            const completionItems: vscode.CompletionItem[] = [];
-            for (const [itemKind, map] of storage.entries()) {
-                const metadata = spec.getReferenceItemKindMetadata(itemKind);
-                const completionItemKind = metadata.completionItemKind;
+            const completionItems: spec.CompletionItem[] = [];
+            for (const [refItemKind, map] of storage.entries()) {
                 for (const [identifier, item] of map.entries()) {
                     const detail = (!suppressDetail && item.signature.startsWith(identifier)) ? item.signature.substring(identifier.length) : undefined;
                     const label: vscode.CompletionItemLabel = { label: identifier, detail: detail, description: description };
-                    const completionItem = new vscode.CompletionItem(label, completionItemKind);
-                    // embed `uriString` into `detail` property in order to resolve it later efficiently.
-                    completionItem.detail = uriString;
+                    const completionItem = new spec.CompletionItem(label, uriString, refItemKind);
                     if (item.snippet) {
                         completionItem.insertText = new vscode.SnippetString(item.snippet);
                     }
@@ -209,7 +212,7 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
     /**
      * Required implementation of vscode.CompletionItemProvider
      */
-    public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionItem[]> {
+    public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionList<spec.CompletionItem> | spec.CompletionItem[]> {
         if (token.isCancellationRequested) { return; }
 
         const range = document.getWordRangeAtPosition(position);
@@ -218,29 +221,23 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
         const selectorName = document.getText(range);
         if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(selectorName)) { return; }
 
-        const aggregatedCompletionItems: vscode.CompletionItem[] = [];
-        for (const completionItems of this.completionItemCollection.values()) {
-            aggregatedCompletionItems.push(...completionItems);
-        }
-        return aggregatedCompletionItems;
+        return new Array<spec.CompletionItem>().concat(...this.completionItemCollection.values());
     }
 
     /**
      * Optional implementation of vscode.CompletionItemProvider
      */
-    public resolveCompletionItem(completionItem: vscode.CompletionItem, token: vscode.CancellationToken): vscode.ProviderResult<vscode.CompletionItem> {
+    public resolveCompletionItem(completionItem: spec.CompletionItem, token: vscode.CancellationToken): vscode.ProviderResult<spec.CompletionItem> {
         if (token.isCancellationRequested) { return; }
 
-        // The URI is stored in `detail` property in unresolved completion item.
-        const refItemKind = spec.getReferenceItemKindFromCompletionItemKind(completionItem.kind);
-        const refUriString = completionItem.detail;
-        if (refUriString === undefined) { return; }
+        const refItemKind = completionItem.refItemKind;
+        const refUriString = completionItem.uriString;
 
         const activeEditor = vscode.window.activeTextEditor;
         const documentUriString = activeEditor ? activeEditor.document.uri.toString() : '';
 
         const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages');
-        const truncationlevel = (config && 'completionItem.documentation' in config && config['completionItem.documentation'] === true) ? 2 : 1;
+        const truncationlevel = (config !== undefined && 'completionItem.documentation' in config && config['completionItem.documentation'] === true) ? TruncationLevel.line : TruncationLevel.paragraph;
 
         // find the symbol information about the symbol.
         const label = typeof completionItem.label === 'string' ? completionItem.label : completionItem.label.label;
@@ -283,7 +280,7 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
         if (token.isCancellationRequested) { return; }
 
         const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages');
-        const truncationLevel = (config && 'hover.contents' in config && config['hover.contents'] === true) ? 1 : 0;
+        const truncationLevel = (config !== undefined && 'hover.contents' in config && config['hover.contents'] === true) ? TruncationLevel.paragraph : TruncationLevel.full;
 
         const range = document.getWordRangeAtPosition(position);
         if (range === undefined) { return; }
@@ -341,7 +338,7 @@ export class CommandProvider implements vscode.CompletionItemProvider, vscode.Ho
         if (signatureHint === undefined) { return; }
 
         const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages');
-        const truncationLevel = (config && 'signatureHelp.signatures.documentation' in config && config['signatureHelp.signatures.documentation'] === true) ? 1 : 0;
+        const truncationLevel = (config !== undefined && 'signatureHelp.signatures.documentation' in config && config['signatureHelp.signatures.documentation'] === true) ? TruncationLevel.paragraph : TruncationLevel.full;
 
         for (const storage of this.storageCollection.values()) {
             const map = storage.get(spec.ReferenceItemKind.Function);

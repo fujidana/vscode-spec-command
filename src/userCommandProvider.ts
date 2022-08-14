@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import * as vscode from 'vscode';
 import * as estree from "estree";
 import * as estraverse from "estraverse";
@@ -18,137 +19,6 @@ const ADDITIONAL_TRAVERSE_KEYS = {
 
 interface CustomProgram extends estree.Program {
     exDiagnostics: { location: IFileRange, message: string, severity: vscode.DiagnosticSeverity }[];
-}
-
-/**
- * @param tree Parser AST object
- * @param position the current cursor position. If not given, top-level symbols (global variables, constant, macro and functions) are picked up.
- */
-function collectSymbolsFromTree(tree: estree.Program, position?: vscode.Position): spec.ReferenceStorage {
-
-    const constantRefMap: spec.ReferenceMap = new Map();
-    const variableRefMap: spec.ReferenceMap = new Map();
-    const macroRefMap: spec.ReferenceMap = new Map();
-    const functionRefMap: spec.ReferenceMap = new Map();
-
-    // const nestedNodes: string[] = [];
-
-    // console.log('<<<Scan start>>>', JSON.stringify(position, undefined, ""));
-
-    estraverse.traverse(tree, {
-        enter: (currentNode, parentNode) => {
-            // console.log('enter', currentNode.type, parentNode && parentNode.type);
-
-            // This traverser only traverses statements.
-            if (parentNode === null && currentNode.type === 'Program') {
-                // if it is a top-level, dig in.
-                return;
-            } else if (!currentNode.type.endsWith('Statement') && !currentNode.type.endsWith('Declaration')) {
-                // if not any type of statements, skip.
-                return estraverse.VisitorOption.Skip;
-            }
-
-            const nodeRange = currentNode.loc ? spec.convertRange(currentNode.loc as IFileRange) : undefined;
-            let refItem: spec.ReferenceItem | undefined;
-            const refItems: spec.ReferenceItem[] = [];
-
-            if (!nodeRange) {
-                console.log('Statement should have location. This may be a bug in the parser.');
-                return;
-            }
-
-            if (position) {
-                // in case of active document
-                // if (nodeRange.contains(position)) {
-                //     nestedNodes.push(currentNode.type);
-                // }
-
-                if (currentNode.type === 'BlockStatement' && nodeRange.end.isBefore(position)) {
-                    // skip the code block that ends before the cursor.
-                    return estraverse.VisitorOption.Skip;
-
-                } else if (currentNode.type === 'FunctionDeclaration' && currentNode.params && nodeRange.contains(position)) {
-                    // register arguments of function as variables if the cursor is in the function block.
-                    for (const param of currentNode.params) {
-                        if (param.type === 'Identifier') {
-                            refItem = { signature: param.name, location: currentNode.loc as IFileRange };
-                            variableRefMap.set(param.name, refItem);
-                        }
-                    }
-                } else if (nodeRange.start.isAfter(position)) {
-                    return estraverse.VisitorOption.Break;
-                }
-            }
-
-            if (currentNode.type === 'FunctionDeclaration' && currentNode.id) {
-                if (currentNode.params) {
-                    // register the id as a function if parameter is not null.
-                    if (!position || (parentNode && parentNode.type !== 'Program')) {
-                        let signatureStr = currentNode.id.name + '(';
-                        signatureStr += currentNode.params.map(param => (param.type === 'Identifier') ? param.name : '').join(', ') + ')';
-                        refItem = { signature: signatureStr, location: currentNode.loc as IFileRange };
-                        functionRefMap.set(currentNode.id.name, refItem);
-                        refItems.push(refItem);
-                    }
-
-                } else {
-                    // register the id as a traditional macro if parameter is null.
-                    if (!position || (parentNode && parentNode.type !== 'Program')) {
-                        refItem = { signature: currentNode.id.name, location: currentNode.loc as IFileRange };
-                        macroRefMap.set(currentNode.id.name, refItem);
-                        refItems.push(refItem);
-                    }
-                }
-
-            } else if (currentNode.type === 'VariableDeclaration') {
-                if (!position || (parentNode && parentNode.type !== 'Program')) {
-                    for (const declarator of currentNode.declarations) {
-                        if (declarator.type === "VariableDeclarator" && declarator.id.type === 'Identifier') {
-                            let signatureStr = declarator.id.name;
-                            if (declarator.init && declarator.init.type === 'Literal') {
-                                signatureStr += ' = ' + declarator.init.raw;
-                            }
-                            refItem = { signature: signatureStr, location: currentNode.loc as IFileRange };
-                            if (currentNode.kind === 'const') {
-                                constantRefMap.set(declarator.id.name, refItem);
-                            } else {
-                                variableRefMap.set(declarator.id.name, refItem);
-                            }
-                            refItems.push(refItem);
-                        }
-                    }
-                }
-            }
-
-            // add docstrings
-            if (refItems.length > 0 && currentNode.leadingComments && currentNode.leadingComments.length > 0) {
-                for (const refItem of refItems) {
-                    refItem.description = currentNode.leadingComments[currentNode.leadingComments.length - 1].value;
-                }
-            }
-
-            if (!position) {
-                // in case of inactive document
-                // only scan the top-level items
-                if (parentNode && parentNode.type === 'Program') {
-                    return estraverse.VisitorOption.Skip;
-                }
-            }
-        },
-        // leave: (currentNode, parentNode) => {
-        //     console.log('leave', currentNode.type, parentNode && parentNode.type);
-        // },
-        keys: ADDITIONAL_TRAVERSE_KEYS,
-    });
-
-    return new Map(
-        [
-            [spec.ReferenceItemKind.Constant, constantRefMap],
-            [spec.ReferenceItemKind.Variable, variableRefMap],
-            [spec.ReferenceItemKind.Macro, macroRefMap],
-            [spec.ReferenceItemKind.Function, functionRefMap],
-        ]
-    );
 }
 
 async function findFilesInWorkspaces() {
@@ -416,10 +286,12 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         this.refreshCollections();
     }
 
-    // update the metadata database.
-    // All metadata for oldFiles are removed. Mismatched files are just ignored.
-    // All metadata for newFiles are created thus the file paths should be filtered beforehand
-    // based on the configuration settings.
+    /**
+     * update the metadata database.
+     * All metadata for oldFiles are removed. Mismatched files are just ignored.
+     * All metadata for newFiles are created thus the file paths should be filtered beforehand
+     * based on the configuration settings.
+     */
     private async applyFileOperation(oldUriStringSet?: Set<string>, newUriStringSet?: Set<string>) {
         // unregister metadata for old URIs.
         if (oldUriStringSet) {
@@ -451,6 +323,138 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
                 }
             }
         }
+    }
+
+    /**
+     * @param tree Parser AST object.
+     * @param uriString document URI string.
+     * @param position the current cursor position. If not given, top-level symbols (global variables, constant, macro and functions) are picked up.
+     */
+     private collectSymbolsFromTree(tree: estree.Program, uriString: string, position?: vscode.Position) {
+
+        const constantRefMap: spec.ReferenceMap = new Map();
+        const variableRefMap: spec.ReferenceMap = new Map();
+        const macroRefMap: spec.ReferenceMap = new Map();
+        const functionRefMap: spec.ReferenceMap = new Map();
+
+        // const nestedNodes: string[] = [];
+
+        // console.log('<<<Scan start>>>', JSON.stringify(position, undefined, ""));
+
+        estraverse.traverse(tree, {
+            enter: (currentNode, parentNode) => {
+                // console.log('enter', currentNode.type, parentNode && parentNode.type);
+
+                // This traverser only traverses statements.
+                if (parentNode === null && currentNode.type === 'Program') {
+                    // if it is a top-level, dig in.
+                    return;
+                } else if (!currentNode.type.endsWith('Statement') && !currentNode.type.endsWith('Declaration')) {
+                    // if not any type of statements, skip.
+                    return estraverse.VisitorOption.Skip;
+                }
+
+                if (!currentNode.loc) {
+                    console.log('Statement should have location. This may be a bug in the parser.');
+                    return;
+                }
+                const nodeRange = spec.convertRange(currentNode.loc as IFileRange);
+                let refItem: spec.ReferenceItem | undefined;
+                const refItems: spec.ReferenceItem[] = [];
+
+                if (position) {
+                    // in case of active document
+                    // if (nodeRange.contains(position)) {
+                    //     nestedNodes.push(currentNode.type);
+                    // }
+
+                    if (currentNode.type === 'BlockStatement' && nodeRange.end.isBefore(position)) {
+                        // skip the code block that ends before the cursor.
+                        return estraverse.VisitorOption.Skip;
+
+                    } else if (currentNode.type === 'FunctionDeclaration' && currentNode.params && nodeRange.contains(position)) {
+                        // register arguments of function as variables if the cursor is in the function block.
+                        for (const param of currentNode.params) {
+                            if (param.type === 'Identifier') {
+                                refItem = { signature: param.name, location: currentNode.loc as IFileRange };
+                                variableRefMap.set(param.name, refItem);
+                            }
+                        }
+                    } else if (nodeRange.start.isAfter(position)) {
+                        return estraverse.VisitorOption.Break;
+                    }
+                }
+
+                if (currentNode.type === 'FunctionDeclaration' && currentNode.id) {
+                    if (currentNode.params) {
+                        // register the id as a function if parameter is not null.
+                        if (!position || (parentNode && parentNode.type !== 'Program')) {
+                            let signatureStr = currentNode.id.name + '(';
+                            signatureStr += currentNode.params.map(param => (param.type === 'Identifier') ? param.name : '').join(', ') + ')';
+                            refItem = { signature: signatureStr, location: currentNode.loc as IFileRange };
+                            functionRefMap.set(currentNode.id.name, refItem);
+                            refItems.push(refItem);
+                        }
+
+                    } else {
+                        // register the id as a traditional macro if parameter is null.
+                        if (!position || (parentNode && parentNode.type !== 'Program')) {
+                            refItem = { signature: currentNode.id.name, location: currentNode.loc as IFileRange };
+                            macroRefMap.set(currentNode.id.name, refItem);
+                            refItems.push(refItem);
+                        }
+                    }
+
+                } else if (currentNode.type === 'VariableDeclaration') {
+                    if (!position || (parentNode && parentNode.type !== 'Program')) {
+                        for (const declarator of currentNode.declarations) {
+                            if (declarator.type === "VariableDeclarator" && declarator.id.type === 'Identifier') {
+                                let signatureStr = declarator.id.name;
+                                if (declarator.init && declarator.init.type === 'Literal') {
+                                    signatureStr += ' = ' + declarator.init.raw;
+                                }
+                                refItem = { signature: signatureStr, location: currentNode.loc as IFileRange };
+                                if (currentNode.kind === 'const') {
+                                    constantRefMap.set(declarator.id.name, refItem);
+                                } else {
+                                    variableRefMap.set(declarator.id.name, refItem);
+                                }
+                                refItems.push(refItem);
+                            }
+                        }
+                    }
+                }
+
+                // add docstrings
+                if (refItems.length > 0 && currentNode.leadingComments && currentNode.leadingComments.length > 0) {
+                    for (const refItem of refItems) {
+                        refItem.description = currentNode.leadingComments[currentNode.leadingComments.length - 1].value;
+                    }
+                }
+
+                if (!position) {
+                    // in case of inactive document
+                    // only scan the top-level items
+                    if (parentNode && parentNode.type === 'Program') {
+                        return estraverse.VisitorOption.Skip;
+                    }
+                }
+            },
+            // leave: (currentNode, parentNode) => {
+            //     console.log('leave', currentNode.type, parentNode && parentNode.type);
+            // },
+            keys: ADDITIONAL_TRAVERSE_KEYS,
+        });
+
+        this.storageCollection.set(uriString, new Map(
+               [
+                   [spec.ReferenceItemKind.Constant, constantRefMap],
+                   [spec.ReferenceItemKind.Variable, variableRefMap],
+                   [spec.ReferenceItemKind.Macro, macroRefMap],
+                   [spec.ReferenceItemKind.Function, functionRefMap],
+               ]
+           )
+        );
     }
 
     // 
@@ -490,8 +494,9 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
             this.treeCollection.set(uriString, tree);
         }
 
-        this.storageCollection.set(uriString, collectSymbolsFromTree(tree));
+        this.collectSymbolsFromTree(tree, uriString);
         this.updateCompletionItemsForUriString(uriString);
+
         return true;
     }
 
@@ -531,12 +536,12 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
     /**
      * Required implementation of vscode.CompletionItemProvider, overriding the super class
      */
-    public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionItem[]> {
+    public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionList<spec.CompletionItem> | spec.CompletionItem[]> {
         if (token.isCancellationRequested) { return; }
 
         const tree = this.treeCollection.get(document.uri.toString());
         if (tree) {
-            this.storageCollection.set(spec.ACTIVE_FILE_URI, collectSymbolsFromTree(tree, position));
+            this.collectSymbolsFromTree(tree, spec.ACTIVE_FILE_URI, position);
             this.updateCompletionItemsForUriString(spec.ACTIVE_FILE_URI);
         }
         return super.provideCompletionItems(document, position, token, context);
@@ -550,7 +555,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
 
         const tree = this.treeCollection.get(document.uri.toString());
         if (tree) {
-            this.storageCollection.set(spec.ACTIVE_FILE_URI, collectSymbolsFromTree(tree, position));
+            this.collectSymbolsFromTree(tree, spec.ACTIVE_FILE_URI, position);
         }
         return super.provideHover(document, position, token);
     }
@@ -570,7 +575,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         // update the storage for local variables for the current cursor position.
         const tree = this.treeCollection.get(document.uri.toString());
         if (tree) {
-            this.storageCollection.set(spec.ACTIVE_FILE_URI, collectSymbolsFromTree(tree, position));
+            this.collectSymbolsFromTree(tree, spec.ACTIVE_FILE_URI, position);
         }
 
         // seek the identifier
