@@ -110,7 +110,7 @@
         pushDiagnostic(locEach, `Expected ${label}.`, vscode.DiagnosticSeverity.Error);
         continue;
       }
-      let obj = { type: 'VariableDeclarator', id: identifier};
+      let obj = { type: 'VariableDeclarator', id: identifier };
       if (option) {
         Object.assign(obj, option);
       }
@@ -588,7 +588,7 @@ data_array_def 'data-array declaration' =
     return {
       type: 'VariableDeclaration',
       declarations: makeDeclarators(items, location(), 'array identifier', true),
-      kind: 'let',
+      kind: 'var',
       exType: 'data-array',
       exScope: scope ? scope[0] : undefined,
       exUnit: unit ? unit[0] : undefined,
@@ -642,7 +642,7 @@ extern_array_def =
     return {
       type: 'VariableDeclaration',
       declarations: makeDeclarators(items, location(), 'external array identifier', false),
-      kind: 'let',
+      kind: 'var',
       exType: 'data-array',
       exScope: 'extern',
       exSize: undefined,

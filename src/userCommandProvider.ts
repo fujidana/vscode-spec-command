@@ -334,6 +334,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
 
         const constantRefMap: spec.ReferenceMap = new Map();
         const variableRefMap: spec.ReferenceMap = new Map();
+        const arrayRefMap: spec.ReferenceMap = new Map();
         const macroRefMap: spec.ReferenceMap = new Map();
         const functionRefMap: spec.ReferenceMap = new Map();
 
@@ -416,8 +417,10 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
                                 refItem = { signature: signatureStr, location: currentNode.loc as IFileRange };
                                 if (currentNode.kind === 'const') {
                                     constantRefMap.set(declarator.id.name, refItem);
-                                } else {
+                                } else if (currentNode.kind === 'let') {
                                     variableRefMap.set(declarator.id.name, refItem);
+                                } else {
+                                    arrayRefMap.set(declarator.id.name, refItem);
                                 }
                                 refItems.push(refItem);
                             }
@@ -450,6 +453,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
                [
                    [spec.ReferenceItemKind.Constant, constantRefMap],
                    [spec.ReferenceItemKind.Variable, variableRefMap],
+                   [spec.ReferenceItemKind.Array, arrayRefMap],
                    [spec.ReferenceItemKind.Macro, macroRefMap],
                    [spec.ReferenceItemKind.Function, functionRefMap],
                ]
