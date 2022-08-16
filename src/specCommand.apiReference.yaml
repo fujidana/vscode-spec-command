@@ -1802,6 +1802,19 @@ functions:
       
       For the most part, the `move_info()` function will reflect what will happen on the next `move_all` command.
       However, for shared motors that can be moved by other processes or for motors that have positions that drift or have jitter, the status and position may change between the `move_info()` call and the `move_all` call.
+    overloads:
+    - signature: move_info()
+      description: |-
+        Returns a two-dimensional associative array containing the move information.
+    - signature: move_info(motor)
+      description: |-
+        Returns a one-dimensional associative array, indexed by the above keywords containing values for the one motor.
+    - signature: move_info(keyword)
+      description: |-
+        Returns a one-dimensional associative array indexed by motor number containing values for that keyword for each motor.
+    - signature: move_info(motor, keyword)
+      description: |-
+        Returns the corresponding single value.
   chg_dial:
     signature: chg_dial(motor, <dial_angle|cmd>)
     overloads:
