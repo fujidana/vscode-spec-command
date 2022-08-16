@@ -6,6 +6,10 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Changed
 
+- Overhaul a feature to navigate symbols in an editor.
+  - Line comments that start with either `# MARK:`, `# TODO:`, or `# FIXME:` are treated as breadcrumbs.
+  - Symbols in an editor are now displayed hierarchically in the breadcrumb navigation. Previously they were flat.
+  - breadcrumbs of data-array (e.g., `float array myarray[32]`) now have a different icon from other local variables.
 - Migrate the package manager to `pnpm`.
 - Update Node.js packages.
 - Raise the minimum VS Code version to 1.70.0.

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import * as vscode from 'vscode';
 import * as estree from "estree";
 import * as estraverse from "estraverse";
@@ -7,6 +6,7 @@ import { CommandProvider } from "./commandProvider";
 import { SyntaxError, parse, IFileRange } from './grammar';
 import { getTextDecoder } from './textEncoding';
 
+/* eslint-disable @typescript-eslint/naming-convention */
 /**
  * Extention-specific keys for estraverse (not exist in the original Parser AST.)
  */
@@ -16,6 +16,7 @@ const ADDITIONAL_TRAVERSE_KEYS = {
     ExitStatement: [],
     NullExpression: [],
 };
+/* eslint-disable @typescript-eslint/naming-convention */
 
 interface CustomProgram extends estree.Program {
     exDiagnostics: { location: IFileRange, message: string, severity: vscode.DiagnosticSeverity }[];
@@ -604,21 +605,100 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
     public provideDocumentSymbols(document: vscode.TextDocument, token: vscode.CancellationToken): vscode.ProviderResult<vscode.SymbolInformation[] | vscode.DocumentSymbol[]> {
         if (token.isCancellationRequested) { return; }
 
-        const storage = this.storageCollection.get(document.uri.toString());
-        if (!storage) { return; }
-
         // seek the identifier
-        const symbols: vscode.SymbolInformation[] = [];
-        for (const [itemKind, map] of storage.entries()) {
-            const symbolKind = spec.getReferenceItemKindMetadata(itemKind).symbolKind;
-            for (const [identifier, refItem] of map.entries()) {
-                if (refItem.location) {
-                    const location = new vscode.Location(document.uri, spec.convertRange(refItem.location));
-                    symbols.push(new vscode.SymbolInformation(identifier, symbolKind, '', location));
-                }
-            }
+        const tree = this.treeCollection.get(document.uri.toString());
+
+        if (tree) {
+            const symbols: vscode.DocumentSymbol[] = [];
+            estraverse.traverse(tree, {
+                enter: (currentNode, parentNode) => {
+                    // This traverser only traverses statements.
+                    if (parentNode === null && currentNode.type === 'Program') {
+                        // if it is a top-level, dig in.
+                        return;
+                    } else if (!currentNode.type.endsWith('Statement') && !currentNode.type.endsWith('Declaration')) {
+                        // if not any type of statements, skip.
+                        return estraverse.VisitorOption.Skip;
+                    } else if (!currentNode.loc) {
+                        console.log('Statement should have location. This may be a bug in the parser.');
+                        return estraverse.VisitorOption.Skip;
+                    }
+
+                    const stmtRange = spec.convertRange(currentNode.loc as IFileRange);
+                    let symbol: vscode.DocumentSymbol;
+
+                    if (currentNode.leadingComments) {
+                        for (const leadingComment of currentNode.leadingComments) {
+                            let matched: RegExpMatchArray | null;
+                            if (leadingComment.type === 'Line' && leadingComment.loc && (matched = leadingComment.value.match(/^(\s*(MARK|TODO|FIXME):\s+)(.+)$/)) !== null) {
+                                const commentRange = spec.convertRange(leadingComment.loc as IFileRange);
+                                const commentRange2 = commentRange.with(commentRange.start.translate(undefined, matched[1].length + 1));
+                                symbol = new vscode.DocumentSymbol(matched[3], '', vscode.SymbolKind.Key, commentRange, commentRange2);
+                                if (symbols.length !== 0 && symbols[symbols.length - 1].range.contains(commentRange)) {
+                                    symbols[symbols.length - 1].children.push(symbol);
+                                } else {
+                                    symbols.push(symbol);
+                                }
+                            }
+                        }
+                    }
+
+                    if (currentNode.type === 'FunctionDeclaration') {
+                        if (currentNode.id && currentNode.id.loc) {
+                            const idName = currentNode.id.name;
+                            const idRange = spec.convertRange(currentNode.id.loc as IFileRange);
+                            // if (currentNode.params) {
+                            //     const params = currentNode.params.map(param => (param.type === 'Identifier') ? param.name : '') ;
+                            //     symbol = new vscode.DocumentSymbol(idName, '(' + params.join(' ,') + ')', vscode.SymbolKind.Function, stmtRange, idRange);
+                            // } else {
+                            //     symbol = new vscode.DocumentSymbol(idName, '', vscode.SymbolKind.Module, stmtRange, idRange);
+                            // }
+                            symbol = new vscode.DocumentSymbol(idName, '', vscode.SymbolKind.Module, stmtRange, idRange);
+
+                            if (symbols.length !== 0 && symbols[symbols.length - 1].range.contains(stmtRange)) {
+                                symbols[symbols.length - 1].children.push(symbol);
+                            } else {
+                                symbols.push(symbol);
+                            }
+                        }
+                    } else if (currentNode.type === 'VariableDeclaration') {
+                        for (const declarator of currentNode.declarations) {
+                            if (declarator.type === 'VariableDeclarator' && declarator.id.type === 'Identifier' && declarator.id.loc) {
+                                const idName = declarator.id.name;
+                                const idRange = spec.convertRange(declarator.id.loc as IFileRange);
+                                const idDetail = '';
+                                // const idDetail = (declarator.init && declarator.init.type === 'Literal' && declarator.init.raw) ? ' = ' + declarator.init.raw : '';
+                                let symbolKind;
+                                if (currentNode.kind === 'const') {
+                                    symbolKind = vscode.SymbolKind.Constant;
+                                } else if (currentNode.kind === 'let') {
+                                    symbolKind = vscode.SymbolKind.Variable;
+                                } else {
+                                    symbolKind = vscode.SymbolKind.Array;
+                                }
+                                symbol = new vscode.DocumentSymbol(idName, idDetail, symbolKind, idRange, idRange);
+                                if (symbols.length !== 0 && symbols[symbols.length - 1].range.contains(stmtRange)) {
+                                    symbols[symbols.length - 1].children.push(symbol);
+                                } else {
+                                    symbols.push(symbol);
+                                }
+                            }
+                        }
+                    }
+
+                    // // only scan the top-level items
+                    // if (parentNode && parentNode.type === 'Program') {
+                    //     return estraverse.VisitorOption.Skip;
+                    // }
+                },
+                // leave: (_currentNode, _parentNode) => {
+                //     console.log('leave', currentNode.type, parentNode && parentNode.type);
+                // },
+                keys: ADDITIONAL_TRAVERSE_KEYS,
+            });
+            return symbols;
         }
-        return symbols;
+        return undefined;
     }
 
     /**

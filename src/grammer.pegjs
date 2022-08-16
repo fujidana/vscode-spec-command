@@ -44,10 +44,9 @@
    * Return a new range object whose 'start' is identical to 'range' and the length is equal to 'length'.
    */
   function shortenRange(range: IFileRange, length: number): IFileRange {
-    range.end.line = range.start.line;
-    range.end.offset = range.start.offset + length;
-    range.end.column = range.start.column + length;
-    return range;
+    const newRange = { ...range };
+    newRange.end = { line: range.start.line, offset: range.start.offset + length, column: range.start.column + length };
+    return newRange;
   }
 
   /**
@@ -110,7 +109,7 @@
         pushDiagnostic(locEach, `Expected ${label}.`, vscode.DiagnosticSeverity.Error);
         continue;
       }
-      let obj = { type: 'VariableDeclarator', id: identifier };
+      let obj = { type: 'VariableDeclarator', id: identifier, loc: locEach };
       if (option) {
         Object.assign(obj, option);
       }
@@ -202,7 +201,7 @@ start =
 
 eol 'EOL' = '\n' / '\r\n'
 eof 'EOF' = !.
-line_comment 'line comment' = '#' p:$(!eol .)* (eol / eof) { return {type: 'Line', value: p }; }
+line_comment 'line comment' = '#' p:$(!eol .)* (eol / eof) { return {type: 'Line', value: p, loc: location() }; }
 
 quotation_mark 'quotation mark' = $('\\'? ('"' / "'"))
 
@@ -216,7 +215,7 @@ block_comment 'block comment' =
     if (!closer) {
       pushDiagnostic(shortenRange(location(), 3), 'Unterminated docstring.', vscode.DiagnosticSeverity.Error);
     }
-    return { type: 'Block', value: p };
+    return { type: 'Block', value: p, loc: location() };
   }
 
 space = $(' ' / '\t' / '\\' eol / block_comment { pushDiagnostic(location(), 'Inline docstring not recommended.', vscode.DiagnosticSeverity.Information); return text(); })
@@ -912,6 +911,7 @@ identifier 'identifier' =
       operator: '@',
       argument: arg ? arg : NULL_LITERAL,
       prefix: true,
+      loc: location()
     };
   }
 
@@ -927,6 +927,7 @@ strict_identifier =
     return {
       type: 'Identifier',
       name: name,
+      loc: location()
     };
   }
 
@@ -935,6 +936,7 @@ macro_argument =
     return {
       type: 'Identifier',
       name: name,
+      loc: location()
     };
   }
 
