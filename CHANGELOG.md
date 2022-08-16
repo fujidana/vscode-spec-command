@@ -4,12 +4,17 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
-### Changed
+## [1.8.0] -- 2022-08-16
+
+### Added
 
 - Overhaul a feature to navigate symbols in an editor.
-  - Line comments that start with either `# MARK:`, `# TODO:`, or `# FIXME:` are treated as breadcrumbs.
+  - Comment lines that start with either `# MARK:`, `# TODO:`, or `# FIXME:` are treated as breadcrumbs.
   - Symbols in an editor are now displayed hierarchically in the breadcrumb navigation. Previously they were flat.
   - breadcrumbs of data-array (e.g., `float array myarray[32]`) now have a different icon from other local variables.
+
+### Changed
+
 - Migrate the package manager to `pnpm`.
 - Update Node.js packages.
 - Raise the minimum VS Code version to 1.70.0.
@@ -353,7 +358,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
   - syntax highlighting
   - code snippets
 
-[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.4...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.0...HEAD
+[1.8.0]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.4...v1.8.0
 [1.7.4]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.3...v1.7.4
 [1.7.3]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.2...v1.7.3
 [1.7.2]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.1...v1.7.2

@@ -35,7 +35,7 @@ Sorry for inconvenence.
     * __Code snippets__ - templates that make it easier to enter repeating code patterns, such as loops and conditional-statements
   * __Help with function signatures__ - help that appears during a user types an argument in a function call.
 * __Code navigation__
-  * __Show all symbol definitions within a document__ - symbol definitions in a file, used in: _Go to Symbol in File_ (Ctrl+Shift+O) and the navigation bar below the editor tabs (aka breadcrumb)
+  * __Show all symbol definitions within a document__ - symbol definitions in a file, used in: _Go to Symbol in Editor_ (Ctrl+Shift+O) and the navigation bar below the editor tabs (aka breadcrumbs)
   * __Show definitions of a symbol__ - symbol definitions in open files, used in: _Go to Definition_ (F12) and _Peek Definition_ (Alt+F12) in right-click menu
 * __Commands__ - the following commands can be invoked from the command pallate (Ctrl+Shit+P):
   * "Run Seclection/Line in Terminal" and "Run File in Terminal" commands. These commands assume __spec__ interactive shell has been ready in the active terminal view.
@@ -43,6 +43,8 @@ Sorry for inconvenence.
 
 This extension treats user-defined symbols declared at the top level (i.e., not in a code block, curly brackets) as global and those in code blocks as local.
 Global symbols are visible beyond a file where the symbol is defined; local symbols are visible only when the cursor is in the same block.
+
+Tip: A comment line that starts with `# MARK:`, `# FIXME:` or `# TODO:` is treated as a breadcrumb.
 
 ![screenshot of the hover](resources/screenshot.png "hover demo")
 
@@ -52,7 +54,7 @@ The help text of built-in symbols are cited from this document, except where oth
 ## Requirements
 
 The __spec__ grammar is torelant and its behavior is determined only at runtime, which makes it impossible for the extension to mimic spec's interpreter perfectly.
-For example, the extension treats `f(var)` in a __spec__ script as a function call (like most people assume) but there is another possibility:
+For example, the extension regards `f(var)` in a __spec__ script as a function call (like most people assume) but there is another possibility:
 
 ```
 1.SEPC> def f1(var) '{p var}' # function definition
