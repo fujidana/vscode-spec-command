@@ -85,11 +85,7 @@ repository:
             begin: (def)\s+(\w+)(?:\s*(\()([^'"#)]*)(\)))?\s*(')
             beginCaptures:
               "1": { name: storage.type.function.spec-command }
-              "2":
-                {
-                  name: entity.name.function.spec-command,
-                  patterns: [{ include: "#validation-id" }],
-                }
+              "2": { name: entity.name.function.spec-command, patterns: [{ include: "#validation-id" }] }
               "3": { name: punctuation.function-argument.begin.spec-command }
               "4": { patterns: [{ include: "#func-param-ids" }] }
               "5": { name: punctuation.function-argument.end.spec-command }
@@ -105,11 +101,7 @@ repository:
             begin: \b(rdef)\s+(\w+)(?:\s*(\()([^'"#)]*)(\)))?\s+
             beginCaptures:
               "1": { name: storage.type.function.spec-command }
-              "2":
-                {
-                  name: entity.name.function.spec-command,
-                  patterns: [{ include: "#validation-id" }],
-                }
+              "2": { name: entity.name.function.spec-command, patterns: [{ include: "#validation-id" }] }
               "3": { name: punctuation.function-argument.begin.spec-command }
               "4": { patterns: [{ include: "#func-param-ids" }] }
               "5": { name: punctuation.function-argument.end.spec-command }
@@ -138,11 +130,7 @@ repository:
             begin: \b(constant)\s+(\S+)(?:\s*(=)\s*|\s+)
             beginCaptures:
               "1": { name: storage.type.constant.spec-command }
-              "2":
-                {
-                  name: variable.other.constant.spec-command,
-                  patterns: [{ include: "#validation-id" }],
-                }
+              "2": { name: variable.other.constant.spec-command, patterns: [{ include: "#validation-id" }] }
               "3": { name: keyword.operator.arithmetic.assignment.spec-command }
             end: (?=$|;|#|"""|}|')
             patterns: [{ include: "#expression-single" }]
@@ -174,9 +162,9 @@ repository:
             end: (?=$|;|#|"""|}|')
             patterns: [{ include: "#expression-multiple" }]
           - ### usage: (history) N?
-            begin: \b(history)\b
+            begin: \bhistory\b
             beginCaptures:
-              "1": { name: support.function.built-in.macro.spec-command }
+              "0": { name: support.function.built-in.macro.spec-command }
             end: (?=$|;|#|"""|}|')
             patterns: [{ include: "#expression-single" }]
       macro-statement:
@@ -324,22 +312,22 @@ repository:
         patterns: [{ include: "#expression-single" }]
       operator:
         patterns:
-          - match: \b(in)\b
+          - match: \bin\b
             name: keyword.operator.binary.access-array-item.spec-command
           - match: --|\+\+
             name: keyword.operator.unary.arithmetic.increment-decrement.spec-command
-          - match: <<=|>>=|\^=|&=|\|=
+          - match: (?:<<|>>|\||&|\^)=
             name: keyword.operator.assignment.bitwise.spec-command
           - match: <<|>>
             name: keyword.operator.binary.bitwise.shift.spec-command
-          - match: ==|!=|<=|>=|<|>
+          - match: ==|!=|<=?|>=?
             name: keyword.operator.binary.arithmetic.comparison.spec-command
-          - match: \+=|−=|\*=|/=|%=|=
+          - match: "[-+*/%]?="
             name: keyword.operator.assignment.arithmetic.spec-command
+          - match: "[-+*/%]"
+            name: keyword.operator.binary.arithmetic.four-operations.spec-command
           - match: \|\||&&
             name: keyword.operator.binary.logical.and-or.spec-command
-          - match: \*|/|-|\+|%
-            name: keyword.operator.binary.arithmetic.four-operations.spec-command
           - match: \||&|\^
             name: keyword.operator.binary.bitwise.logical.spec-command
           - match: "!"
@@ -349,11 +337,7 @@ repository:
           - match: (@)([a-zA-Z_][a-zA-Z0-9_]*)\b
             captures:
               "1": { name: keyword.operator.indirection.spec-command }
-              "2":
-                {
-                  name: variable.other.indirection.spec-command,
-                  patterns: [{ include: "#validation-id" }],
-                }
+              "2": { name: variable.other.indirection.spec-command, patterns: [{ include: "#validation-id" }] }
       array-access:
         patterns:
           - begin: \[
