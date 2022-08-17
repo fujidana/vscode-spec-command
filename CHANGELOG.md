@@ -4,6 +4,10 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+### Fixed
+
+- failure in parsing unopened documents in workspace folders when KOI8-U (Cyrillic) is the preferred text encoding.
+
 ## [1.8.0] -- 2022-08-16
 
 ### Added
