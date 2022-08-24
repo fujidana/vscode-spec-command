@@ -4,18 +4,23 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+### Added
+
+- `--` in a comment-line breadcrumb item is treated as a separator between the main and subsiriary text. Check how the line `# MARK: main text -- explanatory text` is displayed in the breadcrumb bar.
+
 ### Fixed
 
-- failure in parsing unopened documents in workspace folders when KOI8-U (Cyrillic) is the preferred text encoding.
+- a bug where icons of fucntions and macros in breadcrumb navigation were mistakenly the same. The bug was introduced in 1.8.0.
+- failure in parsing a file in a workspace folder but not opened by editors when KOI8-U (Cyrillic) is the preferred text encoding.
 
 ## [1.8.0] -- 2022-08-16
 
 ### Added
 
 - Overhaul a feature to navigate symbols in an editor.
-  - Comment lines that start with either `# MARK:`, `# TODO:`, or `# FIXME:` are treated as breadcrumbs.
-  - Symbols in an editor are now displayed hierarchically in the breadcrumb navigation. Previously they were flat.
-  - breadcrumbs of data-array (e.g., `float array myarray[32]`) now have a different icon from other local variables.
+  - A comment line that starts with either `# MARK:`, `# TODO:`, or `# FIXME:` are treated as a breadcrumb item.
+  - Symbols in an editor are now displayed hierarchically in breadcrumb navigation. Previously they were flat.
+  - Breadcrumbs of data-array (e.g., `float array myarray[32]`) now have a different icon from other local variables.
 
 ### Changed
 

@@ -630,10 +630,10 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
                     if (currentNode.leadingComments) {
                         for (const leadingComment of currentNode.leadingComments) {
                             let matched: RegExpMatchArray | null;
-                            if (leadingComment.type === 'Line' && leadingComment.loc && (matched = leadingComment.value.match(/^(\s*(MARK|TODO|FIXME):\s+)(.+)$/)) !== null) {
+                            if (leadingComment.type === 'Line' && leadingComment.loc && (matched = leadingComment.value.match(/^(\s*(MARK|TODO|FIXME):\s+)((?:(?!--).)+)(?:--\s*(.+))?$/)) !== null) {
                                 const commentRange = spec.convertRange(leadingComment.loc as IFileRange);
                                 const commentRange2 = commentRange.with(commentRange.start.translate(undefined, matched[1].length + 1));
-                                symbol = new vscode.DocumentSymbol(matched[3], '', vscode.SymbolKind.Key, commentRange, commentRange2);
+                                symbol = new vscode.DocumentSymbol(matched[3], matched[4] !== undefined ? matched[4] : '', vscode.SymbolKind.Key, commentRange, commentRange2);
                                 if (symbols.length !== 0 && symbols[symbols.length - 1].range.contains(commentRange)) {
                                     symbols[symbols.length - 1].children.push(symbol);
                                 } else {

@@ -44,7 +44,7 @@ Sorry for inconvenence.
 This extension treats user-defined symbols declared at the top level (i.e., not in a code block, curly brackets) as global and those in code blocks as local.
 Global symbols are visible beyond a file where the symbol is defined; local symbols are visible only when the cursor is in the same block.
 
-Tip: A comment line that starts with `# MARK:`, `# FIXME:` or `# TODO:` is treated as a breadcrumb.
+Tip: A comment line that starts with `# MARK:`, `# FIXME:` or `# TODO:` is treated as a breadcrumb. Optionally, `--` devides the text with the main and subsidiary parts.
 
 ![screenshot of the hover](resources/screenshot.png "hover demo")
 
