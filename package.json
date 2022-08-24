@@ -188,8 +188,8 @@
 						"completionItem.label.detail": false,
 						"completionItem.label.description": false,
 						"completionItem.documentation": false,
-						"signatureHelp.signatures.documentation": false,
-						"hover.contents": false
+						"hover.contents": false,
+						"signatureHelp.signatures.documentation": false
 					},
 					"properties": {
 						"completionItem.label.detail": {
@@ -207,15 +207,15 @@
 							"default": false,
 							"description": "Truncates explanatory text of a selected item of auto completion suggestions to a sentence."
 						},
-						"signatureHelp.signatures.documentation": {
-							"type": "boolean",
-							"default": false,
-							"description": "Truncates explanatory text in a signature help, which is shown when the user edits function arguments, to a paragraph."
-						},
 						"hover.contents": {
 							"type": "boolean",
 							"default": false,
 							"description": "Truncates explanatory text in a hover, which is shown when the mouse cursor is on a symbol, to a paragraph."
+						},
+						"signatureHelp.signatures.documentation": {
+							"type": "boolean",
+							"default": false,
+							"description": "Truncates explanatory text in a signature help, which is shown when the user edits function arguments, to a paragraph."
 						}
 					},
 					"additionalProperties": false

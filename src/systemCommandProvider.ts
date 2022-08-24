@@ -30,8 +30,7 @@ const SNIPPET_TEMPLATES: Record<string, string> = {
 };
 
 /**
- * Provider for symbols that spec system manages.
- * This class manages built-in symbols and motor mnemonics user added in VS Code configuraion.
+ * Provider subclass that manages built-in symbols and motor mnemonics user added in VS Code configuraion.
  */
 export class SystemCommandProvider extends CommandProvider implements vscode.TextDocumentContentProvider {
     private activeWorkspaceFolder: vscode.WorkspaceFolder | undefined;
@@ -46,7 +45,7 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
             const apiReference: APIReference = JSON.parse(new TextDecoder('utf-8').decode(uint8Array));
 
             // convert the object to ReferenceMap and register the set.
-            const builtinStorage: spec.ReferenceStorage = new Map(
+            this.storageCollection.set(spec.BUILTIN_URI, new Map(
                 [
                     [spec.ReferenceItemKind.Constant, new Map(Object.entries(apiReference.constants))],
                     [spec.ReferenceItemKind.Variable, new Map(Object.entries(apiReference.variables))],
@@ -54,8 +53,7 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
                     [spec.ReferenceItemKind.Function, new Map(Object.entries(apiReference.functions))],
                     [spec.ReferenceItemKind.Keyword, new Map(Object.entries(apiReference.keywords))],
                 ]
-            );
-            this.storageCollection.set(spec.BUILTIN_URI, builtinStorage);
+            ));
             this.updateCompletionItemsForUriString(spec.BUILTIN_URI);
         });
 
@@ -94,30 +92,23 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
 
         // register command to show reference manual as a virtual document
         const openReferenceManualCallback = () => {
-            const showReferenceManual = (storage: spec.ReferenceStorage) => {
+            const showReferenceManual = async (storage: spec.ReferenceStorage) => {
                 const quickPickItems = [{ key: 'all', label: '$(references) all' }];
                 for (const itemKind of storage.keys()) {
                     const metadata = spec.getReferenceItemKindMetadata(itemKind);
                     quickPickItems.push({ key: metadata.label, label: `$(${metadata.iconIdentifier}) ${metadata.label}` });
                 }
-                vscode.window.showQuickPick(quickPickItems).then(quickPickItem => {
-                    if (quickPickItem) {
-                        let uri = vscode.Uri.parse(spec.BUILTIN_URI);
-                        if (quickPickItem.key !== 'all') {
-                            uri = uri.with({ query: quickPickItem.key });
-                        }
-                        vscode.window.showTextDocument(uri, { preview: false }).then(editor => {
-                            const flag: boolean = vscode.workspace.getConfiguration('spec-command').get('showReferenceManualInPreview', true);
-                            if (flag) {
-                                vscode.commands.executeCommand('markdown.showPreview').then(() => {
-                                    // vscode.window.showTextDocument(editor.document).then(() => {
-                                    //     vscode.commands.executeCommand('workbench.action.closeActiveEditor');
-                                    // });
-                                });
-                            }
-                        });
+                const quickPickItem = await vscode.window.showQuickPick(quickPickItems);
+                if (quickPickItem) {
+                    const uri = vscode.Uri.parse(spec.BUILTIN_URI).with({ query: quickPickItem.key });
+                    const editor = await vscode.window.showTextDocument(uri, { preview: false });
+                    const flag = vscode.workspace.getConfiguration('spec-command').get<boolean>('showReferenceManualInPreview');
+                    if (flag) {
+                        await vscode.commands.executeCommand('markdown.showPreview');
+                        // await vscode.window.showTextDocument(editor.document);
+                        // vscode.commands.executeCommand('workbench.action.closeActiveEditor');
                     }
-                });
+                }
             };
 
             // The API reference database may have not been loaded 
@@ -214,8 +205,15 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
     public provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken): vscode.ProviderResult<string> {
         if (token.isCancellationRequested) { return; }
 
-        if (uri.scheme === 'spec' && uri.authority === 'system') {
-            const storage = this.storageCollection.get(uri.with({ query: '' }).toString());
+        const getFormattedStringForItem = (item: { signature?: string, description?: string, comments?: string }) => {
+            let mdText = `\`${item.signature}\``;
+            mdText += item.description ? ` \u2014 ${item.description}\n\n` : '\n\n';
+            mdText += item.comments ? `${item.comments}\n\n` : '';
+            return mdText;
+        };
+
+        if (uri.with({ query: '' }).toString() === spec.BUILTIN_URI) {
+            const storage = this.storageCollection.get(spec.BUILTIN_URI);
             if (storage) {
                 let mdText = '# __spec__ Reference Manual\n\n';
                 mdText += 'The contents of this page are cited from the _Reference Manual_ section in [PDF version](https://www.certif.com/downloads/css_docs/spec_man.pdf) of the _User manual and Tutorials_, written by [Certified Scientific Software](https://www.certif.com/), except where otherwise noted.\n\n';
@@ -223,8 +221,8 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
                 for (const [itemKind, map] of storage.entries()) {
                     const itemKindLabel = spec.getReferenceItemKindMetadata(itemKind).label;
 
-                    // if 'query' is specified, skip maps other than the speficed query.
-                    if (uri.query && uri.query !== itemKindLabel) {
+                    // if 'query' is not 'all', skip maps other than the speficed query.
+                    if (uri.query && uri.query !== 'all' && uri.query !== itemKindLabel) {
                         continue;
                     }
 
@@ -234,14 +232,10 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
                     // add each item
                     for (const [key, item] of map.entries()) {
                         mdText += `### ${key}\n\n`;
-                        mdText += `\`${item.signature}\``;
-                        mdText += (item.description) ? ` \u2014 ${item.description}\n\n` : '\n\n';
-                        mdText += (item.comments) ? `${item.comments}\n\n` : '';
-
+                        mdText += getFormattedStringForItem(item);
                         if (item.overloads) {
                             for (const overload of item.overloads) {
-                                mdText += `\`${overload.signature}\``;
-                                mdText += (overload.description) ? ` \u2014 ${overload.description}\n\n` : '\n\n';
+                                mdText += getFormattedStringForItem(overload);
                             }
                         }
                     }

@@ -165,10 +165,9 @@ export class CommandProvider implements vscode.CompletionItemProvider<spec.Compl
         const storage = this.storageCollection.get(uriString);
         if (storage) {
             const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages');
-            let description: string | undefined;
-
             const suppressDetail = config !== undefined && 'completionItem.label.detail' in config && config['completionItem.label.detail'] === true;
             const suppressDescription = config !== undefined && 'completionItem.label.description' in config && config['completionItem.label.description'] === true;
+            let description: string | undefined;
 
             if (!suppressDescription) {
                 if (uriString === spec.BUILTIN_URI) {
@@ -180,7 +179,7 @@ export class CommandProvider implements vscode.CompletionItemProvider<spec.Compl
                 } else if (uriString === spec.SNIPPET_URI) {
                     description = 'snippet';
                 } else if (uriString === spec.ACTIVE_FILE_URI) {
-                // } else if (uriString === spec.ACTIVE_FILE_URI || uriString === vscode.window.activeTextEditor?.document.uri.toString()) {
+                    // } else if (uriString === spec.ACTIVE_FILE_URI || uriString === vscode.window.activeTextEditor?.document.uri.toString()) {
                     description = 'local';
                 } else {
                     const itemUri = vscode.Uri.parse(uriString);
@@ -289,7 +288,7 @@ export class CommandProvider implements vscode.CompletionItemProvider<spec.Compl
         if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(selectorName)) { return; }
 
         // start to seek if the selection is a proper identifier.
-        let hover: vscode.Hover | undefined;
+        const contents: vscode.MarkdownString[] = [];
 
         for (const [refUriString, storage] of this.storageCollection.entries()) {
             for (const [itemKind, map] of storage.entries()) {
@@ -303,12 +302,7 @@ export class CommandProvider implements vscode.CompletionItemProvider<spec.Compl
                     if (truncatedString) {
                         mainMarkdown = mainMarkdown.appendMarkdown(truncatedString);
                     }
-
-                    if (!hover) {
-                        hover = new vscode.Hover(mainMarkdown);
-                    } else {
-                        hover.contents.push(mainMarkdown);
-                    }
+                    contents.push(mainMarkdown);
 
                     // for overloaded functions, prepare additional markdown blocks
                     if (item.overloads) {
@@ -318,14 +312,13 @@ export class CommandProvider implements vscode.CompletionItemProvider<spec.Compl
                             if (truncatedString2) {
                                 overloadMarkdown = overloadMarkdown.appendMarkdown(truncatedString2);
                             }
-                            hover.contents.push(overloadMarkdown);
+                            contents.push(overloadMarkdown);
                         }
                     }
-                    // return hover;
                 }
             }
         }
-        return hover;
+        return contents.length > 0 ? new vscode.Hover(contents) : undefined;
     }
 
     /**
@@ -354,8 +347,8 @@ export class CommandProvider implements vscode.CompletionItemProvider<spec.Compl
                     if (truncatedString) {
                         signatureInformation.documentation = new vscode.MarkdownString(truncatedString);
                     }
-                    let parameters: vscode.ParameterInformation[] | undefined;
-                    if ((parameters = getParameterInformation(overload.signature)) !== undefined) {
+                    const parameters = getParameterInformation(overload.signature);
+                    if (parameters !== undefined) {
                         signatureInformation.parameters = parameters;
                     }
                     signatureHelp.signatures.push(signatureInformation);
