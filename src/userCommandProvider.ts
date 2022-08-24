@@ -647,13 +647,13 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
                         if (currentNode.id && currentNode.id.loc) {
                             const idName = currentNode.id.name;
                             const idRange = spec.convertRange(currentNode.id.loc as IFileRange);
-                            // if (currentNode.params) {
-                            //     const params = currentNode.params.map(param => (param.type === 'Identifier') ? param.name : '') ;
-                            //     symbol = new vscode.DocumentSymbol(idName, '(' + params.join(' ,') + ')', vscode.SymbolKind.Function, stmtRange, idRange);
-                            // } else {
-                            //     symbol = new vscode.DocumentSymbol(idName, '', vscode.SymbolKind.Module, stmtRange, idRange);
-                            // }
-                            symbol = new vscode.DocumentSymbol(idName, '', vscode.SymbolKind.Module, stmtRange, idRange);
+                            if (currentNode.params) {
+                                symbol = new vscode.DocumentSymbol(idName, '', vscode.SymbolKind.Function, stmtRange, idRange);
+                                // const params = currentNode.params.map(param => (param.type === 'Identifier') ? param.name : '') ;
+                                // symbol = new vscode.DocumentSymbol(idName, '(' + params.join(' ,') + ')', vscode.SymbolKind.Function, stmtRange, idRange);
+                            } else {
+                                symbol = new vscode.DocumentSymbol(idName, '', vscode.SymbolKind.Module, stmtRange, idRange);
+                            }
 
                             if (symbols.length !== 0 && symbols[symbols.length - 1].range.contains(stmtRange)) {
                                 symbols[symbols.length - 1].children.push(symbol);
