@@ -4,9 +4,11 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+## [1.8.1] -- 2022-08-30
+
 ### Added
 
-- `--` in a comment-line breadcrumb item is treated as a separator between the main and subsiriary text. Check how the line `# MARK: main text -- explanatory text` is displayed in the breadcrumb bar.
+- `--` in a comment-line breadcrumb item is treated as a separator between the main and subsiriary text. Check how a line `# MARK: main text -- explanatory text` is displayed in the breadcrumb bar.
 
 ### Fixed
 
@@ -367,7 +369,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
   - syntax highlighting
   - code snippets
 
-[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.0...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.1...HEAD
+[1.8.1]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.0...v1.8.1
 [1.8.0]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.4...v1.8.0
 [1.7.4]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.3...v1.7.4
 [1.7.3]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.2...v1.7.3
