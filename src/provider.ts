@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as spec from './spec';
+import * as lang from './specCommand';
 
 /* eslint-disable @typescript-eslint/naming-convention */
 interface SuppressMessagesConfig {
@@ -11,23 +11,23 @@ interface SuppressMessagesConfig {
 }
 /* eslint-enable @typescript-eslint/naming-convention */
 
-function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceItemKind, itemUriString: string, documentUriString: string, outputsMarkdown: true): vscode.MarkdownString;
-function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceItemKind, itemUriString: string, documentUriString: string, outputsMarkdown: false): string;
-function getShortDescription(item: spec.ReferenceItem, itemKind: spec.ReferenceItemKind, itemUriString: string, documentUriString: string, outputsMarkdown: boolean) {
+function getShortDescription(item: lang.ReferenceItem, itemKind: lang.ReferenceItemKind, itemUriString: string, documentUriString: string, outputsMarkdown: true): vscode.MarkdownString;
+function getShortDescription(item: lang.ReferenceItem, itemKind: lang.ReferenceItemKind, itemUriString: string, documentUriString: string, outputsMarkdown: false): string;
+function getShortDescription(item: lang.ReferenceItem, itemKind: lang.ReferenceItemKind, itemUriString: string, documentUriString: string, outputsMarkdown: boolean) {
     let symbolLabel: string;
     let itemUriLabel: string | undefined;
 
-    symbolLabel = spec.getReferenceItemKindMetadata(itemKind).label;
+    symbolLabel = lang.getReferenceItemKindMetadata(itemKind).label;
 
-    if (itemUriString === spec.BUILTIN_URI) {
+    if (itemUriString === lang.BUILTIN_URI) {
         symbolLabel = 'built-in ' + symbolLabel;
-    } else if (itemUriString === spec.MOTOR_URI) {
+    } else if (itemUriString === lang.MOTOR_URI) {
         symbolLabel = 'motor mnemonic ' + symbolLabel;
-    } else if (itemUriString === spec.COUNTER_URI) {
+    } else if (itemUriString === lang.COUNTER_URI) {
         symbolLabel = 'counter mnemonic ' + symbolLabel;
-    } else if (itemUriString === spec.SNIPPET_URI) {
+    } else if (itemUriString === lang.SNIPPET_URI) {
         symbolLabel = 'counter/motor ' + symbolLabel;
-    } else if (itemUriString === spec.ACTIVE_FILE_URI || itemUriString === documentUriString) {
+    } else if (itemUriString === lang.ACTIVE_FILE_URI || itemUriString === documentUriString) {
         if (item.location) {
             symbolLabel = `${symbolLabel} defined in l.${item.location.start.line} of this file `;
         } else {
@@ -63,22 +63,22 @@ const enum TruncationLevel {
     line
 }
 
-function truncateString(level: TruncationLevel, description?: string, comments?: string): string | undefined {
+function truncateString(level: TruncationLevel, item: { description?: string, comments?: string }): string | undefined {
     let truncatedString;
-    if (description) {
+    if (item.description) {
         if (level === TruncationLevel.full) {
-            truncatedString = description;
+            truncatedString = item.description;
         } else if (level === TruncationLevel.paragraph) {
-            const endIndex = description.indexOf('\n\n');
-            truncatedString = (endIndex >= 0) ? description.substring(0, endIndex) + '\n\n...' : description;
+            const endIndex = item.description.indexOf('\n\n');
+            truncatedString = (endIndex >= 0) ? item.description.substring(0, endIndex) + '\n\n...' : item.description;
         } else if (level === TruncationLevel.line) {
-            const endIndex = description.search(/\.\s/g);
-            truncatedString = (endIndex >= 0) ? description.substring(0, endIndex) + '. ...' : description;
+            const endIndex = item.description.search(/\.\s/g);
+            truncatedString = (endIndex >= 0) ? item.description.substring(0, endIndex) + '. ...' : item.description;
         }
     }
 
-    if (comments && level !== TruncationLevel.line) {
-        truncatedString = truncatedString ? truncatedString + '\n\n' + comments : comments;
+    if (item.comments && level !== TruncationLevel.line) {
+        truncatedString = truncatedString ? truncatedString + '\n\n' + item.comments : item.comments;
     }
 
     return truncatedString;
@@ -127,7 +127,7 @@ function parseSignatureInEditing(line: string, position: number) {
 /**
  * Provider class
  */
-export class CommandProvider implements vscode.CompletionItemProvider<spec.CompletionItem>, vscode.HoverProvider, vscode.SignatureHelpProvider {
+export class Provider implements vscode.CompletionItemProvider<lang.CompletionItem>, vscode.HoverProvider, vscode.SignatureHelpProvider {
 
     // vscode.Uri objects can not be used as a key for a Map object because these 
     // objects having the same string representation can be recognized different,
@@ -136,8 +136,8 @@ export class CommandProvider implements vscode.CompletionItemProvider<spec.Compl
     // (File System Path). To avoid this problem, the string representation of a Uri 
     // object is used as a key.
 
-    protected readonly storageCollection = new Map<string, spec.ReferenceStorage>();
-    protected readonly completionItemCollection = new Map<string, spec.CompletionItem[]>();
+    protected readonly storageCollection = new Map<string, lang.ReferenceStorage>();
+    protected readonly completionItemCollection = new Map<string, lang.CompletionItem[]>();
 
     constructor(context: vscode.ExtensionContext) {
         const configurationChangeListener = (event: vscode.ConfigurationChangeEvent) => {
@@ -150,9 +150,9 @@ export class CommandProvider implements vscode.CompletionItemProvider<spec.Compl
 
         // register providers
         context.subscriptions.push(
-            vscode.languages.registerCompletionItemProvider(spec.CMD_SELECTOR, this),
-            vscode.languages.registerHoverProvider(spec.CMD_SELECTOR, this),
-            vscode.languages.registerSignatureHelpProvider(spec.CMD_SELECTOR, this, '(', ')', ','),
+            vscode.languages.registerCompletionItemProvider(lang.SELECTOR, this),
+            vscode.languages.registerHoverProvider(lang.SELECTOR, this),
+            vscode.languages.registerSignatureHelpProvider(lang.SELECTOR, this, '(', ')', ','),
             vscode.workspace.onDidChangeConfiguration(configurationChangeListener),
         );
     }
@@ -170,30 +170,29 @@ export class CommandProvider implements vscode.CompletionItemProvider<spec.Compl
             let description: string | undefined;
 
             if (!suppressDescription) {
-                if (uriString === spec.BUILTIN_URI) {
+                if (uriString === lang.BUILTIN_URI) {
                     description = 'built-in';
-                } else if (uriString === spec.MOTOR_URI) {
+                } else if (uriString === lang.MOTOR_URI) {
                     description = 'motor';
-                } else if (uriString === spec.COUNTER_URI) {
+                } else if (uriString === lang.COUNTER_URI) {
                     description = 'counter';
-                } else if (uriString === spec.SNIPPET_URI) {
+                } else if (uriString === lang.SNIPPET_URI) {
                     description = 'snippet';
-                } else if (uriString === spec.ACTIVE_FILE_URI) {
+                } else if (uriString === lang.ACTIVE_FILE_URI) {
                     // } else if (uriString === spec.ACTIVE_FILE_URI || uriString === vscode.window.activeTextEditor?.document.uri.toString()) {
                     description = 'local';
                 } else {
-                    const itemUri = vscode.Uri.parse(uriString);
-                    // description = (itemUri.scheme === 'file') ? vscode.workspace.asRelativePath(itemUri) : uriString;
-                    description = vscode.workspace.asRelativePath(itemUri);
+                    // description = (itemUri.scheme === 'file') ? vscode.workspace.asRelativePath(vscode.Uri.parse(uriString)) : uriString;
+                    description = vscode.workspace.asRelativePath(vscode.Uri.parse(uriString));
                 }
             }
 
-            const completionItems: spec.CompletionItem[] = [];
+            const completionItems: lang.CompletionItem[] = [];
             for (const [refItemKind, map] of storage.entries()) {
                 for (const [identifier, item] of map.entries()) {
                     const detail = (!suppressDetail && item.signature.startsWith(identifier)) ? item.signature.substring(identifier.length) : undefined;
                     const label: vscode.CompletionItemLabel = { label: identifier, detail: detail, description: description };
-                    const completionItem = new spec.CompletionItem(label, uriString, refItemKind);
+                    const completionItem = new lang.CompletionItem(label, uriString, refItemKind);
                     if (item.snippet) {
                         completionItem.insertText = new vscode.SnippetString(item.snippet);
                     }
@@ -211,7 +210,7 @@ export class CommandProvider implements vscode.CompletionItemProvider<spec.Compl
     /**
      * Required implementation of vscode.CompletionItemProvider
      */
-    public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionList<spec.CompletionItem> | spec.CompletionItem[]> {
+    public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionList<lang.CompletionItem> | lang.CompletionItem[]> {
         if (token.isCancellationRequested) { return; }
 
         const range = document.getWordRangeAtPosition(position);
@@ -220,13 +219,13 @@ export class CommandProvider implements vscode.CompletionItemProvider<spec.Compl
         const selectorName = document.getText(range);
         if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(selectorName)) { return; }
 
-        return new Array<spec.CompletionItem>().concat(...this.completionItemCollection.values());
+        return new Array<lang.CompletionItem>().concat(...this.completionItemCollection.values());
     }
 
     /**
      * Optional implementation of vscode.CompletionItemProvider
      */
-    public resolveCompletionItem(completionItem: spec.CompletionItem, token: vscode.CancellationToken): vscode.ProviderResult<spec.CompletionItem> {
+    public resolveCompletionItem(completionItem: lang.CompletionItem, token: vscode.CancellationToken): vscode.ProviderResult<lang.CompletionItem> {
         if (token.isCancellationRequested) { return; }
 
         const refItemKind = completionItem.refItemKind;
@@ -246,29 +245,27 @@ export class CommandProvider implements vscode.CompletionItemProvider<spec.Compl
         // copy completion item.
         const newCompletionItem = Object.assign({}, completionItem);
 
-        // set the detail of the completion item
-        newCompletionItem.detail = getShortDescription(refItem, refItemKind, refUriString, documentUriString, false);
-
         // set the description of the completion item
         // if the main description exists, append it.
 
-        const descriptionMarkdown = new vscode.MarkdownString(truncateString(truncationlevel, refItem.description, refItem.comments));
+        const documentation = new vscode.MarkdownString(truncateString(truncationlevel, refItem));
 
         // if overloaded signature exists, append them.
         if (refItem.overloads) {
             for (const overload of refItem.overloads) {
-                // descriptionMarkdown.appendMarkdown('---');
-                descriptionMarkdown.appendCodeblock(overload.signature);
-                const truncatedString = truncateString(truncationlevel, overload.description, undefined);
+                // documentation.appendMarkdown('---');
+                documentation.appendCodeblock(overload.signature);
+                const truncatedString = truncateString(truncationlevel, overload);
                 if (truncatedString) {
-                    descriptionMarkdown.appendMarkdown(truncatedString);
+                    documentation.appendMarkdown(truncatedString);
                 }
             }
         }
 
-        if (descriptionMarkdown.value) {
-            newCompletionItem.documentation = descriptionMarkdown;
-        }
+        // set the detail of the completion item
+        newCompletionItem.detail = getShortDescription(refItem, refItemKind, refUriString, documentUriString, false);
+        newCompletionItem.documentation = documentation;
+
         return newCompletionItem;
     }
 
@@ -290,15 +287,15 @@ export class CommandProvider implements vscode.CompletionItemProvider<spec.Compl
         // start to seek if the selection is a proper identifier.
         const contents: vscode.MarkdownString[] = [];
 
-        for (const [refUriString, storage] of this.storageCollection.entries()) {
+        for (const [uriString, storage] of this.storageCollection.entries()) {
             for (const [itemKind, map] of storage.entries()) {
                 // find the symbol information about the symbol.
                 const item = map.get(selectorName);
                 if (item) {
-                    let mainMarkdown = getShortDescription(item, itemKind, refUriString, document.uri.toString(), true);
+                    let mainMarkdown = getShortDescription(item, itemKind, uriString, document.uri.toString(), true);
 
                     // prepare the second line: the description (if it exists)
-                    const truncatedString = truncateString(truncationLevel, item.description, item.comments);
+                    const truncatedString = truncateString(truncationLevel, item);
                     if (truncatedString) {
                         mainMarkdown = mainMarkdown.appendMarkdown(truncatedString);
                     }
@@ -308,7 +305,7 @@ export class CommandProvider implements vscode.CompletionItemProvider<spec.Compl
                     if (item.overloads) {
                         for (const overload of item.overloads) {
                             let overloadMarkdown = new vscode.MarkdownString().appendCodeblock(overload.signature);
-                            const truncatedString2 = truncateString(truncationLevel, overload.description, undefined);
+                            const truncatedString2 = truncateString(truncationLevel, overload);
                             if (truncatedString2) {
                                 overloadMarkdown = overloadMarkdown.appendMarkdown(truncatedString2);
                             }
@@ -334,8 +331,8 @@ export class CommandProvider implements vscode.CompletionItemProvider<spec.Compl
         const truncationLevel = (config !== undefined && 'signatureHelp.signatures.documentation' in config && config['signatureHelp.signatures.documentation'] === true) ? TruncationLevel.paragraph : TruncationLevel.full;
 
         for (const storage of this.storageCollection.values()) {
-            const map = storage.get(spec.ReferenceItemKind.Function);
-            let item: spec.ReferenceItem | undefined;
+            const map = storage.get(lang.ReferenceItemKind.Function);
+            let item: lang.ReferenceItem | undefined;
             if (map && (item = map.get(signatureHint.signature)) !== undefined) {
                 const overloads = (item.overloads) ? item.overloads : [{ signature: item.signature, description: item.description }];
                 const signatureHelp = new vscode.SignatureHelp();
@@ -343,7 +340,7 @@ export class CommandProvider implements vscode.CompletionItemProvider<spec.Compl
                 for (const overload of overloads) {
                     // assume that usage.signature must exist.
                     const signatureInformation = new vscode.SignatureInformation(overload.signature);
-                    const truncatedString = truncateString(truncationLevel, overload.description, undefined);
+                    const truncatedString = truncateString(truncationLevel, overload);
                     if (truncatedString) {
                         signatureInformation.documentation = new vscode.MarkdownString(truncatedString);
                     }

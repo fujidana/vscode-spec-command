@@ -1,27 +1,31 @@
 import * as vscode from 'vscode';
 import * as estree from "estree";
 import * as estraverse from "estraverse";
-import * as spec from "./spec";
-import { CommandProvider } from "./commandProvider";
+import * as lang from "./specCommand";
+import { Provider } from "./provider";
 import { SyntaxError, parse, IFileRange } from './grammar';
 import { getTextDecoder } from './textEncoding';
 
-/* eslint-disable @typescript-eslint/naming-convention */
 /**
  * Extention-specific keys for estraverse (not exist in the original Parser AST.)
  */
 const ADDITIONAL_TRAVERSE_KEYS = {
+    /* eslint-disable @typescript-eslint/naming-convention */
     MacroStatement: ['arguments'],
     InvalidStatement: [],
     ExitStatement: [],
     NullExpression: [],
+    /* eslint-enable @typescript-eslint/naming-convention */
 };
-/* eslint-disable @typescript-eslint/naming-convention */
 
 interface CustomProgram extends estree.Program {
     exDiagnostics: { location: IFileRange, message: string, severity: vscode.DiagnosticSeverity }[];
 }
 
+/**
+ * Get a set of the URIs of supported files from workspaces
+ * @returns a promise of Set of a string representation of URIs
+ */
 async function findFilesInWorkspaces() {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     const uriStringSet = new Set<string>();
@@ -30,6 +34,7 @@ async function findFilesInWorkspaces() {
         for (const workspaceFolder of workspaceFolders) {
             // refer to `files.associations` configuration property
             const associations = Object.assign(
+                // eslint-disable-next-line @typescript-eslint/naming-convention
                 <Record<string, string>>{ '*.mac': 'spec-command' },
                 vscode.workspace.getConfiguration('files', workspaceFolder).get<Record<string, string>>('associations')
             );
@@ -52,10 +57,10 @@ async function findFilesInWorkspaces() {
 }
 
 /**
- * Provider class for user documents.
- * This class manages opened documents and other documents in the current workspace.
+ * Provider class for user's documents.
+ * This class manages documents opened in editors and other documents in the current workspaces.
  */
-export class UserCommandProvider extends CommandProvider implements vscode.DefinitionProvider, vscode.DocumentSymbolProvider, vscode.WorkspaceSymbolProvider {
+export class UserProvider extends Provider implements vscode.DefinitionProvider, vscode.DocumentSymbolProvider, vscode.WorkspaceSymbolProvider, vscode.DocumentDropEditProvider {
 
     private readonly diagnosticCollection: vscode.DiagnosticCollection;
     private readonly treeCollection: Map<string, CustomProgram>;
@@ -124,33 +129,32 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         };
 
         // a hander invoked when the document is changed
-        const textDocumentChangeListener = (event: vscode.TextDocumentChangeEvent) => {
+        const textDocumentDidChangeListener = (event: vscode.TextDocumentChangeEvent) => {
             const document = event.document;
-            if (vscode.languages.match(spec.CMD_SELECTOR, document) && document.uri.scheme !== 'git') {
+            if (vscode.languages.match(lang.SELECTOR, document) && document.uri.scheme !== 'git') {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
-                // this.diagnoseOpenDocments();
             }
         };
 
         // a hander invoked when the document is opened
         // this is also invoked after the user manually changed the language id
-        const textDocumentOpenListener = (document: vscode.TextDocument) => {
-            if (vscode.languages.match(spec.CMD_SELECTOR, document) && document.uri.scheme !== 'git') {
+        const textDocumentDidOpenListener = (document: vscode.TextDocument) => {
+            if (vscode.languages.match(lang.SELECTOR, document) && document.uri.scheme !== 'git') {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
             }
         };
 
         // a hander invoked when the document is saved
-        const textDocumentSaveListener = (document: vscode.TextDocument) => {
-            if (vscode.languages.match(spec.CMD_SELECTOR, document) && document.uri.scheme !== 'git') {
+        const textDocumentDidSaveListener = (document: vscode.TextDocument) => {
+            if (vscode.languages.match(lang.SELECTOR, document) && document.uri.scheme !== 'git') {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
             }
         };
 
         // a hander invoked when the document is closed
         // this is also invoked after the user manually changed the language id
-        const textDocumentCloseListener = async (document: vscode.TextDocument) => {
-            if (vscode.languages.match(spec.CMD_SELECTOR, document)) {
+        const textDocumentDidCloseListener = async (document: vscode.TextDocument) => {
+            if (vscode.languages.match(lang.SELECTOR, document)) {
                 const documentUriString = document.uri.toString();
 
                 this.treeCollection.delete(documentUriString);
@@ -173,8 +177,15 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
             }
         };
 
+        // const activeTextEditorDidChangeListener = (editor: vscode.TextEditor | undefined) => {
+        //     if (editor) {
+        //         const document = editor.document;
+        //         this.parseDocumentContents(document.getText(), document.uri, true, true);
+        //     }
+        // };
+
         // // a hander invoked after files are created
-        // const fileCreateListener = async (event: vscode.FileCreateEvent) => {
+        // const fileDidCreateListener = async (event: vscode.FileCreateEvent) => {
         //     const filesInWorkspaces = await findFilesInWorkspaces();
         //     const newUriStringSet = new Set<string>();
         //     for (const newUri of event.files) {
@@ -182,34 +193,25 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         // };
 
         // a hander invoked after files are renamed
-        const fileRenameListener = async (event: vscode.FileRenameEvent) => {
+        const fileDidRenameListener = async (event: vscode.FileRenameEvent) => {
             const filesInWorkspaces = await findFilesInWorkspaces();
-            const oldUriStringSet = new Set<string>();
-            const newUriStringSet = new Set<string>();
+            let oldUriStringSet: Set<string> | undefined;
+            let newUriStringSet: Set<string> | undefined;
 
             for (const { oldUri, newUri } of event.files) {
                 const stat = await vscode.workspace.fs.stat(newUri);
 
                 if (stat.type === vscode.FileType.File) {
-                    oldUriStringSet.add(oldUri.toString());
+                    oldUriStringSet = new Set([oldUri.toString()]);
                     if (filesInWorkspaces.has(newUri.toString())) {
-                        newUriStringSet.add(newUri.toString());
+                        newUriStringSet = new Set([newUri.toString()]);
                     }
                 } else if (stat.type === vscode.FileType.Directory) {
                     const oldDirUriString = oldUri.toString() + "/";
-
-                    for (const fileUriString of this.storageCollection.keys()) {
-                        if (fileUriString.startsWith(oldDirUriString)) {
-                            oldUriStringSet.add(fileUriString);
-                        }
-                    }
+                    oldUriStringSet = new Set([...this.storageCollection.keys()].filter(uriString => uriString.startsWith(oldDirUriString)));
 
                     const newDirUriString = newUri.toString() + "/";
-                    for (const fileUriString of filesInWorkspaces) {
-                        if (fileUriString.startsWith(newDirUriString)) {
-                            newUriStringSet.add(fileUriString);
-                        }
-                    }
+                    newUriStringSet = new Set([...filesInWorkspaces].filter(uriString => uriString.startsWith(newDirUriString)));
                 }
             }
 
@@ -221,17 +223,12 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
             for (const oldUri of event.files) {
                 const promise = vscode.workspace.fs.stat(oldUri).then(
                     stat => {
-                        const oldUriStringSet = new Set<string>();
+                        let oldUriStringSet : Set<string> | undefined;
                         if (stat.type === vscode.FileType.File) {
-                            oldUriStringSet.add(oldUri.toString());
+                            oldUriStringSet = new Set([oldUri.toString()]);
                         } else if (stat.type === vscode.FileType.Directory) {
                             const oldDirUriString = oldUri.toString() + "/";
-
-                            for (const fileUriString of this.storageCollection.keys()) {
-                                if (fileUriString.startsWith(oldDirUriString)) {
-                                    oldUriStringSet.add(fileUriString);
-                                }
-                            }
+                            oldUriStringSet = new Set([...this.storageCollection.keys()].filter(uriString => uriString.startsWith(oldDirUriString)));
                         }
                         this.applyFileOperation(oldUriStringSet);
                     }
@@ -239,13 +236,6 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
                 event.waitUntil(promise);
             }
         };
-
-        // const activeTextEditorChangeListener = (editor: vscode.TextEditor | undefined) => {
-        //     if (editor) {
-        //         const document = editor.document;
-        //         this.parseDocumentContents(document.getText(), document.uri, true, true);
-        //     }
-        // };
 
         // a hander invoked when the configuration is changed
         const configurationChangeListener = (event: vscode.ConfigurationChangeEvent) => {
@@ -263,22 +253,27 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
             vscode.commands.registerCommand('spec-command.execSelectionInTerminal', execSelectionInTerminalCommandCallback),
             vscode.commands.registerCommand('spec-command.execFileInTerminal', execFileInTerminalCommandCallback),
             // register document-event listeners
-            vscode.workspace.onDidChangeTextDocument(textDocumentChangeListener),
-            vscode.workspace.onDidOpenTextDocument(textDocumentOpenListener),
-            vscode.workspace.onDidSaveTextDocument(textDocumentSaveListener),
-            vscode.workspace.onDidCloseTextDocument(textDocumentCloseListener),
-            // vscode.window.onDidChangeActiveTextEditor(activeTextEditorChangeListener),
+            vscode.workspace.onDidChangeTextDocument(textDocumentDidChangeListener),
+            vscode.workspace.onDidOpenTextDocument(textDocumentDidOpenListener),
+            vscode.workspace.onDidSaveTextDocument(textDocumentDidSaveListener),
+            vscode.workspace.onDidCloseTextDocument(textDocumentDidCloseListener),
+            // vscode.window.onDidChangeActiveTextEditor(activeTextEditorDidChangeListener),
+
             // register file-event listeners
-            // vscode.workspace.onDidCreateFiles(fileCreateListener),
-            vscode.workspace.onDidRenameFiles(fileRenameListener),
+            // vscode.workspace.onDidCreateFiles(fileDidCreateListener),
+            vscode.workspace.onDidRenameFiles(fileDidRenameListener),
             vscode.workspace.onWillDeleteFiles(fileWillDeleteListener),
+
             // register other event listeners
             vscode.workspace.onDidChangeConfiguration(configurationChangeListener),
             vscode.workspace.onDidChangeWorkspaceFolders(workspaceFoldersChangeListener),
+
             // register providers
-            vscode.languages.registerDefinitionProvider(spec.CMD_SELECTOR, this),
-            vscode.languages.registerDocumentSymbolProvider(spec.CMD_SELECTOR, this),
+            vscode.languages.registerDefinitionProvider(lang.SELECTOR, this),
+            vscode.languages.registerDocumentSymbolProvider(lang.SELECTOR, this),
             vscode.languages.registerWorkspaceSymbolProvider(this),
+            vscode.languages.registerDocumentDropEditProvider(lang.SELECTOR, this),
+
             // register diagnostic collection
             this.diagnosticCollection,
         );
@@ -288,10 +283,9 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
     }
 
     /**
-     * update the metadata database.
-     * All metadata for oldFiles are removed. Mismatched files are just ignored.
-     * All metadata for newFiles are created thus the file paths should be filtered beforehand
-     * based on the configuration settings.
+     * Update the database.
+     * @param oldUriStringSet a set of files of which metadata will be removed. Mismatched files are just ignored.
+     * @param newUriStringSet a set of files of which metadata will be created. The file paths should be filtered beforehand.
      */
     private async applyFileOperation(oldUriStringSet?: Set<string>, newUriStringSet?: Set<string>) {
         // unregister metadata for old URIs.
@@ -308,12 +302,14 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
             // make a list of opened documents.
             // Do nothing for these files because they are handled by
             // onDidOpenTextDocument and onDidCloseTextDocument events.
-            const documentUriStringSet = new Set<string>();
-            for (const document of vscode.workspace.textDocuments) {
-                if (vscode.languages.match(spec.CMD_SELECTOR, document) && document.uri.scheme !== 'git') {
-                    documentUriStringSet.add(document.uri.toString());
-                }
-            }
+            const documentUriStringSet = new Set(
+                vscode.workspace.textDocuments.filter(
+                    document => (vscode.languages.match(lang.SELECTOR, document) && document.uri.scheme !== 'git')
+                ).map(
+                    document => document.uri.toString()
+                )
+            );
+
             for (const newUriString of newUriStringSet) {
                 if (!documentUriStringSet.has(newUriString)) {
                     const newUri = vscode.Uri.parse(newUriString);
@@ -327,23 +323,23 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
     }
 
     /**
-     * @param tree Parser AST object.
+     * @param program Parser AST object.
      * @param uriString document URI string.
      * @param position the current cursor position. If not given, top-level symbols (global variables, constant, macro and functions) are picked up.
      */
-     private collectSymbolsFromTree(tree: estree.Program, uriString: string, position?: vscode.Position) {
+    private collectSymbolsFromTree(program: estree.Program, uriString: string, position?: vscode.Position) {
 
-        const constantRefMap: spec.ReferenceMap = new Map();
-        const variableRefMap: spec.ReferenceMap = new Map();
-        const arrayRefMap: spec.ReferenceMap = new Map();
-        const macroRefMap: spec.ReferenceMap = new Map();
-        const functionRefMap: spec.ReferenceMap = new Map();
+        const constantRefMap: lang.ReferenceMap = new Map();
+        const variableRefMap: lang.ReferenceMap = new Map();
+        const arrayRefMap: lang.ReferenceMap = new Map();
+        const macroRefMap: lang.ReferenceMap = new Map();
+        const functionRefMap: lang.ReferenceMap = new Map();
 
         // const nestedNodes: string[] = [];
 
         // console.log('<<<Scan start>>>', JSON.stringify(position, undefined, ""));
 
-        estraverse.traverse(tree, {
+        estraverse.traverse(program, {
             enter: (currentNode, parentNode) => {
                 // console.log('enter', currentNode.type, parentNode && parentNode.type);
 
@@ -360,9 +356,9 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
                     console.log('Statement should have location. This may be a bug in the parser.');
                     return;
                 }
-                const nodeRange = spec.convertRange(currentNode.loc as IFileRange);
-                let refItem: spec.ReferenceItem | undefined;
-                const refItems: spec.ReferenceItem[] = [];
+                const nodeRange = lang.convertRange(currentNode.loc as IFileRange);
+                let refItem: lang.ReferenceItem | undefined;
+                const refItems: lang.ReferenceItem[] = [];
 
                 if (position) {
                     // in case of active document
@@ -450,29 +446,26 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
             keys: ADDITIONAL_TRAVERSE_KEYS,
         });
 
-        this.storageCollection.set(uriString, new Map(
-               [
-                   [spec.ReferenceItemKind.Constant, constantRefMap],
-                   [spec.ReferenceItemKind.Variable, variableRefMap],
-                   [spec.ReferenceItemKind.Array, arrayRefMap],
-                   [spec.ReferenceItemKind.Macro, macroRefMap],
-                   [spec.ReferenceItemKind.Function, functionRefMap],
-               ]
-           )
-        );
+        this.storageCollection.set(uriString, new Map([
+            [lang.ReferenceItemKind.Constant, constantRefMap],
+            [lang.ReferenceItemKind.Variable, variableRefMap],
+            [lang.ReferenceItemKind.Array, arrayRefMap],
+            [lang.ReferenceItemKind.Macro, macroRefMap],
+            [lang.ReferenceItemKind.Function, functionRefMap],
+        ]));
     }
 
     // 
     private parseDocumentContents(contents: string, uri: vscode.Uri, isOpenDocument: boolean, diagnoseProblems: boolean) {
         const uriString = uri.toString();
 
-        let tree: CustomProgram;
+        let program: CustomProgram;
         try {
-            tree = parse(contents);
+            program = parse(contents);
         } catch (error) {
             if (error instanceof SyntaxError) {
                 if (diagnoseProblems) {
-                    const diagnostic = new vscode.Diagnostic(spec.convertRange(error.location), error.message, vscode.DiagnosticSeverity.Error);
+                    const diagnostic = new vscode.Diagnostic(lang.convertRange(error.location), error.message, vscode.DiagnosticSeverity.Error);
                     this.diagnosticCollection.set(uri, [diagnostic]);
                     // this.updateCompletionItemsForUriString(uriString);
                 }
@@ -482,7 +475,6 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
                     const diagnostic = new vscode.Diagnostic(new vscode.Range(0, 0, 0, 0), 'Unknown error in sytax parsing', vscode.DiagnosticSeverity.Error);
                     this.diagnosticCollection.set(uri, [diagnostic]);
                 }
-
             }
             // update with an empty map object.
             this.storageCollection.set(uriString, new Map());
@@ -491,15 +483,15 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         // console.log(JSON.stringify(tree, null, 2));
 
         if (diagnoseProblems) {
-            const diagnostics = tree.exDiagnostics.map(item => new vscode.Diagnostic(spec.convertRange(item.location), item.message, item.severity));
+            const diagnostics = program.exDiagnostics.map(item => new vscode.Diagnostic(lang.convertRange(item.location), item.message, item.severity));
             this.diagnosticCollection.set(uri, diagnostics);
         }
 
         if (isOpenDocument) {
-            this.treeCollection.set(uriString, tree);
+            this.treeCollection.set(uriString, program);
         }
 
-        this.collectSymbolsFromTree(tree, uriString);
+        this.collectSymbolsFromTree(program, uriString);
         this.updateCompletionItemsForUriString(uriString);
 
         return true;
@@ -518,7 +510,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         // parse documents opened by editors
         const documentUriStringSet = new Set<string>();
         for (const document of vscode.workspace.textDocuments) {
-            if (vscode.languages.match(spec.CMD_SELECTOR, document) && document.uri.scheme !== 'git') {
+            if (vscode.languages.match(lang.SELECTOR, document) && document.uri.scheme !== 'git') {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
                 documentUriStringSet.add(document.uri.toString());
             }
@@ -541,13 +533,13 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
     /**
      * Required implementation of vscode.CompletionItemProvider, overriding the super class
      */
-    public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionList<spec.CompletionItem> | spec.CompletionItem[]> {
+    public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionList<lang.CompletionItem> | lang.CompletionItem[]> {
         if (token.isCancellationRequested) { return; }
 
         const tree = this.treeCollection.get(document.uri.toString());
         if (tree) {
-            this.collectSymbolsFromTree(tree, spec.ACTIVE_FILE_URI, position);
-            this.updateCompletionItemsForUriString(spec.ACTIVE_FILE_URI);
+            this.collectSymbolsFromTree(tree, lang.ACTIVE_FILE_URI, position);
+            this.updateCompletionItemsForUriString(lang.ACTIVE_FILE_URI);
         }
         return super.provideCompletionItems(document, position, token, context);
     }
@@ -560,7 +552,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
 
         const tree = this.treeCollection.get(document.uri.toString());
         if (tree) {
-            this.collectSymbolsFromTree(tree, spec.ACTIVE_FILE_URI, position);
+            this.collectSymbolsFromTree(tree, lang.ACTIVE_FILE_URI, position);
         }
         return super.provideHover(document, position, token);
     }
@@ -578,21 +570,21 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(selectorName)) { return; }
 
         // update the storage for local variables for the current cursor position.
-        const tree = this.treeCollection.get(document.uri.toString());
-        if (tree) {
-            this.collectSymbolsFromTree(tree, spec.ACTIVE_FILE_URI, position);
+        const program = this.treeCollection.get(document.uri.toString());
+        if (program) {
+            this.collectSymbolsFromTree(program, lang.ACTIVE_FILE_URI, position);
         }
 
         // seek the identifier
         const locations: vscode.Location[] = [];
         for (const [uriString, storage] of this.storageCollection.entries()) {
-            const uri = (uriString === spec.ACTIVE_FILE_URI) ? document.uri : vscode.Uri.parse(uriString);
+            const uri = (uriString === lang.ACTIVE_FILE_URI) ? document.uri : vscode.Uri.parse(uriString);
 
             // seek through storages for all types of symbols
             for (const map of storage.values()) {
                 const item = map.get(selectorName);
                 if (item && item.location) {
-                    locations.push(new vscode.Location(uri, spec.convertRange(item.location)));
+                    locations.push(new vscode.Location(uri, lang.convertRange(item.location)));
                 }
             }
         }
@@ -624,14 +616,14 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
                         return estraverse.VisitorOption.Skip;
                     }
 
-                    const stmtRange = spec.convertRange(currentNode.loc as IFileRange);
+                    const stmtRange = lang.convertRange(currentNode.loc as IFileRange);
                     let symbol: vscode.DocumentSymbol;
 
                     if (currentNode.leadingComments) {
                         for (const leadingComment of currentNode.leadingComments) {
                             let matched: RegExpMatchArray | null;
                             if (leadingComment.type === 'Line' && leadingComment.loc && (matched = leadingComment.value.match(/^(\s*(MARK|TODO|FIXME):\s+)((?:(?!--).)+)(?:--\s*(.+))?$/)) !== null) {
-                                const commentRange = spec.convertRange(leadingComment.loc as IFileRange);
+                                const commentRange = lang.convertRange(leadingComment.loc as IFileRange);
                                 const commentRange2 = commentRange.with(commentRange.start.translate(undefined, matched[1].length + 1));
                                 symbol = new vscode.DocumentSymbol(matched[3], matched[4] !== undefined ? matched[4] : '', vscode.SymbolKind.Key, commentRange, commentRange2);
                                 if (symbols.length !== 0 && symbols[symbols.length - 1].range.contains(commentRange)) {
@@ -646,7 +638,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
                     if (currentNode.type === 'FunctionDeclaration') {
                         if (currentNode.id && currentNode.id.loc) {
                             const idName = currentNode.id.name;
-                            const idRange = spec.convertRange(currentNode.id.loc as IFileRange);
+                            const idRange = lang.convertRange(currentNode.id.loc as IFileRange);
                             if (currentNode.params) {
                                 symbol = new vscode.DocumentSymbol(idName, '', vscode.SymbolKind.Function, stmtRange, idRange);
                                 // const params = currentNode.params.map(param => (param.type === 'Identifier') ? param.name : '') ;
@@ -665,7 +657,7 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
                         for (const declarator of currentNode.declarations) {
                             if (declarator.type === 'VariableDeclarator' && declarator.id.type === 'Identifier' && declarator.id.loc) {
                                 const idName = declarator.id.name;
-                                const idRange = spec.convertRange(declarator.id.loc as IFileRange);
+                                const idRange = lang.convertRange(declarator.id.loc as IFileRange);
                                 const idDetail = '';
                                 // const idDetail = (declarator.init && declarator.init.type === 'Literal' && declarator.init.raw) ? ' = ' + declarator.init.raw : '';
                                 let symbolKind;
@@ -718,18 +710,18 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
         const symbols: vscode.SymbolInformation[] = [];
         for (const [uriString, storage] of this.storageCollection.entries()) {
             // skip storage for local variables
-            if (uriString === spec.ACTIVE_FILE_URI) { continue; }
+            if (uriString === lang.ACTIVE_FILE_URI) { continue; }
 
             const uri = vscode.Uri.parse(uriString);
 
             // find all items from each storage.
             for (const [itemKind, map] of storage.entries()) {
-                const symbolKind = spec.getReferenceItemKindMetadata(itemKind).symbolKind;
+                const symbolKind = lang.getReferenceItemKindMetadata(itemKind).symbolKind;
                 for (const [identifier, refItem] of map.entries()) {
                     if (query.length === 0 || regExp.test(identifier)) {
                         if (refItem.location) {
-                            const name = (itemKind === spec.ReferenceItemKind.Function) ? identifier + '()' : identifier;
-                            const location = new vscode.Location(uri, spec.convertRange(refItem.location));
+                            const name = (itemKind === lang.ReferenceItemKind.Function) ? identifier + '()' : identifier;
+                            const location = new vscode.Location(uri, lang.convertRange(refItem.location));
                             symbols.push(new vscode.SymbolInformation(name, symbolKind, '', location));
                         }
                     }
@@ -737,5 +729,31 @@ export class UserCommandProvider extends CommandProvider implements vscode.Defin
             }
         }
         return symbols;
+    }
+
+    /**
+     * Required implementation of vscode.DocumentDropEditProvider
+     */
+    public provideDocumentDropEdits(document: vscode.TextDocument, position: vscode.Position, dataTransfer: vscode.DataTransfer, token: vscode.CancellationToken): vscode.ProviderResult<vscode.DocumentDropEdit> {
+        // The value for 'text/uri-list' key in dataTransfer is a string of file list separated by '\r\n'.
+        const uriList = dataTransfer.get('text/uri-list');
+        if (uriList && typeof uriList.value === 'string') {
+            // adjust path. Append prefix in the configuration for relative path.
+            const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
+
+            return new vscode.DocumentDropEdit(uriList.value.split('\r\n').map(
+                uriString => {
+                    const path = vscode.Uri.parse(uriString).path;
+                    let path2: string;
+                    if (workspaceFolder && ((path2 = vscode.workspace.asRelativePath(path, false)) !== path)) {
+                        path2 = vscode.workspace.getConfiguration('spec-command.terminal', workspaceFolder).get<string>('filePathPrefix', '') + path2;
+                    } else {
+                        path2 = path;
+                    }
+
+                    return `qdofile("${path2}")\n`;
+                }
+            ).join(''));
+        }
     }
 }

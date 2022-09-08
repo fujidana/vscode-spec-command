@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
-import * as spec from "./spec";
-import { CommandProvider } from "./commandProvider";
+import * as lang from "./specCommand";
+import { Provider } from "./provider";
 
 interface APIReference {
-    constants: spec.ReferenceItem[];
-    variables: spec.ReferenceItem[];
-    functions: spec.ReferenceItem[];
-    macros: spec.ReferenceItem[];
-    keywords: spec.ReferenceItem[];
+    constants: lang.ReferenceItem[];
+    variables: lang.ReferenceItem[];
+    functions: lang.ReferenceItem[];
+    macros: lang.ReferenceItem[];
+    keywords: lang.ReferenceItem[];
 }
 
 const SNIPPET_TEMPLATES: Record<string, string> = {
@@ -32,7 +32,7 @@ const SNIPPET_TEMPLATES: Record<string, string> = {
 /**
  * Provider subclass that manages built-in symbols and motor mnemonics user added in VS Code configuraion.
  */
-export class SystemCommandProvider extends CommandProvider implements vscode.TextDocumentContentProvider {
+export class SystemProvider extends Provider implements vscode.TextDocumentContentProvider {
     private activeWorkspaceFolder: vscode.WorkspaceFolder | undefined;
 
     constructor(context: vscode.ExtensionContext) {
@@ -45,16 +45,14 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
             const apiReference: APIReference = JSON.parse(new TextDecoder('utf-8').decode(uint8Array));
 
             // convert the object to ReferenceMap and register the set.
-            this.storageCollection.set(spec.BUILTIN_URI, new Map(
-                [
-                    [spec.ReferenceItemKind.Constant, new Map(Object.entries(apiReference.constants))],
-                    [spec.ReferenceItemKind.Variable, new Map(Object.entries(apiReference.variables))],
-                    [spec.ReferenceItemKind.Macro, new Map(Object.entries(apiReference.macros))],
-                    [spec.ReferenceItemKind.Function, new Map(Object.entries(apiReference.functions))],
-                    [spec.ReferenceItemKind.Keyword, new Map(Object.entries(apiReference.keywords))],
-                ]
-            ));
-            this.updateCompletionItemsForUriString(spec.BUILTIN_URI);
+            this.storageCollection.set(lang.BUILTIN_URI, new Map([
+                [lang.ReferenceItemKind.Constant, new Map(Object.entries(apiReference.constants))],
+                [lang.ReferenceItemKind.Variable, new Map(Object.entries(apiReference.variables))],
+                [lang.ReferenceItemKind.Macro, new Map(Object.entries(apiReference.macros))],
+                [lang.ReferenceItemKind.Function, new Map(Object.entries(apiReference.functions))],
+                [lang.ReferenceItemKind.Keyword, new Map(Object.entries(apiReference.keywords))],
+            ]));
+            this.updateCompletionItemsForUriString(lang.BUILTIN_URI);
         });
 
         // register motor and counter mnemonic storages and snippet storage.
@@ -65,7 +63,7 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
         this.updateSnippetStorage();
 
         //
-        const activeTextEditorChangeListener = (event: vscode.TextEditor | undefined) => {
+        const activeTextEditorDidChangeListener = (event: vscode.TextEditor | undefined) => {
            const newActiveWorkspaceFolder = event ? vscode.workspace.getWorkspaceFolder(event.document.uri) : undefined;
            if (this.activeWorkspaceFolder !== newActiveWorkspaceFolder) {
                this.activeWorkspaceFolder = newActiveWorkspaceFolder;
@@ -76,7 +74,7 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
         };
 
         // observe the change in configuration
-        const configurationChangeListener = (event: vscode.ConfigurationChangeEvent) => {
+        const configurationDidChangeListener = (event: vscode.ConfigurationChangeEvent) => {
             if (event.affectsConfiguration('spec-command.suggest.motors', this.activeWorkspaceFolder)) {
                 this.updateMnemonicStorage('motors');
                 this.updateSnippetStorage();
@@ -92,15 +90,15 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
 
         // register command to show reference manual as a virtual document
         const openReferenceManualCallback = () => {
-            const showReferenceManual = async (storage: spec.ReferenceStorage) => {
+            const showReferenceManual = async (storage: lang.ReferenceStorage) => {
                 const quickPickItems = [{ key: 'all', label: '$(references) all' }];
                 for (const itemKind of storage.keys()) {
-                    const metadata = spec.getReferenceItemKindMetadata(itemKind);
+                    const metadata = lang.getReferenceItemKindMetadata(itemKind);
                     quickPickItems.push({ key: metadata.label, label: `$(${metadata.iconIdentifier}) ${metadata.label}` });
                 }
                 const quickPickItem = await vscode.window.showQuickPick(quickPickItems);
                 if (quickPickItem) {
-                    const uri = vscode.Uri.parse(spec.BUILTIN_URI).with({ query: quickPickItem.key });
+                    const uri = vscode.Uri.parse(lang.BUILTIN_URI).with({ query: quickPickItem.key });
                     const editor = await vscode.window.showTextDocument(uri, { preview: false });
                     const flag = vscode.workspace.getConfiguration('spec-command').get<boolean>('showReferenceManualInPreview');
                     if (flag) {
@@ -116,7 +114,7 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
             // Therefore, wait until the database is loaded or 0.05 * 5 seconds passes.
             let trial = 0;
             const timer = setInterval(() => {
-                const storage = this.storageCollection.get(spec.BUILTIN_URI);
+                const storage = this.storageCollection.get(lang.BUILTIN_URI);
                 if (storage) {
                     clearInterval(timer);
                     showReferenceManual(storage);
@@ -132,10 +130,10 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
             // register command handlers
             vscode.commands.registerCommand('spec-command.openReferenceManual', openReferenceManualCallback),
             // register providers
-            vscode.workspace.registerTextDocumentContentProvider('spec', this),
+            vscode.workspace.registerTextDocumentContentProvider('spec-command', this),
             // register event handlers
-            vscode.window.onDidChangeActiveTextEditor(activeTextEditorChangeListener),
-            vscode.workspace.onDidChangeConfiguration(configurationChangeListener),
+            vscode.window.onDidChangeActiveTextEditor(activeTextEditorDidChangeListener),
+            vscode.workspace.onDidChangeConfiguration(configurationDidChangeListener),
         );
     }
 
@@ -144,8 +142,8 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
      * Invoked when initialization completed or configuration modified. 
      */
     private updateMnemonicStorage(kind: 'motors' | 'counters') {
-        const uriString = kind === 'motors' ? spec.MOTOR_URI : spec.COUNTER_URI;
-        const refMap: spec.ReferenceMap = new Map();
+        const uriString = kind === 'motors' ? lang.MOTOR_URI : lang.COUNTER_URI;
+        const refMap: lang.ReferenceMap = new Map();
 
         const record = vscode.workspace.getConfiguration('spec-command.suggest', this.activeWorkspaceFolder).get<Record<string, string>>(kind);
         if (record) {
@@ -156,7 +154,7 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
                 }
             }
         }
-        this.storageCollection.set(uriString, new Map([[spec.ReferenceItemKind.Enum, refMap]]));
+        this.storageCollection.set(uriString, new Map([[lang.ReferenceItemKind.Enum, refMap]]));
         this.updateCompletionItemsForUriString(uriString);
     }
 
@@ -165,13 +163,13 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
      * Invoked when initialization completed or configuration modified. 
      */
     private updateSnippetStorage() {
-        const refMap: spec.ReferenceMap = new Map();
+        const refMap: lang.ReferenceMap = new Map();
 
         const userTemplates = vscode.workspace.getConfiguration('spec-command.suggest', this.activeWorkspaceFolder).get<Record<string, string>>('codeSnippets');
         const templates = (userTemplates && Object.keys(userTemplates).length) ? Object.assign({}, SNIPPET_TEMPLATES, userTemplates) : SNIPPET_TEMPLATES;
 
-        const motorRefMap = this.storageCollection.get(spec.MOTOR_URI)?.get(spec.ReferenceItemKind.Enum);
-        const counterRefMap = this.storageCollection.get(spec.COUNTER_URI)?.get(spec.ReferenceItemKind.Enum);
+        const motorRefMap = this.storageCollection.get(lang.MOTOR_URI)?.get(lang.ReferenceItemKind.Enum);
+        const counterRefMap = this.storageCollection.get(lang.COUNTER_URI)?.get(lang.ReferenceItemKind.Enum);
         const motorChoiceString = (motorRefMap && motorRefMap.size > 0) ?
             '|' + [...motorRefMap.keys()].join(',') + '|' :
             ':motor$1';
@@ -195,8 +193,8 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
                 refMap.set(key, { signature, description, snippet });
             }
         }
-        this.storageCollection.set(spec.SNIPPET_URI, new Map([[spec.ReferenceItemKind.Snippet, refMap]]));
-        this.updateCompletionItemsForUriString(spec.SNIPPET_URI);
+        this.storageCollection.set(lang.SNIPPET_URI, new Map([[lang.ReferenceItemKind.Snippet, refMap]]));
+        this.updateCompletionItemsForUriString(lang.SNIPPET_URI);
     }
 
     /**
@@ -212,14 +210,14 @@ export class SystemCommandProvider extends CommandProvider implements vscode.Tex
             return mdText;
         };
 
-        if (uri.with({ query: '' }).toString() === spec.BUILTIN_URI) {
-            const storage = this.storageCollection.get(spec.BUILTIN_URI);
+        if (uri.scheme === 'spec-command' && uri.authority === 'system') {
+            const storage = this.storageCollection.get(uri.with({ query: '' }).toString());
             if (storage) {
                 let mdText = '# __spec__ Reference Manual\n\n';
                 mdText += 'The contents of this page are cited from the _Reference Manual_ section in [PDF version](https://www.certif.com/downloads/css_docs/spec_man.pdf) of the _User manual and Tutorials_, written by [Certified Scientific Software](https://www.certif.com/), except where otherwise noted.\n\n';
 
                 for (const [itemKind, map] of storage.entries()) {
-                    const itemKindLabel = spec.getReferenceItemKindMetadata(itemKind).label;
+                    const itemKindLabel = lang.getReferenceItemKindMetadata(itemKind).label;
 
                     // if 'query' is not 'all', skip maps other than the speficed query.
                     if (uri.query && uri.query !== 'all' && uri.query !== itemKindLabel) {
