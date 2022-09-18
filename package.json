@@ -340,7 +340,7 @@
 		"js-yaml:snippets": "js-yaml ./src/specCommand.snippets.yaml > ./syntaxes/specCommand.snippets.json",
 		"js-yaml:apiReference": "js-yaml ./src/specCommand.apiReference.yaml > ./syntaxes/specCommand.apiReference.json",
 		"js-yaml:tmLanguage": "js-yaml ./src/specCommand.tmLanguage.yaml > ./syntaxes/specCommand.tmLanguage.json",
-		"pegjs": "peggy --cache --plugin ./node_modules/ts-pegjs/src/tspegjs --extra-options-file ./src/pegconfig.json -o src/grammar.ts src/grammer.pegjs"
+		"pegjs": "peggy --cache --plugin ./node_modules/ts-pegjs/src/tspegjs --extra-options-file ./src/pegconfig.json -o src/grammar.ts src/grammar.pegjs"
 	},
 	"dependencies": {
 		"estraverse": "^5.3.0"
