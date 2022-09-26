@@ -8,9 +8,9 @@
 
 {{
 interface Diagnostic {
-  location: IFileRange,
-  message: string,
-  severity: DiagnosticSeverity,
+  location: IFileRange;
+  message: string;
+  severity: DiagnosticSeverity;
 }
 
 const INVALID_STATEMENT = { type: 'InvalidStatement' };
@@ -29,6 +29,7 @@ const _reservedKeywordRegExp = new RegExp(
 
 const _ttyCommandRegExp = /^(c(?:d|e)|do|ho|le|m(?:b|d|e|h|r)|nd|s(?:e|o)|u(?:e|p|s))$/;
 const _patternRegExp = /^[a-zA-Z0-9_*?]+$/;
+
 }}
 
 {
@@ -38,28 +39,47 @@ const _quoteStack: string[] = [];
 /**
  * create diagnostic object and store it.
  */
-function pushDiagnostic(location: IFileRange, message: string, severity: DiagnosticSeverity) {
+function pushDiagnostic(location: IFileRange, message: string, severity = DiagnosticSeverity.Error) {
   _diagnostics.push({ location, message, severity });
 }
 
 /**
- * Return a new range object whose 'start' is identical to 'range' and the length is equal to 'length'.
+ * Return a new range object whose 'end' is moved to the 'start' location.
  */
-function shortenRange(range: IFileRange, length: number): IFileRange {
-  const newRange = { ...range };
-  newRange.end = { line: range.start.line, offset: range.start.offset + length, column: range.start.column + length };
-  return newRange;
+function getStartLocation(loc?: IFileRange, length: number = 0) {
+  const loc2 = loc === undefined ? location() : { ...loc };
+  if (length === 0) {
+    loc2.end = loc2.start;
+  } else {
+    loc2.end = { ...loc2.start };
+    loc2.end.offset += length;
+    loc2.end.column += length;
+  }
+  return loc2;
 }
 
 /**
- *
+ * Report an error if closer does not exist.
  */
-function diagnoseEmptyArray<T>(elements: T[] | null, loc: IFileRange, label: string, severity: DiagnosticSeverity) {
-  if (!elements || elements.length === 0) {
-    pushDiagnostic(loc, `Expected at least one ${label}.`, severity);
-    return [];
+function diagnoseIfNotTerminated(closer: string | null | undefined, label: string, loc?: IFileRange, openerLength = 1, severity = DiagnosticSeverity.Error) {
+  if (!closer) {
+    const loc2 = loc === undefined ? location() : loc;
+    pushDiagnostic(getStartLocation(loc2, openerLength), `Unterminated ${label}.`, severity);
   }
-  return elements;
+}
+
+/**
+ * Report an error if the object is empty.
+ */
+function diagnoseIfEmpty<T, U>(obj: T | null | undefined, label: string, alt?: U, loc?: IFileRange, severity = DiagnosticSeverity.Error): T | U | null | undefined {
+  if (!obj || Array.isArray(obj) && obj.length === 0) {
+    const loc2 = loc === undefined ? location() : loc;
+    pushDiagnostic(loc2, `Expected ${label}.`, severity);
+    if (alt !== undefined) {
+      return alt;
+    }
+  }
+  return obj;
 }
 
 /**
@@ -70,19 +90,19 @@ function diagnoseListItems<T>(elements: [T, string, IFileRange][], label: string
   for (let index = 0; index < elements.length; index++) {
     const [item, sep, locEach] = elements[index];
     if (!item) {
-      pushDiagnostic(locEach, `Expected ${label}.`, DiagnosticSeverity.Error);
+      pushDiagnostic(locEach, `Expected ${label}.`);
       continue;
     }
     items.push(item);
 
     if (index === elements.length - 1) {
       if (sep === ',') {
-        pushDiagnostic(locEach, 'Trailing comma not allowed.', DiagnosticSeverity.Error);
+        pushDiagnostic(locEach, 'Trailing comma not allowed.');
       }
     } else if (sepOption === 1 && sep !== ',') {
-      pushDiagnostic(locEach, 'Seprator must be a comma.', DiagnosticSeverity.Error);
+      pushDiagnostic(locEach, 'Seprator must be a comma.');
     } else if (sepOption === 2 && sep !== ' ') {
-      pushDiagnostic(locEach, 'Seprator must be a whitespace.', DiagnosticSeverity.Error);
+      pushDiagnostic(locEach, 'Seprator must be a whitespace.');
     }
   }
   return items;
@@ -93,22 +113,22 @@ function diagnoseListItems<T>(elements: [T, string, IFileRange][], label: string
  */
 function makeDeclarators(elements: [any, string, IFileRange, any][] | null, locAll: IFileRange, label: string, allowsAssign: boolean) {
   if (!elements || elements.length === 0) {
-    pushDiagnostic(locAll, `Expected at least one ${label}.`, DiagnosticSeverity.Error);
+    pushDiagnostic(locAll, `Expected at least one ${label}.`);
     return [];
   } else if (elements[elements.length - 1][1] === ',') {
-    pushDiagnostic(elements[elements.length - 1][2], `Trailing comma not allowed.`, DiagnosticSeverity.Error);
+    pushDiagnostic(elements[elements.length - 1][2], `Trailing comma not allowed.`);
   } else if (elements.some((item: [any, string, IFileRange, any]) => item[3].init !== null)) {
     if (!allowsAssign) {
-      pushDiagnostic(locAll, `Assignment not allowed.`, DiagnosticSeverity.Error);
+      pushDiagnostic(locAll, `Assignment not allowed.`);
     } else if (elements.length > 1) {
-      pushDiagnostic(locAll, `Only one variable per statement can be declared and initialized.`, DiagnosticSeverity.Error);
+      pushDiagnostic(locAll, `Only one variable per statement can be declared and initialized.`);
     }
   }
 
   const declarators: any[] = [];
   for (const [identifier, separator, locEach, option] of elements) {
     if (!identifier) {
-      pushDiagnostic(locEach, `Expected ${label}.`, DiagnosticSeverity.Error);
+      pushDiagnostic(locEach, `Expected ${label}.`);
       continue;
     }
     let obj = { type: 'VariableDeclarator', id: identifier, loc: locEach };
@@ -141,34 +161,38 @@ function makeSequenceExpression(elements: any[] | null) {
  * Make nested expression for binary operation.
  * head must be an expression. tails must be [string, any]
  */
-function getBinaryExpression(head: any, tails: [string, any], option = 0) {
+function getBinaryExpression(head: any, tails: [string, any][], type = 'BinaryExpression') {
   return tails.reduce((accumulator: any, currentValue: any) => {
-    const op = currentValue[0];
-    const term = currentValue[1];
-    return {
-      type: option === 1 ? 'LogicalExpression' : 'BinaryExpression',
-      operator: op,
-      left: accumulator,
-      right: term,
-    };
+    const [op, term] = currentValue;
+    return { type: type,  operator: op, left: accumulator, right: term, };
   }, head);
 }
 
 /**
  *
  */
-function testIfQuoteIsAvailable(quote: string): boolean {
-  if (quote === '"' && (_quoteStack.includes('"') || _quoteStack.includes('\\"'))) {
+function testIfQuoteStarts(opener: string): boolean {
+  if (opener === '"' && (_quoteStack.includes('"') || _quoteStack.includes('\\"'))) {
     return false;
-  } else if (quote === "'" && (_quoteStack.includes("'") || _quoteStack.includes("\\'"))) {
+  } else if (opener === "'" && (_quoteStack.includes("'") || _quoteStack.includes("\\'"))) {
     return false;
-  } else if (quote === '\\"' && _quoteStack.includes('\\"')) {
+  } else if (opener === '\\"' && _quoteStack.includes('\\"')) {
     return false;
-  } else if (quote === "\\'" && _quoteStack.includes("\\'")) {
+  } else if (opener === "\\'" && _quoteStack.includes("\\'")) {
     return false;
   } else {
+    _quoteStack.push(opener);
     return true;
   }
+}
+
+/**
+ * 
+ */
+function testIfQuoteEnds(opener: string, closer: string | undefined): boolean {
+  const flag = (!closer || opener === closer);
+  if (flag) { _quoteStack.pop(); }
+  return flag;
 }
 
 /**
@@ -199,22 +223,27 @@ Start =
 Eol 'end of line' = '\n' / '\r\n'
 Eof 'end of file' = !.
 LineComment 'line comment' =
-  @('#' p:$(!Eol .)* {
+  @('#' p:$(
+    !Eol (
+      !QuotationMark .
+      /
+      q:. ! {return _quoteStack.includes(q); }
+    )
+  )* {
     return { type: 'Line', value: p, loc: location(), };
-  }) (Eol / Eof)
+  }) (Eol / Eos0)
 
 QuotationMark 'quotation mark' = $('\\'? ('"' / "'"))
 
 Eos0 = Eof { } / & QuotationMark { } / & '}' { }
-Eos1 = Eol { } / LineComment / ';' Eol? { } 
+Eos1 = Eol { } / LineComment / ';' ([ \t]* Eol)? { } 
 Eos 'end of statement' = Eos1  / Eos0
 
 BlockComment 'block comment' =
   '"""' p:$(!'"""' .)* closer:'"""'? {
-    if (!closer) {
-      pushDiagnostic(shortenRange(location(), 3), 'Unterminated docstring.', DiagnosticSeverity.Error);
-    }
-    return { type: 'Block', value: p, loc: location(), };
+    const loc = location();
+    diagnoseIfNotTerminated(closer, 'docstring', loc, 3);
+    return { type: 'Block', value: p, loc: loc, };
   }
 
 __ 'whitespace' =
@@ -238,31 +267,27 @@ CommaSep =
   * Statement with or without leading comments.
   */
 Stmt 'statement' =
-  comments:LeadingComment* statement:(EmptyStmt / NonemptyStmt) {
-    if (comments && comments.length > 0) {
-      statement.leadingComments = comments;
-    }
-    return statement;
+  comments:LeadingComment+ stmt:(_0 @(EmptyStmt1 / NonemptyStmt / EmptyStmt0)) {
+    stmt.leadingComments = comments;
+    return stmt;
   }
   /
-  comments:LeadingComment+ Eos0 {
-    return { type: 'EmptyStatement', loc: location(), leadingComments:comments, };
-  }
+  _0 @(EmptyStmt1 / NonemptyStmt)
+  /
+  _1 @EmptyStmt0
 
 /**
  * Empty line containing only whitespaces and a line or block comment,
  * which is treated as the leading comments of the succeeding statement.
  */
 LeadingComment 'empty statement with comment' =
-  [ \t]* @(LineComment / @BlockComment [ \t]* (Eol / Eof))
+  [ \t]* @(LineComment / @BlockComment [ \t]* (Eol / Eos0))
 
-/**
- * Empty statement. It may contains line or block comments.
- */
-EmptyStmt 'empty statement' =
-  (_0 Eos1 / _1 Eos0) {
-    return { type: 'EmptyStatement', loc: location(), };
-  }
+EmptyStmt1 =
+  Eos1 { return { type: 'EmptyStatement', loc: getStartLocation(), }; }
+
+EmptyStmt0 =
+  Eos0 { return { type: 'EmptyStatement', loc: location(), }; }
 
 /**
  * Nonempty statement.
@@ -270,11 +295,13 @@ EmptyStmt 'empty statement' =
 NonemptyStmt 'nonempty statement' =
   _0 p:(
     BlockStmt
-    / IfStmt / WhileStmt / ForStmt / BreakStmt / ContinueStmt / ReturnStmt / ExitStmt
+    / IfStmt / WhileStmt / ForStmt / BreakStmt / ContinueStmt / ReturnStmt / ExitStmt / QuitStmt
     / MacroDef / UndefStmt / RdefStmt / DataArrayDef / VariableDef / ConstantDef
     / DeleteStmt / PatternStmt / BuiltinMacroStmt / ExprStmt
   ) {
-    p.loc = location();
+    if (!p.loc) {
+      p.loc = location();
+    }
     return p;
   }
 
@@ -283,18 +310,17 @@ NonemptyStmt 'nonempty statement' =
  *         { statement-list }
  */
 BlockStmt 'block statement' =
-  '{' _0 Eos? stmts:Stmt* _0 closer:'}'? tail:(_0 @Eos)? {
-    if (!closer) {
-      pushDiagnostic(shortenRange(location(), 1), 'Unterminated block statement.', DiagnosticSeverity.Error);
+  stmt:(
+    '{' _0 Eos? body:Stmt* _0 closer:'}'? {
+      const loc = location();
+      diagnoseIfNotTerminated(closer, 'block statement', loc);
+      return { type: 'BlockStatement', body: body, loc: loc, };
     }
-    const obj: any = {
-      type: 'BlockStatement',
-      body: stmts ? stmts : [],
-    };
+  ) tail:(_0 @Eos)? {
     if (tail) {
-      obj.trailingComments = [tail];
+      stmt.trailingComments = [tail];
     }
-    return obj;
+    return stmt;
   }
 
 
@@ -307,35 +333,26 @@ BlockStmt 'block statement' =
 IfStmt 'if statement' =
   test:(
     'if' _0 @(
-      '(' _0 test:ExprForceSingle? _0 closer:')'? {
-        if (!test) {
-          pushDiagnostic(location(), 'The test expression of if-statement must not be empty.', DiagnosticSeverity.Error);
-        } else if (!closer) {
-          pushDiagnostic(shortenRange(location(), 1), 'Unterminated parenthesis.', DiagnosticSeverity.Error);
-        }
-        return test;
+      '(' _0 expr:ExprForceSingle? _0 closer:')'? {
+        const loc = location();
+        diagnoseIfNotTerminated(closer, 'parenthesis for test expression', loc);
+        return diagnoseIfEmpty(expr, 'a test expression in if-statement', NULL_EXPRESSION, loc);
       }
     )
     /
     ('ifd' / 'ifp') { return NULL_EXPRESSION; }
   ) _0 (Eol / LineComment)? cons:(
-    cons:NonemptyStmt? {
-      if (!cons) {
-        pushDiagnostic(location(), 'The consequent clause of if-statement must not be empty.', DiagnosticSeverity.Error);
-      }
-      return cons;
+    stmt:NonemptyStmt? {
+      return diagnoseIfEmpty(stmt, 'a consequent clause in if-statement');
     }
   ) alt:(
     _0 'else' !Word _0 (Eol / LineComment)? @(
-      alt:NonemptyStmt? {
-        if (!alt) {
-          pushDiagnostic(location(), 'The altanative clause of if-statement must not be empty.', DiagnosticSeverity.Error);
-        }
-        return alt;
+      stmt:NonemptyStmt? {
+        return diagnoseIfEmpty(stmt, 'an altanative clause in if-statement');
       }
     )
   )? {
-    return { type: 'IfStatement', test: test, consequent: cons, alternate: alt, };
+    return { type: 'IfStatement', test: test, consequent: cons, alternate: alt, loc: location(), };
   }
 
 /**
@@ -343,23 +360,17 @@ IfStmt 'if statement' =
  */
 WhileStmt 'while statement' =
   'while' _0 test:(
-    '(' _0 test:ExprForceSingle? _0 closer:')'? _0 (Eol / LineComment)? {
-      if (!test) {
-        pushDiagnostic(shortenRange(location(), 1), 'The test expression of while-statement must not be empty.', DiagnosticSeverity.Error);
-      } else if (!closer) {
-        pushDiagnostic(shortenRange(location(), 1), 'Unterminated parenthesis.', DiagnosticSeverity.Error);
-      }
-      return test;
+    '(' _0 expr:ExprForceSingle? _0 closer:')'? _0 (Eol / LineComment)? {
+      const loc = location();
+      diagnoseIfNotTerminated(closer, 'parenthesis for test expression', loc);
+      return diagnoseIfEmpty(expr, 'a test expression in while-statement', NULL_EXPRESSION, loc);
     }
   ) body:(
-    body:NonemptyStmt? {
-      if (!body) {
-        pushDiagnostic(location(), 'The body of while-statement must not be empty.', DiagnosticSeverity.Error);
-      }
-      return body;
+    stmt:NonemptyStmt? {
+      return diagnoseIfEmpty(stmt, 'a body in while-statement');
     }
   ) {
-    return { type: 'WhileStatement', test: test, body: body, };
+    return { type: 'WhileStatement', test: test, body: body, loc: location(), };
   }
   
 /**
@@ -370,7 +381,7 @@ WhileStmt 'while statement' =
  */
 ForStmt 'for statement' =
   'for' _0 stmt:(
-    '(' _0 stmt:(
+    '(' _0 stmt2:(
       init:ExprSingleList? _0 ';' _0 test:ExprForceSingle? _0 ';' _0 update:ExprSingleList? {
         return { type: 'ForStatement', init: makeSequenceExpression(init), test: test, update: makeSequenceExpression(update), };
       }
@@ -379,20 +390,16 @@ ForStmt 'for statement' =
         return { type: 'ForInStatement', left: ll, right: rr, each: false, };
       }
     ) _0 closer:')'? {
-      if (!closer) {
-        pushDiagnostic(shortenRange(location(), 1), 'Unterminated parenthesis.', DiagnosticSeverity.Error);
-      }
-      return stmt;
+      diagnoseIfNotTerminated(closer, 'parenthesis for test expression');
+      return stmt2;
     }
   ) _0 (Eol / LineComment)? body:(
-    body:NonemptyStmt? {
-      if (!body) {
-        pushDiagnostic(location(), 'The body of for-statement must not be empty.', DiagnosticSeverity.Error);
-      }
-      return body;
+    stmt2:NonemptyStmt? {
+      return diagnoseIfEmpty(stmt2, 'a body in for-statement');
     }
   ) {
     stmt.body = body;
+    stmt.loc = location();
     return stmt;
   }
 
@@ -401,7 +408,7 @@ ForStmt 'for statement' =
  */
 BreakStmt 'break statement' =
   'break' _0 Eos {
-    return { type: 'BreakStatement', label: null, };
+    return { type: 'BreakStatement', label: null, loc: location(), };
   }
 
 /**
@@ -409,7 +416,7 @@ BreakStmt 'break statement' =
  */
 ContinueStmt 'continue statement' =
   'continue' _0 Eos {
-    return { type: 'ContinueStatement', label: null, };
+    return { type: 'ContinueStatement', label: null, loc: location(), };
   }
 
 /**
@@ -418,17 +425,26 @@ ContinueStmt 'continue statement' =
  */
 ReturnStmt 'return statement' =
   'return' !Word _0 p:ExprSingle? _0 Eos {
-    return { type: 'ReturnStatement', argument: p, };
+    return { type: 'ReturnStatement', argument: p, loc: location(), };
   }
 
 /**
  * <BNF> exit [;]
  * <NOTICE> no correspondence item in Parser AST.
- * Currently not used.
  */
 ExitStmt 'exit statement' =
   'exit' _0 Eos {
-    return { type: 'ExitStatement', };
+    return { type: 'ExitStatement', loc: location(), };
+  }
+
+/**
+ * <NOTICE> no correspondence item in Parser AST.
+ */
+QuitStmt 'quit statement' =
+  'quit' _0 Eos {
+    const loc = location();
+    pushDiagnostic(loc, "The quit command can't be included in a macro.");
+    return { type: 'QuitStatement', loc: loc, };
   }
 
 
@@ -443,36 +459,21 @@ ExitStmt 'exit statement' =
 MacroDef 'macro declaration' =
   'def' _1 id:IdentifierValidated _0 params:(
     '(' _0 params:IdListItem* _0 closer:')'? _0 {
-      if (!closer) {
-        pushDiagnostic(shortenRange(location(), 1), 'Unterminated parenthesis.', DiagnosticSeverity.Error);
-      }
+      diagnoseIfNotTerminated(closer, 'parenthesis for function parameters');
       return params ? diagnoseListItems(params, 'identifier', 1) : [];
     }
   )?
   _0 body:(
-    opener:QuotationMark
-    & {
-      const flag = testIfQuoteIsAvailable(opener);
-      if (flag) { _quoteStack.push(opener); }
-      return flag;
-    }
-    _0 Eos? body:Stmt*
-    closer:QuotationMark?
-    & {
-      // console.log(location(), text());
-      const flag = (!closer || opener === closer);
-      if (flag) { _quoteStack.pop(); }
-      return flag;
-    }
+    opener:QuotationMark & { return testIfQuoteStarts(opener); }
+    _0 Eos? stmt:Stmt*
+    closer:QuotationMark? & { return testIfQuoteEnds(opener, closer); }
     _0 Eos {
-      if (!closer) {
-        pushDiagnostic(shortenRange(location(), opener.length), 'Unterminated macro definition.', DiagnosticSeverity.Error);
-      }
-      return body;
+      diagnoseIfNotTerminated(closer, 'macro definition', opener.length);
+      return stmt;
     }
-    / body:Stmt? _0 Eos {
-      pushDiagnostic(shortenRange(location(), 1), 'Expected macro definition body, which must be embraced with quotes.', DiagnosticSeverity.Error);
-      return body;
+    / stmt:Stmt? _0 Eos {
+      pushDiagnostic(location(), 'Expected macro definition body, which must be embraced with quotes.');
+      return stmt;
     }
   ) {
     return {
@@ -501,8 +502,7 @@ IdListItem =
 UndefStmt 'undef statement' =
   'undef' _1 items:(
     items:IdListItem* {
-      diagnoseEmptyArray(items, location(), 'identifier', DiagnosticSeverity.Error);
-      return items;
+      return diagnoseIfEmpty(items, 'identifiers', []);
     }
   ) _0 Eos {
     const nodes = diagnoseListItems(items, 'identifier', 0);
@@ -520,24 +520,19 @@ RdefStmt 'rdef statement' =
   'rdef' _1 p:(
     id:IdentifierValidated _0 params:(
       '(' _0 params:IdListItem* _0 closer:')'? _0 {
-        if (!closer) {
-          pushDiagnostic(shortenRange(location(), 1), 'Unterminated parenthesis.', DiagnosticSeverity.Error);
-        }
+        diagnoseIfNotTerminated(closer, 'parenthesis for function parameters');
         return params ? diagnoseListItems(params, 'identifier', 1) : [];
       }
     )? expr:(
       expr:ExprMulti? {
-        if (!expr) {
-          pushDiagnostic(location(), `Expected an expression.`, DiagnosticSeverity.Error);
-        }
-        return expr;
+        return diagnoseIfEmpty(expr, 'an expression');
       }
     ) {
       return [id, expr];
     }
   )? _0 Eos {
     if (!p) {
-      pushDiagnostic(location(), `Expected following identifier and expression.`, DiagnosticSeverity.Error);
+      pushDiagnostic(location(), 'Expected following identifier and expression.');
       return INVALID_STATEMENT;
     }
     return {
@@ -590,33 +585,29 @@ DataArrayUnit =
 
 DataArrayListItem =
   id:IdentifierValidated sizes:(
-    _0 p:(
+    _0 @(
       '[' _0 expr:ExprForceSingle? _0 closer:']'? {
-        if (!closer) {
-          pushDiagnostic(shortenRange(location(), 1), 'Unterminated bracket.', DiagnosticSeverity.Error);
-        } else if (!expr) {
-          pushDiagnostic(location(), 'Array size must be sepcified.', DiagnosticSeverity.Error);
-          expr = NULL_LITERAL;
-        }
-        return expr;
+        const loc = location();
+        diagnoseIfNotTerminated(closer, 'bracket for data array', loc);
+        return diagnoseIfEmpty(expr, 'an array size expression', NULL_LITERAL, loc);
       }
-    ) { return p; }
+    )
   )* init:(
     _0 op:AssignOp _0 term:ExprMulti? {
       if (op !== '=') {
-        pushDiagnostic(location(), `Invalid operator: \"${op}\". Only \"=\" is allowed.`, DiagnosticSeverity.Error);
+        pushDiagnostic(location(), `Invalid operator: \"${op}\". Only \"=\" is allowed.`);
       }
       if (!term) {
-        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, DiagnosticSeverity.Error);
+        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`);
         term = NULL_LITERAL;
       } else if (term.type !== 'ObjectExpression' && term.type !== 'ArrayExpression') {
-        pushDiagnostic(location(), 'Only array can be assigned.', DiagnosticSeverity.Error);
+        pushDiagnostic(location(), 'Only array can be assigned.');
       }
       return term;
     }
   )? sep:ListSep? {
     if (!sizes || sizes.length === 0) {
-      pushDiagnostic(location(), 'Array size must be sepcified.', DiagnosticSeverity.Error);
+      pushDiagnostic(location(), 'Array size must be sepcified.');
     }
     return [ id, sep, location(), { exSizes: sizes, init: init } ];
   }
@@ -656,21 +647,16 @@ VariableDef 'variable declaration' =
 VariableListItem =
   id:IdentifierValidated bracket:(
     _0 @('[' _0 closer:']'? {
-      if (!closer) {
-        pushDiagnostic(shortenRange(location(), 1), 'Unterminated bracket.', DiagnosticSeverity.Error);
-      }
+      diagnoseIfNotTerminated(closer, 'bracket');
       return true;
     })
   )? init:(
     _0 op:AssignOp _0 term:ExprMulti? {
+      const loc = location();
       if (op !== '=') {
-        pushDiagnostic(location(), `Invalid operator: \"${op}\". Only \"=\" is allowed.`, DiagnosticSeverity.Error);
+        pushDiagnostic(loc, `Invalid operator: \"${op}\". Only \"=\" is allowed.`);
       }
-      if (!term) {
-        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, DiagnosticSeverity.Error);
-        term = NULL_LITERAL;
-      }
-      return term;
+      return diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, NULL_LITERAL, loc);
     }
   )? sep:ListSep? {
     return [ id, sep, location(), { exType: bracket !== null ? 'assoc-array' : 'scalar', init: init, } ];
@@ -691,18 +677,18 @@ ConstantDef 'constant declaration' =
     }
   )* _0 Eos {
     if (!items || items.length === 0) {
-      pushDiagnostic(location(), `Expected following identifier and initial value.`, DiagnosticSeverity.Error);
+      pushDiagnostic(location(), `Expected following identifier and initial value.`);
       return INVALID_STATEMENT;
     }
 
     const item = items[0];
 
     if (items.length > 1) {
-      pushDiagnostic(location(), `Only single constant can be decleared per statement.`, DiagnosticSeverity.Error);
+      pushDiagnostic(location(), `Only single constant can be decleared per statement.`);
     } else if (item[2]) {
-      pushDiagnostic(location(), `Trailing comma not allowed.`, DiagnosticSeverity.Error);
+      pushDiagnostic(location(), `Trailing comma not allowed.`);
     } else if (!item[1]) {
-      pushDiagnostic(item[3], `Expected initial value.`, DiagnosticSeverity.Error);
+      pushDiagnostic(item[3], `Expected initial value.`);
       item[1] = NULL_LITERAL;
     }
 
@@ -736,8 +722,7 @@ ConstantDef 'constant declaration' =
 DeleteStmt 'delete statement' =
   'delete' _1 items:(
     items:AssocElemListItem* {
-      diagnoseEmptyArray(items, location(), 'associative array', DiagnosticSeverity.Error);
-      return items;
+      return diagnoseIfEmpty(items, 'associative arrays', []);
     }
    ) _0 Eos {
     const nodes = diagnoseListItems(items, 'associative array', 0);
@@ -790,13 +775,13 @@ PatternValidated =
   MacroArgument
   /
   p:StringLiteral {
-    pushDiagnostic(location(), 'Expected a pattern.', DiagnosticSeverity.Error);
+    pushDiagnostic(location(), 'Expected a pattern.');
     return p;
   }
   /
   (!__ !Eos .)+ {
     if (!_patternRegExp.test(text())) {
-      pushDiagnostic(location(), 'Expected a pattern.', DiagnosticSeverity.Error);
+      pushDiagnostic(location(), 'Expected a pattern.');
     }
     return { type: 'literal', value: text(), raw: text(), };
   }
@@ -872,28 +857,22 @@ Identifier 'identifier' =
   MacroArgument
   /
   op:'@' _0 arg:ExprSingle? {
-    if (!arg) {
-      pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, DiagnosticSeverity.Error);
-    }
-    return {
-      type: 'UnaryExpression',
-      operator: '@',
-      argument: arg ? arg : NULL_LITERAL,
-      prefix: true,
-      loc: location()
-    };
+    const loc = location();
+    arg = diagnoseIfEmpty(arg, `an expression following \"${op}\" operator`, NULL_LITERAL, loc);
+    return { type: 'UnaryExpression', operator: '@', argument: arg, prefix: true, loc: loc, };
   }
 
 StrictIdentifier =
   name:$([a-zA-Z_][a-zA-Z0-9_]*) {
+    const loc = location();
     if (_reservedKeywordRegExp.test(name)) {
-      pushDiagnostic(location(), `${name} is a reserved keyword.`, DiagnosticSeverity.Error);
+      pushDiagnostic(loc, `${name} is a reserved keyword.`);
     // } else if (name === 'const') {
-    //   pushDiagnostic(location(), `Using ${name} for \"constant\"?`, DiagnosticSeverity.Information);
+    //   pushDiagnostic(loc, `Using ${name} for \"constant\"?`, DiagnosticSeverity.Information);
     // } else if (name === 'elseif' || name === 'elif') {
-    //   pushDiagnostic(location(), `Using ${name} for \"else if\"?`, DiagnosticSeverity.Information);
+    //   pushDiagnostic(loc, `Using ${name} for \"else if\"?`, DiagnosticSeverity.Information);
     }
-    return { type: 'Identifier', name: name, loc: location(), };
+    return { type: 'Identifier', name: name, loc: loc, };
   }
 
 MacroArgument =
@@ -905,7 +884,7 @@ MacroArgument =
 IdentifierValidated =
   Identifier / InvalidExpr
   // / [a-zA-Z0-9_.+\-*/%!?^~\\]+ {
-  //   pushDiagnostic(location(), 'invalid as an identifier', DiagnosticSeverity.Error);
+  //   pushDiagnostic(location(), 'invalid as an identifier');
   //   return {
   //     type: 'Identifier',
   //     name: text(),
@@ -935,9 +914,7 @@ ArrayElem =
   _0 '[' _0 item0:SlicableIndex? items1ToN:(
     sep:CommaSep item:SlicableIndex? { return item ? item : NULL_LITERAL; }
   )* _0 closer:']'? {
-    if (!closer) {
-      pushDiagnostic(shortenRange(location(), 1), 'Unterminated bracket.', DiagnosticSeverity.Error);
-    }
+    diagnoseIfNotTerminated(closer, 'bracket');
     item0 = item0 ? item0 : NULL_LITERAL;
     if (items1ToN && items1ToN.length > 0) {
       return {
@@ -971,7 +948,7 @@ AssocArray =
 
 InvalidExpr =
   '{' Eos? _0 stmts:ExprMultiList? _0 '}'? Eos? {
-    pushDiagnostic(location(), 'Braces are to bundle statements. Use parentheses "()" for expressions.', DiagnosticSeverity.Error);
+    pushDiagnostic(location(), 'Braces are to bundle statements. Use parentheses "()" for expressions.');
     return NULL_EXPRESSION;
   }
   /
@@ -987,33 +964,9 @@ InvalidExpr =
  * e.g., "foo,\"bar\"\n123", \'foo\'
  */
 StringLiteral 'string literal' =
-  opener:QuotationMark
-  & {
-    const flag = testIfQuoteIsAvailable(opener);
-    if (flag) { _quoteStack.push(opener); }
-    return flag;
-  }
+  opener:QuotationMark & { return testIfQuoteStarts(opener); }
   chars:(
-    '\\' q:(
-      p:[abfnrt'"\\$\n]
-      & { return testIfEscapedCharIsAvailable(p); }
-        {
-          switch (p) {
-            case 'a': return '\x07';
-            case 'b': return '\b';
-            case 'f': return '\f';
-            case 'n': return '\n';
-            case 'r': return '\r';
-            case 't': return '\t';
-            case '\\': return '\\';
-            case '\'': return '\'';
-            case '\"': return '\"';
-            case '$': return '$';
-            case '\n': return '';
-            default: return '';
-          }
-        }
-      /
+    '\\' @(
       p:$([0-7][0-7]?[0-7]?) { return String.fromCharCode(parseInt(p, 8)); }
       /
       p:'[' cmd:$Word+ ']' {
@@ -1023,34 +976,41 @@ StringLiteral 'string literal' =
         return text();
       }
       /
-      p:.
-      & { return testIfEscapedCharIsAvailable(p); }
-        {
-          const loc = location();
-          loc.start.offset -= 1;
-          loc.start.column -= 1;
-          pushDiagnostic(loc, 'Unknown escape sequence.', DiagnosticSeverity.Warning);
-          return p;
+      // p:[abfnrt'"\\$\n] & { return testIfEscapedCharIsAvailable(p); }
+      p:. & { return testIfEscapedCharIsAvailable(p); } {
+        switch (p) {
+          case 'a': return '\x07';
+          case 'b': return '\b';
+          case 'f': return '\f';
+          case 'n': return '\n';
+          case 'r': return '\r';
+          case 't': return '\t';
+          case '\\': return '\\';
+          case '\'': return '\'';
+          case '\"': return '\"';
+          case '$': return '$';
+          case '\n': return '';
+          default:
+            const loc = location();
+            loc.start.offset -= 1;
+            loc.start.column -= 1;
+            pushDiagnostic(loc, 'Unknown escape sequence.', DiagnosticSeverity.Warning);
+            return p;
         }
-    ) { return q; }
+      }
+    )
     /
-    r:[^\\]
-    & { return testIfUnescapedCharIsAvailable(r); }
+    r:[^\\] & { return testIfUnescapedCharIsAvailable(r); }
       {
         if (!testIfEscapedCharIsAvailable(r)) {
-          pushDiagnostic(location(), 'Quotation symbol not allowed here.', DiagnosticSeverity.Error);
+          pushDiagnostic(location(), 'Quotation symbol not allowed here.');
         }
         return r;
       }
   )*
-  closer:QuotationMark? {
-    if (!closer) { pushDiagnostic(shortenRange(location(), opener.length), 'Unterminated string literal.', DiagnosticSeverity.Error); }
-    _quoteStack.pop();
-    return {
-      type: 'Literal',
-      value: chars.join(''),
-      raw: text(),
-    };
+  closer:QuotationMark? & { return testIfQuoteEnds(opener, closer); } {
+    diagnoseIfNotTerminated(closer, 'string literal', opener.length);
+    return { type: 'Literal', value: chars.join(''), raw: text(), };
   }
 
 /** 
@@ -1091,24 +1051,14 @@ Exponent =
 ArrayLiteral 'array literal' =
   '[' _0 item0:(
     item:ArrayItem? {
-      if (!item) {
-        pushDiagnostic(location(), 'Expected an array element.', DiagnosticSeverity.Error);
-        return NULL_LITERAL;
-      }
-      return item;
+      return diagnoseIfEmpty(item, 'an array element', NULL_LITERAL);
     }
   ) items1ToN:(
     sep:CommaSep item:ArrayItem? {
-      if (!item) {
-        pushDiagnostic(location(), 'Expected an array element.', DiagnosticSeverity.Error);
-        return NULL_LITERAL;
-      }
-      return item;
+      return diagnoseIfEmpty(item, 'an array element', NULL_LITERAL);
     }
   )* _0 closer:']'? {
-    if (!closer) {
-      pushDiagnostic(shortenRange(location(), 1), 'Unterminated bracket.', DiagnosticSeverity.Error);
-    }
+    diagnoseIfNotTerminated(closer, 'bracket');
     const items = [item0, ...items1ToN];
     
     if (items.some((item: any) => item === NULL_LITERAL)) {
@@ -1126,7 +1076,7 @@ ArrayLiteral 'array literal' =
     //     elements: items,
     //   };
     } else {
-    //     pushDiagnostic(location(), 'Mixture of associate-array and data-array literals not allowed.', DiagnosticSeverity.Error);
+    //     pushDiagnostic(location(), 'Mixture of associate-array and data-array literals not allowed.');
     //     return NULL_EXPRESSION;
       return { type: 'ObjectExpression', properties: items, };
     }
@@ -1140,33 +1090,17 @@ ArrayLiteral 'array literal' =
 ArrayItem =
   //  e.g., [ 1: 2: "item", 2: 3: "item2" ]
   key1:ExprMulti? _0 ':' _0 key2:ExprMulti? _0 ':' _0 value:ExprMulti? {
-    if (!key1 || !key2) {
-      pushDiagnostic(location(), `Expected a key expression.`, DiagnosticSeverity.Error);
-    } else if (!value) {
-      pushDiagnostic(location(), `Expected a value expression.`, DiagnosticSeverity.Error);
-    }
-    // Not yet implemented. key2 is not exported!!!
-    return {
-      type: 'Property',
-      key: key1 ? key1 : NULL_LITERAL,
-      value: value ? value : NULL_LITERAL,
-      kind: 'init',
-    };
+    key1 = diagnoseIfEmpty(key1, 'a key expression', NULL_LITERAL);
+    key2 = diagnoseIfEmpty(key2, 'a key expression', NULL_LITERAL);
+    value = diagnoseIfEmpty(value, 'a value expression', NULL_LITERAL);
+    return { type: 'Property', key: key1, value: value, kind: 'init', exKey: key2, };
   }
   /
   //  e.g., [ 0: "item", 1: "item2" ]
   key:ExprMulti? _0 ':' _0 value:ExprMulti? {
-    if (!key) {
-      pushDiagnostic(location(), `Expected a key expression.`, DiagnosticSeverity.Error);
-    } else if (!value) {
-      pushDiagnostic(location(), `Expected a value expression.`, DiagnosticSeverity.Error);
-    }
-    return {
-      type: 'Property',
-      key: key ? key : NULL_LITERAL,
-      value: value ? value : NULL_LITERAL,
-      kind: 'init',
-    };
+    key = diagnoseIfEmpty(key, 'a key expression', NULL_LITERAL);
+    value = diagnoseIfEmpty(value, 'a value expression', NULL_LITERAL);
+    return { type: 'Property', key: key, value: value, kind: 'init', };
   }
   / ExprMulti
 
@@ -1177,12 +1111,8 @@ ArrayItem =
  */
 ExprBlock 'parentheses that enclose expression' =
   '(' _0 expr:ExprMulti? _0 closer:')'? {
-    if (!expr) {
-      pushDiagnostic(location(), `Expected an expression in the parentheses.`, DiagnosticSeverity.Error);
-      return NULL_EXPRESSION;
-    } else if (!closer) {
-      pushDiagnostic(shortenRange(location(), 1), 'Unterminated parenthesis.', DiagnosticSeverity.Error);
-    }
+    expr = diagnoseIfEmpty(location(), 'an expression in the parenthesis', NULL_LITERAL);
+    diagnoseIfNotTerminated(closer, 'parenthesis');
     return expr;
   }
 
@@ -1195,9 +1125,7 @@ ExprBlock 'parentheses that enclose expression' =
 FunctionCall 'function call' =
   expr:StrictIdentifier _0 args:(
     '(' _0 args:ExprSingleList? _0 closer:')'? {
-      if (!closer) {
-        pushDiagnostic(shortenRange(location(), 1), 'Unterminated parenthesis.', DiagnosticSeverity.Error);
-      }
+      diagnoseIfNotTerminated(closer, 'parenthesis for function parameters');
       return args;
     }
   ) {
@@ -1213,10 +1141,8 @@ FunctionCall 'function call' =
  */
 UnaryExpr 'unary expression' =
   op:('+' / '-' / '!' / '~') _0 arg:ExprSingle? {
-    if (!arg) {
-      pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, DiagnosticSeverity.Error);
-    }
-    return { type: 'UnaryExpression', operator: op, argument: arg ? arg : NULL_LITERAL, prefix: true, };
+    arg = diagnoseIfEmpty(arg, `an expression following \"${op}\" operator`, NULL_LITERAL);
+    return { type: 'UnaryExpression', operator: op, argument: arg, prefix: true, };
   }
 
 /**
@@ -1227,10 +1153,8 @@ UnaryExpr 'unary expression' =
  */
 UpdateExpr 'update expression' =
   op:('++' / '--') _0 arg:LValue? {
-    if (!arg) {
-      pushDiagnostic(location(), `Expected an lvalue following \"${op}\" operator.`, DiagnosticSeverity.Error);
-    }
-    return { type: 'UpdateExpression', operator: op, argument: arg ? arg : NULL_LITERAL, prefix: true, };
+    arg = diagnoseIfEmpty(arg, `an lvalue following \"${op}\" operator.`, NULL_LITERAL);
+    return { type: 'UpdateExpression', operator: op, argument: arg, prefix: true, };
   }
   / arg:LValue _0 op:('++' / '--') {
     return { type: 'UpdateExpression', operator: op, argument: arg, prefix: false, };
@@ -1243,10 +1167,7 @@ UpdateExpr 'update expression' =
 ExprRule3 =
   head:ExprRule2 tails:(
     _0 op:$(('*' / '/' / '%') !'=') _0 term:ExprRule2? {
-      if (!term) {
-        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, DiagnosticSeverity.Error);
-        term = NULL_LITERAL;
-      }
+      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator.`, NULL_LITERAL);
       return [op, term];
     }
   )* {
@@ -1260,10 +1181,7 @@ ExprRule3 =
 ExprRule4 =
   head:ExprRule3 tails:(
     _0 op:$(('+' / '-') !'=') _0 term:ExprRule3? {
-      if (!term) {
-        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, DiagnosticSeverity.Error);
-        term = NULL_LITERAL;
-      }
+      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, NULL_LITERAL);
       return [op, term];
     }
   )* {
@@ -1277,10 +1195,7 @@ ExprRule4 =
 ExprRule5 =
   head:ExprRule4 tails:(
     _0 op:$(('<<' / '>>') !'=') _0 term:ExprRule4? {
-      if (!term) {
-        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, DiagnosticSeverity.Error);
-        term = NULL_LITERAL;
-      }
+      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, NULL_LITERAL);
       return [op, term];
     }
   )* {
@@ -1294,10 +1209,7 @@ ExprRule5 =
 ExprRule6 =
   head:ExprRule5 tails:(
     _0 op:($('<' !'<' '='?) / $('>' !'>' '='?)) _0 term:ExprRule5? {
-      if (!term) {
-        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, DiagnosticSeverity.Error);
-        term = NULL_LITERAL;
-      }
+      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, NULL_LITERAL);
       return [op, term];
     }
   )* {
@@ -1311,10 +1223,7 @@ ExprRule6 =
 ExprRule7 =
   head:ExprRule6 tails:(
     _0 op:('==' / '!=') _0 term:ExprRule6? {
-      if (!term) {
-        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, DiagnosticSeverity.Error);
-        term = NULL_LITERAL;
-      }
+      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, NULL_LITERAL);
       return [op, term];
     }
   )* {
@@ -1328,10 +1237,7 @@ ExprRule7 =
 ExprRule8 =
   head:ExprRule7 tails:(
     _0 op:$('&' ![&=]) _0 term:ExprRule7? {
-      if (!term) {
-        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, DiagnosticSeverity.Error);
-        term = NULL_LITERAL;
-      }
+      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, NULL_LITERAL);
       return [op, term];
     }
   )* {
@@ -1345,10 +1251,7 @@ ExprRule8 =
 ExprRule9 =
   head:ExprRule8 tails:(
     _0 op:$('^' !'=') _0 term:ExprRule8? {
-      if (!term) {
-        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, DiagnosticSeverity.Error);
-        term = NULL_LITERAL;
-      }
+      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, NULL_LITERAL);
       return [op, term];
     }
   )* {
@@ -1362,10 +1265,7 @@ ExprRule9 =
 ExprRule10 =
   head:ExprRule9 tails:(
     _0 op:$('|' ![|=]) _0 term:ExprRule9? {
-      if (!term) {
-        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, DiagnosticSeverity.Error);
-        term = NULL_LITERAL;
-      }
+      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, NULL_LITERAL);
       return [op, term];
     }
   )* {
@@ -1379,14 +1279,11 @@ ExprRule10 =
 ExprRule11 =
   head:ExprRule10 tails:(
     _0 op:'&&' _0 term:ExprRule10? {
-      if (!term) {
-        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, DiagnosticSeverity.Error);
-        term = NULL_LITERAL;
-      }
+      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, NULL_LITERAL);
       return [op, term];
     }
   )* {
-    return getBinaryExpression(head, tails, 1);
+    return getBinaryExpression(head, tails, 'LogicalExpression');
   }
 
 /**
@@ -1396,14 +1293,11 @@ ExprRule11 =
 ExprRule12 =
   head:ExprRule11 tails:(
     _0 op:'||' _0 term:ExprRule11? {
-      if (!term) {
-        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, DiagnosticSeverity.Error);
-        term = NULL_LITERAL;
-      }
+      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, NULL_LITERAL);
       return [op, term];
     }
   )* {
-    return getBinaryExpression(head, tails, 1);
+    return getBinaryExpression(head, tails, 'LogicalExpression');
   }
 
 /*
@@ -1413,13 +1307,8 @@ ExprRule12 =
 ExprRule13 =
   head: ExprRule12 tails:(
     _0 '?' _0 cons:ExprRule12? _0 alt:(':' _0 @ExprRule12?)? {
-      if (!alt) {
-        pushDiagnostic(location(), 'Expected an altenative expression following \":\" opearator.', DiagnosticSeverity.Error);
-        alt = NULL_LITERAL;
-      } else if (!cons) {
-        pushDiagnostic(location(), 'Expected a consequent expression following \"?\" opearator.', DiagnosticSeverity.Error);
-        cons = NULL_LITERAL;
-      }
+      alt = diagnoseIfEmpty(alt, `an altenative expression following \":\" opearator`, NULL_LITERAL);
+      cons = diagnoseIfEmpty(cons, `a consequent expression following \"?\" opearator`, NULL_LITERAL);
       return [cons, alt];
     }
   )* {
@@ -1437,10 +1326,7 @@ ExprRule13 =
 ExprRule14 =
   head:ExprRule13 tail:(
     _0 op:AssignOp _0 term:ExprMulti? {
-      if (!term) {
-        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`, DiagnosticSeverity.Error);
-        term = NULL_LITERAL;
-      }
+      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, NULL_LITERAL);
       return [op, term];
     }
   )? {
@@ -1448,7 +1334,7 @@ ExprRule14 =
       return head;
     } else {
       if (head.type !== 'Identifier' && head.type !== 'MemberExpression') {
-        pushDiagnostic(location(), 'Left-side value must be assignable.', DiagnosticSeverity.Error);
+        pushDiagnostic(location(), 'Left-side value must be assignable.');
       }
       const op = tail[0];
       const term = tail[1];
@@ -1472,9 +1358,7 @@ AssignOp =
 ExprRule15 =
   head:ExprRule14 tails:(
     _0 op:'in' !Word _0 term:AssocArray? {
-      if (!term) {
-        pushDiagnostic(location(), `Expected an associative array following \"${op}\" operator.`, DiagnosticSeverity.Error);
-      }
+      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, NULL_LITERAL);
       return [op, term];
     }
   )* {
@@ -1508,7 +1392,7 @@ ExprMulti =
 ExprForceSingle =
   head:ExprSingle tails:(
     _0 tail:ExprSingle {
-      pushDiagnostic(location(), 'Expression concatenation not allowed.', DiagnosticSeverity.Error);
+      pushDiagnostic(location(), 'Expression concatenation not allowed.');
       return [' ', tail];
     }
   )* {
@@ -1527,42 +1411,38 @@ ExprForceSingle =
  * Comma-separated expression list in which concatenation of the expressions is not allowed.
  */
 ExprSingleList 'comma-separated expression list' =
-  item0:ExprForceSingle items1ToN:_ExprSingleListItem* {
+  item0:ExprForceSingle items1ToN:ExprSingleListItem* {
     return [item0, ...items1ToN];
   }
   /
-  items1ToN:_ExprSingleListItem+ {
-    pushDiagnostic(shortenRange(location(), 0), 'Expected an expression.', DiagnosticSeverity.Error);
+  items1ToN:ExprSingleListItem+ {
+    pushDiagnostic(getStartLocation(), 'Expected an expression.');
     return [NULL_LITERAL, ...items1ToN];
   }
 
-_ExprSingleListItem =
-  CommaSep item:ExprForceSingle? {
-    if (!item) {
-      pushDiagnostic(location(), 'Expected an expression.', DiagnosticSeverity.Error);
-      return NULL_LITERAL;
+ExprSingleListItem =
+  CommaSep @(
+    item:ExprForceSingle? {
+      return diagnoseIfEmpty(item, 'an expression', NULL_LITERAL);
     }
-    return item;
-  }
+  )
 
 /**
  * Comma-separated expression list in which concatenation of the expressions is also allowed.
  */
 ExprMultiList 'comma-separated expression list' =
-  item0:ExprMulti items1ToN:_ExprMultiListItem* {
+  item0:ExprMulti items1ToN:ExprMultiListItem* {
     return [item0, ...items1ToN];
   }
   /
-  items1ToN:_ExprMultiListItem+ {
-    pushDiagnostic(shortenRange(location(), 0), 'Expected an expression.', DiagnosticSeverity.Error);
+  items1ToN:ExprMultiListItem+ {
+    pushDiagnostic(getStartLocation(), 'Expected an expression.');
     return [NULL_LITERAL, ...items1ToN];
   }
 
-_ExprMultiListItem =
-  CommaSep item:ExprMulti? {
-    if (!item) {
-      pushDiagnostic(location(), 'Expected an expression.', DiagnosticSeverity.Error);
-      return NULL_LITERAL;
+ExprMultiListItem =
+  CommaSep @(
+    item:ExprMulti? {
+      return diagnoseIfEmpty(item, 'an expression', NULL_LITERAL);
     }
-    return item;
-  }
+  )

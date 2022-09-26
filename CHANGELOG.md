@@ -4,6 +4,11 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+### Fixed
+
+- overhaul syntax parser
+  - fix a handling of quotation mark in a comment line. See [Issue #9](https://github.com/fujidana/vscode-spec-command/issues/9#issue-1385913414)
+
 ## [1.8.1] -- 2022-08-30
 
 ### Added

@@ -14,6 +14,7 @@ const ADDITIONAL_TRAVERSE_KEYS = {
     MacroStatement: ['arguments'],
     InvalidStatement: [],
     ExitStatement: [],
+    QuitStatement: [],
     NullExpression: [],
     /* eslint-enable @typescript-eslint/naming-convention */
 };
