@@ -28,14 +28,15 @@ Sorry for inconvenence.
 ## Features
 
 * __Diagnostics__ - syntax check
-* __Syntax highlighting__ - colorizing symbols using a grammer
-* __IntelliSense__ - code completion and hinting
+* __Syntax highlighting__
+* __Code completion and hinting__
   * __Hovers__
-  * __Code completion proposals__ - autocompletion that works during a user types a symbol
+  * __Code completion proposals__
     * __Code snippets__ - templates that make it easier to enter repeating code patterns, such as loops and conditional-statements
-  * __Help with function signatures__ - help that appears during a user types an argument in a function call.
+  * __Help with function signatures__ - help that appears during a user types an argument in a function call
 * __Code navigation__
-  * __Show all symbol definitions within a document__ - symbol definitions in a file, used in: _Go to Symbol in Editor_ (Ctrl+Shift+O) and the navigation bar below the editor tabs (aka breadcrumbs)
+  * __Symbol navigation in a document__ - available from _Go to Symbol in Editor_ (Ctrl+Shift+O) menubar item and the navigation bar at the top the editor pane (aka breadcrumbs)
+  * __Symbol navigation in workspaces__ - available from _Go to Symbol in Workspace_ (Ctrl+T) menubar item
   * __Show definitions of a symbol__ - symbol definitions in open files, used in: _Go to Definition_ (F12) and _Peek Definition_ (Alt+F12) in right-click menu
 * __Commands__ - the following commands can be invoked from the command pallate (Ctrl+Shit+P):
   * "Run Seclection/Line in Terminal" and "Run File in Terminal" commands. These commands assume __spec__ interactive shell has been ready in the active terminal view.

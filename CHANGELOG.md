@@ -4,6 +4,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+## [1.8.2] -- 2022-09-26
+
 ### Fixed
 
 - overhaul syntax parser
@@ -288,7 +290,7 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 ### Changed
 
 - Improve syntax parser, including:
-  - support of variant quatations of a string literal (`"`, `'`, `\"`, `\'`) (syntax parser only; code highligting engine assumes `"` as a string literal and `\'` as the body of a macro and function)
+  - support of variant quatations of a string literal (`"`, `'`, `\"`, `\'`) (syntax parser only; code highligting engine assumes `"` as a delimiter for string literals and `'` as a delimiter for macros and functions)
   - support of escape sequenses of TTY command such as `\[md]`
 
 ## [0.7.0] - 2019-10-15
@@ -374,7 +376,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
   - syntax highlighting
   - code snippets
 
-[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.1...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.2...HEAD
+[1.8.2]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.1...v1.8.2
 [1.8.1]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.0...v1.8.1
 [1.8.0]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.4...v1.8.0
 [1.7.4]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.3...v1.7.4
