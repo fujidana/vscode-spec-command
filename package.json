@@ -5,7 +5,7 @@
 	"description": "spec command file support for VS Code",
 	"version": "1.8.3",
 	"engines": {
-		"vscode": "^1.73.1"
+		"vscode": "^1.74.0"
 	},
 	"categories": [
 		"Programming Languages",
