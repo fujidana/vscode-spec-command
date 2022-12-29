@@ -4,6 +4,13 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+## [1.8.3] -- 2022-12-29
+
+### Changed
+
+- Update Node.js packages.
+- Raise the minimum VS Code version to 1.74.0.
+
 ## [1.8.2] -- 2022-09-26
 
 ### Fixed
@@ -376,7 +383,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
   - syntax highlighting
   - code snippets
 
-[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.2...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.3...HEAD
+[1.8.3]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.2...v1.8.3
 [1.8.2]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.1...v1.8.2
 [1.8.1]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.0...v1.8.1
 [1.8.0]: https://github.com/fujidana/vscode-spec-command/compare/v1.7.4...v1.8.0
