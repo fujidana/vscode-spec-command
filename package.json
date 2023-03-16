@@ -3,9 +3,9 @@
 	"name": "spec-command",
 	"displayName": "spec command",
 	"description": "spec command file support for VS Code",
-	"version": "1.8.3",
+	"version": "1.8.4-alpha.1",
 	"engines": {
-		"vscode": "^1.74.0"
+		"vscode": "^1.76.0"
 	},
 	"categories": [
 		"Programming Languages",
@@ -28,10 +28,7 @@
 		"url": "https://github.com/fujidana/vscode-spec-command.git"
 	},
 	"homepage": "https://github.com/fujidana/vscode-spec-command#readme",
-	"activationEvents": [
-		"onLanguage:spec-command",
-		"onCommand:spec-command.openReferenceManual"
-	],
+	"activationEvents": [],
 	"main": "./dist/extension-node.js",
 	"browser": "./dist/extension-web.js",
 	"contributes": {
@@ -340,7 +337,7 @@
 		"js-yaml:snippets": "js-yaml ./src/specCommand.snippets.yaml > ./syntaxes/specCommand.snippets.json",
 		"js-yaml:apiReference": "js-yaml ./src/specCommand.apiReference.yaml > ./syntaxes/specCommand.apiReference.json",
 		"js-yaml:tmLanguage": "js-yaml ./src/specCommand.tmLanguage.yaml > ./syntaxes/specCommand.tmLanguage.json",
-		"pegjs": "peggy --cache --plugin ./node_modules/ts-pegjs/src/tspegjs --extra-options-file ./src/pegconfig.json -o src/grammar.ts src/grammar.pegjs"
+		"pegjs": "peggy --cache --plugin ./node_modules/ts-pegjs/src/tspegjs -c ./src/pegconfig.json -o src/grammar.ts src/grammar.pegjs"
 	},
 	"dependencies": {
 		"estraverse": "^5.3.0"
@@ -348,27 +345,27 @@
 	"devDependencies": {
 		"@types/estraverse": "^5.1.2",
 		"@types/estree": "^1.0.0",
-		"@types/glob": "^8.0.0",
+		"@types/glob": "^8.1.0",
 		"@types/mocha": "^10.0.1",
 		"@types/node": "16.x",
-		"@types/vscode": "^1.74.0",
+		"@types/vscode": "^1.76.0",
 		"@types/webpack-env": "^1.18.0",
-		"@typescript-eslint/eslint-plugin": "^5.45.0",
-		"@typescript-eslint/parser": "^5.45.0",
-		"@vscode/test-electron": "^2.2.0",
-		"@vscode/test-web": "^0.0.33",
+		"@typescript-eslint/eslint-plugin": "^5.53.0",
+		"@typescript-eslint/parser": "^5.53.0",
+		"@vscode/test-electron": "^2.2.3",
+		"@vscode/test-web": "^0.0.35",
 		"assert": "^2.0.0",
-		"eslint": "^8.28.0",
-		"glob": "^8.0.3",
+		"eslint": "^8.34.0",
+		"glob": "^8.1.0",
 		"js-yaml": "^4.1.0",
-		"mocha": "^10.1.0",
+		"mocha": "^10.2.0",
 		"npm-run-all": "^4.1.5",
 		"peggy": "^2.0.1",
 		"process": "^0.11.10",
-		"ts-loader": "^9.4.1",
-		"ts-pegjs": "^2.1.0",
-		"typescript": "^4.9.3",
+		"ts-loader": "^9.4.2",
+		"ts-pegjs": "^3.1.0",
+		"typescript": "^4.9.5",
 		"webpack": "^5.75.0",
-		"webpack-cli": "^5.0.0"
+		"webpack-cli": "^5.0.1"
 	}
 }

@@ -3,7 +3,7 @@ import * as estree from "estree";
 import * as estraverse from "estraverse";
 import * as lang from "./specCommand";
 import { Provider } from "./provider";
-import { SyntaxError, parse, IFileRange } from './grammar';
+import { PeggySyntaxError, parse, FileRange } from './grammar';
 import { getTextDecoder } from './textEncoding';
 
 /**
@@ -20,7 +20,7 @@ const ADDITIONAL_TRAVERSE_KEYS = {
 };
 
 interface CustomProgram extends estree.Program {
-    exDiagnostics: { location: IFileRange, message: string, severity: vscode.DiagnosticSeverity }[];
+    exDiagnostics: { location: FileRange, message: string, severity: vscode.DiagnosticSeverity }[];
 }
 
 /**
@@ -357,7 +357,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                     console.log('Statement should have location. This may be a bug in the parser.');
                     return;
                 }
-                const nodeRange = lang.convertRange(currentNode.loc as IFileRange);
+                const nodeRange = lang.convertRange(currentNode.loc as FileRange);
                 let refItem: lang.ReferenceItem | undefined;
                 const refItems: lang.ReferenceItem[] = [];
 
@@ -375,7 +375,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                         // register arguments of function as variables if the cursor is in the function block.
                         for (const param of currentNode.params) {
                             if (param.type === 'Identifier') {
-                                refItem = { signature: param.name, location: currentNode.loc as IFileRange };
+                                refItem = { signature: param.name, location: currentNode.loc as FileRange };
                                 variableRefMap.set(param.name, refItem);
                             }
                         }
@@ -390,7 +390,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                         if (!position || (parentNode && parentNode.type !== 'Program')) {
                             let signatureStr = currentNode.id.name + '(';
                             signatureStr += currentNode.params.map(param => (param.type === 'Identifier') ? param.name : '').join(', ') + ')';
-                            refItem = { signature: signatureStr, location: currentNode.loc as IFileRange };
+                            refItem = { signature: signatureStr, location: currentNode.loc as FileRange };
                             functionRefMap.set(currentNode.id.name, refItem);
                             refItems.push(refItem);
                         }
@@ -398,7 +398,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                     } else {
                         // register the id as a traditional macro if parameter is null.
                         if (!position || (parentNode && parentNode.type !== 'Program')) {
-                            refItem = { signature: currentNode.id.name, location: currentNode.loc as IFileRange };
+                            refItem = { signature: currentNode.id.name, location: currentNode.loc as FileRange };
                             macroRefMap.set(currentNode.id.name, refItem);
                             refItems.push(refItem);
                         }
@@ -412,7 +412,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                                 if (declarator.init && declarator.init.type === 'Literal') {
                                     signatureStr += ' = ' + declarator.init.raw;
                                 }
-                                refItem = { signature: signatureStr, location: currentNode.loc as IFileRange };
+                                refItem = { signature: signatureStr, location: currentNode.loc as FileRange };
                                 if (currentNode.kind === 'const') {
                                     constantRefMap.set(declarator.id.name, refItem);
                                 } else if (currentNode.kind === 'let') {
@@ -464,7 +464,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         try {
             program = parse(contents);
         } catch (error) {
-            if (error instanceof SyntaxError) {
+            if (error instanceof PeggySyntaxError) {
                 if (diagnoseProblems) {
                     const diagnostic = new vscode.Diagnostic(lang.convertRange(error.location), error.message, vscode.DiagnosticSeverity.Error);
                     this.diagnosticCollection.set(uri, [diagnostic]);
@@ -617,14 +617,14 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                         return estraverse.VisitorOption.Skip;
                     }
 
-                    const stmtRange = lang.convertRange(currentNode.loc as IFileRange);
+                    const stmtRange = lang.convertRange(currentNode.loc as FileRange);
                     let symbol: vscode.DocumentSymbol;
 
                     if (currentNode.leadingComments) {
                         for (const leadingComment of currentNode.leadingComments) {
                             let matched: RegExpMatchArray | null;
                             if (leadingComment.type === 'Line' && leadingComment.loc && (matched = leadingComment.value.match(/^(\s*(MARK|TODO|FIXME):\s+)((?:(?!--).)+)(?:--\s*(.+))?$/)) !== null) {
-                                const commentRange = lang.convertRange(leadingComment.loc as IFileRange);
+                                const commentRange = lang.convertRange(leadingComment.loc as FileRange);
                                 const commentRange2 = commentRange.with(commentRange.start.translate(undefined, matched[1].length + 1));
                                 symbol = new vscode.DocumentSymbol(matched[3], matched[4] !== undefined ? matched[4] : '', vscode.SymbolKind.Key, commentRange, commentRange2);
                                 if (symbols.length !== 0 && symbols[symbols.length - 1].range.contains(commentRange)) {
@@ -639,7 +639,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                     if (currentNode.type === 'FunctionDeclaration') {
                         if (currentNode.id && currentNode.id.loc) {
                             const idName = currentNode.id.name;
-                            const idRange = lang.convertRange(currentNode.id.loc as IFileRange);
+                            const idRange = lang.convertRange(currentNode.id.loc as FileRange);
                             if (currentNode.params) {
                                 symbol = new vscode.DocumentSymbol(idName, '', vscode.SymbolKind.Function, stmtRange, idRange);
                                 // const params = currentNode.params.map(param => (param.type === 'Identifier') ? param.name : '') ;
@@ -658,7 +658,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                         for (const declarator of currentNode.declarations) {
                             if (declarator.type === 'VariableDeclarator' && declarator.id.type === 'Identifier' && declarator.id.loc) {
                                 const idName = declarator.id.name;
-                                const idRange = lang.convertRange(declarator.id.loc as IFileRange);
+                                const idRange = lang.convertRange(declarator.id.loc as FileRange);
                                 const idDetail = '';
                                 // const idDetail = (declarator.init && declarator.init.type === 'Literal' && declarator.init.raw) ? ' = ' + declarator.init.raw : '';
                                 let symbolKind;

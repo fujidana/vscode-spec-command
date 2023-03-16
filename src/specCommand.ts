@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 
 import * as vscode from 'vscode';
-import { IFileRange, IFilePosition } from './grammar';
+import { FileRange, FilePosition } from './grammar';
 
-export function convertPosition(position: IFilePosition): vscode.Position {
+export function convertPosition(position: FilePosition): vscode.Position {
     return new vscode.Position(position.line - 1, position.column - 1);
 }
 
-export function convertRange(range: IFileRange): vscode.Range {
+export function convertRange(range: FileRange): vscode.Range {
     return new vscode.Range(convertPosition(range.start), convertPosition(range.end));
 }
 
@@ -118,7 +118,7 @@ export type ReferenceItem = {
     description?: string;
     comments?: string;
     snippet?: string;
-    location?: IFileRange;
+    location?: FileRange;
     overloads?: {
         signature: string;
         description?: string;

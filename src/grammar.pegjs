@@ -8,7 +8,7 @@
 
 {{
 interface Diagnostic {
-  location: IFileRange;
+  location: FileRange;
   message: string;
   severity: DiagnosticSeverity;
 }
@@ -39,14 +39,14 @@ const _quoteStack: string[] = [];
 /**
  * create diagnostic object and store it.
  */
-function pushDiagnostic(location: IFileRange, message: string, severity = DiagnosticSeverity.Error) {
+function pushDiagnostic(location: FileRange, message: string, severity = DiagnosticSeverity.Error) {
   _diagnostics.push({ location, message, severity });
 }
 
 /**
  * Return a new range object whose 'end' is moved to the 'start' location.
  */
-function getStartLocation(loc?: IFileRange, length: number = 0) {
+function getStartLocation(loc?: FileRange, length: number = 0) {
   const loc2 = loc === undefined ? location() : { ...loc };
   if (length === 0) {
     loc2.end = loc2.start;
@@ -61,7 +61,7 @@ function getStartLocation(loc?: IFileRange, length: number = 0) {
 /**
  * Report an error if closer does not exist.
  */
-function diagnoseIfNotTerminated(closer: string | null | undefined, label: string, loc?: IFileRange, openerLength = 1, severity = DiagnosticSeverity.Error) {
+function diagnoseIfNotTerminated(closer: string | null | undefined, label: string, loc?: FileRange, openerLength = 1, severity = DiagnosticSeverity.Error) {
   if (!closer) {
     const loc2 = loc === undefined ? location() : loc;
     pushDiagnostic(getStartLocation(loc2, openerLength), `Unterminated ${label}.`, severity);
@@ -71,7 +71,7 @@ function diagnoseIfNotTerminated(closer: string | null | undefined, label: strin
 /**
  * Report an error if the object is empty.
  */
-function diagnoseIfEmpty<T, U>(obj: T | null | undefined, label: string, alt?: U, loc?: IFileRange, severity = DiagnosticSeverity.Error): T | U | null | undefined {
+function diagnoseIfEmpty<T, U>(obj: T | null | undefined, label: string, alt?: U, loc?: FileRange, severity = DiagnosticSeverity.Error): T | U | null | undefined {
   if (!obj || Array.isArray(obj) && obj.length === 0) {
     const loc2 = loc === undefined ? location() : loc;
     pushDiagnostic(loc2, `Expected ${label}.`, severity);
@@ -85,7 +85,7 @@ function diagnoseIfEmpty<T, U>(obj: T | null | undefined, label: string, alt?: U
 /**
  * Make array from an array of [identifier | null, separator, location, option?].
  */
-function diagnoseListItems<T>(elements: [T, string, IFileRange][], label: string, sepOption: number) {
+function diagnoseListItems<T>(elements: [T, string, FileRange][], label: string, sepOption: number) {
   const items: T[] = [];
   for (let index = 0; index < elements.length; index++) {
     const [item, sep, locEach] = elements[index];
@@ -111,13 +111,13 @@ function diagnoseListItems<T>(elements: [T, string, IFileRange][], label: string
 /**
  * Make Variable Declarators from an array of [identifier | null, separator, location, option?].
  */
-function makeDeclarators(elements: [any, string, IFileRange, any][] | null, locAll: IFileRange, label: string, allowsAssign: boolean) {
+function makeDeclarators(elements: [any, string, FileRange, any][] | null, locAll: FileRange, label: string, allowsAssign: boolean) {
   if (!elements || elements.length === 0) {
     pushDiagnostic(locAll, `Expected at least one ${label}.`);
     return [];
   } else if (elements[elements.length - 1][1] === ',') {
     pushDiagnostic(elements[elements.length - 1][2], `Trailing comma not allowed.`);
-  } else if (elements.some((item: [any, string, IFileRange, any]) => item[3].init !== null)) {
+  } else if (elements.some((item: [any, string, FileRange, any]) => item[3].init !== null)) {
     if (!allowsAssign) {
       pushDiagnostic(locAll, `Assignment not allowed.`);
     } else if (elements.length > 1) {
