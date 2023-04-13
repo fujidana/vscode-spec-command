@@ -4,6 +4,11 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+### Changed
+
+- Update Node.js packages.
+- Raise the minimum VS Code version to 1.76.0.
+
 ## [1.8.3] -- 2022-12-29
 
 ### Changed
