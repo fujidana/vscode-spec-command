@@ -462,7 +462,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
 
         let program: CustomProgram;
         try {
-            program = parse(contents);
+            program = parse(contents) as CustomProgram;
         } catch (error) {
             if (error instanceof PeggySyntaxError) {
                 if (diagnoseProblems) {

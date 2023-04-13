@@ -3,7 +3,7 @@
 	"name": "spec-command",
 	"displayName": "spec command",
 	"description": "spec command file support for VS Code",
-	"version": "1.8.4-alpha.3",
+	"version": "1.8.4-alpha.4",
 	"engines": {
 		"vscode": "^1.76.0"
 	},
@@ -324,7 +324,7 @@
 		}
 	},
 	"scripts": {
-		"vscode:prepublish": "npm-run-all -s pegjs js-yaml:* package",
+		"vscode:prepublish": "npm-run-all -s peggy js-yaml:* package",
 		"compile": "webpack",
 		"watch": "webpack --watch",
 		"package": "webpack --mode production --devtool hidden-source-map",
@@ -339,7 +339,7 @@
 		"js-yaml:snippets": "js-yaml ./src/specCommand.snippets.yaml > ./syntaxes/specCommand.snippets.json",
 		"js-yaml:apiReference": "js-yaml ./src/specCommand.apiReference.yaml > ./syntaxes/specCommand.apiReference.json",
 		"js-yaml:tmLanguage": "js-yaml ./src/specCommand.tmLanguage.yaml > ./syntaxes/specCommand.tmLanguage.json",
-		"pegjs": "peggy --cache --plugin ./node_modules/ts-pegjs/src/tspegjs -c ./src/pegconfig.json -o src/grammar.ts src/grammar.pegjs"
+		"peggy": "peggy -c ./src/pegconfig.json"
 	},
 	"dependencies": {
 		"estraverse": "^5.3.0"
@@ -362,10 +362,10 @@
 		"js-yaml": "^4.1.0",
 		"mocha": "^10.2.0",
 		"npm-run-all": "^4.1.5",
-		"peggy": "^2.0.1",
+		"peggy": "^3.0.2",
 		"process": "^0.11.10",
 		"ts-loader": "^9.4.2",
-		"ts-pegjs": "^3.1.0",
+		"ts-pegjs": "^4.1.0",
 		"typescript": "^4.9.5",
 		"webpack": "^5.76.3",
 		"webpack-cli": "^5.0.1"

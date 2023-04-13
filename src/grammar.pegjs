@@ -7,207 +7,200 @@
  */
 
 {{
-interface Diagnostic {
-  location: FileRange;
-  message: string;
-  severity: DiagnosticSeverity;
-}
+  const INVALID_STATEMENT = { type: 'InvalidStatement' };
+  const NULL_EXPRESSION = { type: 'NullExpression' };
+  const NULL_LITERAL = { type: 'Literal', value: null, raw: 'null'};
 
-const INVALID_STATEMENT = { type: 'InvalidStatement' };
-const NULL_EXPRESSION = { type: 'NullExpression' };
-const NULL_LITERAL = { type: 'Literal', value: null, raw: 'null'};
+  const _reservedKeywordRegExp = new RegExp(
+    '^('
+    + 'def|rdef|constant|local|global|un(?:def|global)|delete|shared|extern|array'
+    + '|float|double|string|byte|short|long(?:64)?|u(?:byte|short|long(?:64)?)'
+    + '|if|else|while|for|in|break|continue|exit|return|quit'
+    + '|memstat|savstate|reconfig|getcounts|move_(?:all|cnt)|sync'
+    + '|ls(?:cmd|def)|prdef|syms'
+    + ')$'
+  );
 
-const _reservedKeywordRegExp = new RegExp(
-  '^('
-  + 'def|rdef|constant|local|global|un(?:def|global)|delete|shared|extern|array'
-  + '|float|double|string|byte|short|long(?:64)?|u(?:byte|short|long(?:64)?)'
-  + '|if|else|while|for|in|break|continue|exit|return|quit'
-  + '|memstat|savstate|reconfig|getcounts|move_(?:all|cnt)|sync'
-  + '|ls(?:cmd|def)|prdef|syms'
-  + ')$'
-);
-
-const _ttyCommandRegExp = /^(c(?:d|e)|do|ho|le|m(?:b|d|e|h|r)|nd|s(?:e|o)|u(?:e|p|s))$/;
-const _patternRegExp = /^[a-zA-Z0-9_*?]+$/;
-
+  const _ttyCommandRegExp = /^(c(?:d|e)|do|ho|le|m(?:b|d|e|h|r)|nd|s(?:e|o)|u(?:e|p|s))$/;
+  const _patternRegExp = /^[a-zA-Z0-9_*?]+$/;
 }}
 
 {
-const _diagnostics: Diagnostic[] = [];
-const _quoteStack: string[] = [];
+  const _diagnostics: Diagnostic[] = [];
+  const _quoteStack: string[] = [];
 
-/**
- * create diagnostic object and store it.
- */
-function pushDiagnostic(location: FileRange, message: string, severity = DiagnosticSeverity.Error) {
-  _diagnostics.push({ location, message, severity });
-}
-
-/**
- * Return a new range object whose 'end' is moved to the 'start' location.
- */
-function getStartLocation(loc?: FileRange, length: number = 0) {
-  const loc2 = loc === undefined ? location() : { ...loc };
-  if (length === 0) {
-    loc2.end = loc2.start;
-  } else {
-    loc2.end = { ...loc2.start };
-    loc2.end.offset += length;
-    loc2.end.column += length;
+  /**
+   * create diagnostic object and store it.
+   */
+  function pushDiagnostic(location: FileRange, message: string, severity = DiagnosticSeverity.Error) {
+    _diagnostics.push({ location, message, severity });
   }
-  return loc2;
-}
 
-/**
- * Report an error if closer does not exist.
- */
-function diagnoseIfNotTerminated(closer: string | null | undefined, label: string, loc?: FileRange, openerLength = 1, severity = DiagnosticSeverity.Error) {
-  if (!closer) {
-    const loc2 = loc === undefined ? location() : loc;
-    pushDiagnostic(getStartLocation(loc2, openerLength), `Unterminated ${label}.`, severity);
+  /**
+   * Return a new range object whose 'end' is moved to the 'start' location.
+   */
+  function getStartLocation(loc?: FileRange, length: number = 0) {
+    const loc2 = loc === undefined ? location() : { ...loc };
+    if (length === 0) {
+      loc2.end = loc2.start;
+    } else {
+      loc2.end = { ...loc2.start };
+      loc2.end.offset += length;
+      loc2.end.column += length;
+    }
+    return loc2;
   }
-}
 
-/**
- * Report an error if the object is empty.
- */
-function diagnoseIfEmpty<T, U>(obj: T | null | undefined, label: string, alt?: U, loc?: FileRange, severity = DiagnosticSeverity.Error): T | U | null | undefined {
-  if (!obj || Array.isArray(obj) && obj.length === 0) {
-    const loc2 = loc === undefined ? location() : loc;
-    pushDiagnostic(loc2, `Expected ${label}.`, severity);
-    if (alt !== undefined) {
-      return alt;
+  /**
+   * Report an error if closer does not exist.
+   */
+  function diagnoseIfNotTerminated(closer: string | null | undefined, label: string, loc?: FileRange, openerLength = 1, severity = DiagnosticSeverity.Error) {
+    if (!closer) {
+      const loc2 = loc === undefined ? location() : loc;
+      pushDiagnostic(getStartLocation(loc2, openerLength), `Unterminated ${label}.`, severity);
     }
   }
-  return obj;
-}
 
-/**
- * Make array from an array of [identifier | null, separator, location, option?].
- */
-function diagnoseListItems<T>(elements: [T, string, FileRange][], label: string, sepOption: number) {
-  const items: T[] = [];
-  for (let index = 0; index < elements.length; index++) {
-    const [item, sep, locEach] = elements[index];
-    if (!item) {
-      pushDiagnostic(locEach, `Expected ${label}.`);
-      continue;
-    }
-    items.push(item);
-
-    if (index === elements.length - 1) {
-      if (sep === ',') {
-        pushDiagnostic(locEach, 'Trailing comma not allowed.');
+  /**
+   * Report an error if the object is empty.
+   */
+  function diagnoseIfEmpty<T, U>(obj: T | null | undefined, label: string, alt?: U, loc?: FileRange, severity = DiagnosticSeverity.Error): T | U | null | undefined {
+    if (!obj || Array.isArray(obj) && obj.length === 0) {
+      const loc2 = loc === undefined ? location() : loc;
+      pushDiagnostic(loc2, `Expected ${label}.`, severity);
+      if (alt !== undefined) {
+        return alt;
       }
-    } else if (sepOption === 1 && sep !== ',') {
-      pushDiagnostic(locEach, 'Seprator must be a comma.');
-    } else if (sepOption === 2 && sep !== ' ') {
-      pushDiagnostic(locEach, 'Seprator must be a whitespace.');
+    }
+    return obj;
+  }
+
+  /**
+   * Make array from an array of [identifier | null, separator, location, option?].
+   */
+  function diagnoseListItems<T>(elements: [T, string, FileRange][], label: string, sepOption: number) {
+    const items: T[] = [];
+    for (let index = 0; index < elements.length; index++) {
+      const [item, sep, locEach] = elements[index];
+      if (!item) {
+        pushDiagnostic(locEach, `Expected ${label}.`);
+        continue;
+      }
+      items.push(item);
+
+      if (index === elements.length - 1) {
+        if (sep === ',') {
+          pushDiagnostic(locEach, 'Trailing comma not allowed.');
+        }
+      } else if (sepOption === 1 && sep !== ',') {
+        pushDiagnostic(locEach, 'Seprator must be a comma.');
+      } else if (sepOption === 2 && sep !== ' ') {
+        pushDiagnostic(locEach, 'Seprator must be a whitespace.');
+      }
+    }
+    return items;
+  }
+
+  /**
+   * Make Variable Declarators from an array of [identifier | null, separator, location, option?].
+   */
+  function makeDeclarators(elements: [any, string, FileRange, any][] | null, locAll: FileRange, label: string, allowsAssign: boolean) {
+    if (!elements || elements.length === 0) {
+      pushDiagnostic(locAll, `Expected at least one ${label}.`);
+      return [];
+    } else if (elements[elements.length - 1][1] === ',') {
+      pushDiagnostic(elements[elements.length - 1][2], `Trailing comma not allowed.`);
+    } else if (elements.some((item: [any, string, FileRange, any]) => item[3].init !== null)) {
+      if (!allowsAssign) {
+        pushDiagnostic(locAll, `Assignment not allowed.`);
+      } else if (elements.length > 1) {
+        pushDiagnostic(locAll, `Only one variable per statement can be declared and initialized.`);
+      }
+    }
+
+    const declarators: any[] = [];
+    for (const [identifier, separator, locEach, option] of elements) {
+      if (!identifier) {
+        pushDiagnostic(locEach, `Expected ${label}.`);
+        continue;
+      }
+      let obj = { type: 'VariableDeclarator', id: identifier, loc: locEach };
+      if (option) {
+        Object.assign(obj, option);
+      }
+      declarators.push(obj);
+    }
+    
+    return declarators;
+  }
+
+  /**
+   * Make a sequence expression from array.
+   * If an array is empty or null, null is returned.
+   * If an array has only one Expression, it returns the Expression itself (not array).
+   * If an array has two or more expressions, it returns a Sequence Expression containing the elements.
+   */
+  function makeSequenceExpression(elements: any[] | null) {
+    if (elements === null || elements.length === 0) {
+      return null;
+    } else if (elements.length === 1) {
+      return elements[0];
+    } else {
+      return { type: 'SequenceExpression', expressions: elements };
     }
   }
-  return items;
-}
 
-/**
- * Make Variable Declarators from an array of [identifier | null, separator, location, option?].
- */
-function makeDeclarators(elements: [any, string, FileRange, any][] | null, locAll: FileRange, label: string, allowsAssign: boolean) {
-  if (!elements || elements.length === 0) {
-    pushDiagnostic(locAll, `Expected at least one ${label}.`);
-    return [];
-  } else if (elements[elements.length - 1][1] === ',') {
-    pushDiagnostic(elements[elements.length - 1][2], `Trailing comma not allowed.`);
-  } else if (elements.some((item: [any, string, FileRange, any]) => item[3].init !== null)) {
-    if (!allowsAssign) {
-      pushDiagnostic(locAll, `Assignment not allowed.`);
-    } else if (elements.length > 1) {
-      pushDiagnostic(locAll, `Only one variable per statement can be declared and initialized.`);
+  /**
+   * Make nested expression for binary operation.
+   * head must be an expression. tails must be [string, any]
+   */
+  function getBinaryExpression(head: any, tails: [string, any][], type = 'BinaryExpression') {
+    return tails.reduce((accumulator: any, currentValue: any) => {
+      const [op, term] = currentValue;
+      return { type: type,  operator: op, left: accumulator, right: term, };
+    }, head);
+  }
+
+  /**
+   *
+   */
+  function testIfQuoteStarts(opener: string): boolean {
+    if (opener === '"' && (_quoteStack.includes('"') || _quoteStack.includes('\\"'))) {
+      return false;
+    } else if (opener === "'" && (_quoteStack.includes("'") || _quoteStack.includes("\\'"))) {
+      return false;
+    } else if (opener === '\\"' && _quoteStack.includes('\\"')) {
+      return false;
+    } else if (opener === "\\'" && _quoteStack.includes("\\'")) {
+      return false;
+    } else {
+      _quoteStack.push(opener);
+      return true;
     }
   }
 
-  const declarators: any[] = [];
-  for (const [identifier, separator, locEach, option] of elements) {
-    if (!identifier) {
-      pushDiagnostic(locEach, `Expected ${label}.`);
-      continue;
-    }
-    let obj = { type: 'VariableDeclarator', id: identifier, loc: locEach };
-    if (option) {
-      Object.assign(obj, option);
-    }
-    declarators.push(obj);
+  /**
+   * 
+   */
+  function testIfQuoteEnds(opener: string, closer: string | undefined): boolean {
+    const flag = (!closer || opener === closer);
+    if (flag) { _quoteStack.pop(); }
+    return flag;
   }
-  
-  return declarators;
-}
 
-/**
- * Make a sequence expression from array.
- * If an array is empty or null, null is returned.
- * If an array has only one Expression, it returns the Expression itself (not array).
- * If an array has two or more expressions, it returns a Sequence Expression containing the elements.
- */
-function makeSequenceExpression(elements: any[] | null) {
-  if (elements === null || elements.length === 0) {
-    return null;
-  } else if (elements.length === 1) {
-    return elements[0];
-  } else {
-    return { type: 'SequenceExpression', expressions: elements };
+  /**
+   *
+   */
+  function testIfEscapedCharIsAvailable(escapedChar: string): boolean {
+    return _quoteStack.every(quote => quote.length !== 2 || quote.substring(1, 2) !== escapedChar);
   }
-}
 
-/**
- * Make nested expression for binary operation.
- * head must be an expression. tails must be [string, any]
- */
-function getBinaryExpression(head: any, tails: [string, any][], type = 'BinaryExpression') {
-  return tails.reduce((accumulator: any, currentValue: any) => {
-    const [op, term] = currentValue;
-    return { type: type,  operator: op, left: accumulator, right: term, };
-  }, head);
-}
-
-/**
- *
- */
-function testIfQuoteStarts(opener: string): boolean {
-  if (opener === '"' && (_quoteStack.includes('"') || _quoteStack.includes('\\"'))) {
-    return false;
-  } else if (opener === "'" && (_quoteStack.includes("'") || _quoteStack.includes("\\'"))) {
-    return false;
-  } else if (opener === '\\"' && _quoteStack.includes('\\"')) {
-    return false;
-  } else if (opener === "\\'" && _quoteStack.includes("\\'")) {
-    return false;
-  } else {
-    _quoteStack.push(opener);
-    return true;
+  /**
+   *
+   */
+  function testIfUnescapedCharIsAvailable(unescapedChar: string): boolean {
+    return _quoteStack.every(quote => quote.length !== 1 || quote !== unescapedChar);
   }
-}
-
-/**
- * 
- */
-function testIfQuoteEnds(opener: string, closer: string | undefined): boolean {
-  const flag = (!closer || opener === closer);
-  if (flag) { _quoteStack.pop(); }
-  return flag;
-}
-
-/**
- *
- */
-function testIfEscapedCharIsAvailable(escapedChar: string): boolean {
-  return _quoteStack.every(quote => quote.length !== 2 || quote.substring(1, 2) !== escapedChar);
-}
-
-/**
- *
- */
-function testIfUnescapedCharIsAvailable(unescapedChar: string): boolean {
-  return _quoteStack.every(quote => quote.length !== 1 || quote !== unescapedChar);
-}
 }
 
 // # MAIN

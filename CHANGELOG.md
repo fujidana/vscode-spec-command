@@ -6,7 +6,7 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Changed
 
-- Update Node.js packages.
+- Update Node.js packages, including major updates of peggy (ver. 2 -> 3) and ts-pegjs (ver. 3 -> 4).
 - Raise the minimum VS Code version to 1.76.0.
 
 ## [1.8.3] -- 2022-12-29
