@@ -6,8 +6,11 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Changed
 
-- Update Node.js packages, including major updates of peggy (ver. 2 -> 3) and ts-pegjs (ver. 3 -> 4).
+## [1.8.4] -- 2023-04-17
+
+- Update Node.js packages, including peggy (ver. 2 -> 3) and ts-pegjs (ver. 3 -> 4).
 - Raise the minimum VS Code version to 1.76.0.
+- Modify the syntax parser slightly.
 
 ## [1.8.3] -- 2022-12-29
 
@@ -20,8 +23,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Fixed
 
-- overhaul syntax parser
-  - fix a handling of quotation mark in a comment line. See [Issue #9](https://github.com/fujidana/vscode-spec-command/issues/9#issue-1385913414)
+- Overhaul syntax parser
+  - Fix a handling of quotation mark in a comment line. See [Issue #9](https://github.com/fujidana/vscode-spec-command/issues/9#issue-1385913414)
 
 ## [1.8.1] -- 2022-08-30
 
@@ -388,7 +391,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
   - syntax highlighting
   - code snippets
 
-[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.3...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.4...HEAD
+[1.8.4]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.3...v1.8.4
 [1.8.3]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.2...v1.8.3
 [1.8.2]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.1...v1.8.2
 [1.8.1]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.0...v1.8.1

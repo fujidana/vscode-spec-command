@@ -203,7 +203,7 @@ variables:
   S:
     signature: S[]
     description: |-
-      is an array that will be filled with the hardware scaler contents when the command getcounts is executed.
+      is an array that will be filled with the hardware scaler contents when the command `getcounts` is executed.
   SPEC:
     signature: SPEC
     description: |-
