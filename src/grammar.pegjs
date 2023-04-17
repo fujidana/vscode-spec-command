@@ -216,19 +216,19 @@ Start =
 Eol 'end of line' = '\n' / '\r\n'
 Eof 'end of file' = !.
 LineComment 'line comment' =
-  @('#' p:$(
-    !Eol (
-      !QuotationMark .
-      /
-      q:. ! {return _quoteStack.includes(q); }
-    )
-  )* {
-    return { type: 'Line', value: p, loc: location(), };
-  }) (Eol / Eos0)
+  @(
+    '#' p:$(
+      !Eol (
+        !QuotationMark .
+        /
+        q:. !{ return _quoteStack.includes(q); }
+      )
+    )* { return { type: 'Line', value: p, loc: location(), }; }
+  ) (Eol / Eos0)
 
 QuotationMark 'quotation mark' = $('\\'? ('"' / "'"))
 
-Eos0 = Eof { } / & QuotationMark { } / & '}' { }
+Eos0 = Eof { } / &QuotationMark { } / &'}' { }
 Eos1 = Eol { } / LineComment / ';' ([ \t]* Eol)? { } 
 Eos 'end of statement' = Eos1  / Eos0
 
@@ -341,7 +341,7 @@ IfStmt 'if statement' =
   ) alt:(
     _0 'else' !Word _0 (Eol / LineComment)? @(
       stmt:NonemptyStmt? {
-        return diagnoseIfEmpty(stmt, 'an altanative clause in if-statement');
+        return diagnoseIfEmpty(stmt, 'an altenative clause in if-statement');
       }
     )
   )? {
@@ -457,9 +457,9 @@ MacroDef 'macro declaration' =
     }
   )?
   _0 body:(
-    opener:QuotationMark & { return testIfQuoteStarts(opener); }
+    opener:QuotationMark &{ return testIfQuoteStarts(opener); }
     _0 Eos? stmt:Stmt*
-    closer:QuotationMark? & { return testIfQuoteEnds(opener, closer); }
+    closer:QuotationMark? &{ return testIfQuoteEnds(opener, closer); }
     _0 Eos {
       diagnoseIfNotTerminated(closer, 'macro definition', opener.length);
       return stmt;
@@ -555,8 +555,8 @@ DataArrayDef 'data-array declaration' =
       declarations: makeDeclarators(items, location(), 'array identifier', true),
       kind: 'var',
       exType: 'data-array',
-      exScope: scope ? scope : undefined,
-      exUnit: unit ? unit : undefined,
+      exScope: scope ?? undefined,
+      exUnit: unit ?? undefined,
     };
   }
   /
@@ -601,6 +601,8 @@ DataArrayListItem =
   )? sep:ListSep? {
     if (!sizes || sizes.length === 0) {
       pushDiagnostic(location(), 'Array size must be sepcified.');
+    } else if (sizes.length > 2) {
+      pushDiagnostic(location(), 'Data array dimension must be 1 or 2.');
     }
     return [ id, sep, location(), { exSizes: sizes, init: init } ];
   }
@@ -893,6 +895,9 @@ IdentifierValidated =
  */
 LValue 'left value' =
   id:Identifier arrDims:(_0 @ArrayElem)* {
+    if (arrDims && arrDims.length > 2) {
+      pushDiagnostic(location(), 'Array dimension must be 1 or 2.');
+    }
     return arrDims.reduce((accumulator: any, currentValue: any) => {
       return {
         type: 'MemberExpression',
@@ -905,10 +910,10 @@ LValue 'left value' =
 
 ArrayElem =
   _0 '[' _0 item0:SlicableIndex? items1ToN:(
-    sep:CommaSep item:SlicableIndex? { return item ? item : NULL_LITERAL; }
+    sep:CommaSep item:SlicableIndex? { return item ?? NULL_LITERAL; }
   )* _0 closer:']'? {
     diagnoseIfNotTerminated(closer, 'bracket');
-    item0 = item0 ? item0 : NULL_LITERAL;
+    item0 = item0 ?? NULL_LITERAL;
     if (items1ToN && items1ToN.length > 0) {
       return {
         type: 'SequenceExpression',
@@ -926,7 +931,7 @@ ArrayElem =
  */
 SlicableIndex =
   ll:ExprMulti? _0 ':' _0 rr:ExprMulti? {
-    return { type: 'BinaryExpression', operator: ':', left: ll ? ll : NULL_LITERAL, right: rr ? rr : NULL_LITERAL, };
+    return { type: 'BinaryExpression', operator: ':', left: ll ?? NULL_LITERAL, right: rr ?? NULL_LITERAL, };
   }
   /
   ExprMulti
@@ -957,7 +962,7 @@ InvalidExpr =
  * e.g., "foo,\"bar\"\n123", \'foo\'
  */
 StringLiteral 'string literal' =
-  opener:QuotationMark & { return testIfQuoteStarts(opener); }
+  opener:QuotationMark &{ return testIfQuoteStarts(opener); }
   chars:(
     '\\' @(
       p:$([0-7][0-7]?[0-7]?) { return String.fromCharCode(parseInt(p, 8)); }
@@ -969,8 +974,8 @@ StringLiteral 'string literal' =
         return text();
       }
       /
-      // p:[abfnrt'"\\$\n] & { return testIfEscapedCharIsAvailable(p); }
-      p:. & { return testIfEscapedCharIsAvailable(p); } {
+      // p:[abfnrt'"\\$\n] &{ return testIfEscapedCharIsAvailable(p); }
+      p:. &{ return testIfEscapedCharIsAvailable(p); } {
         switch (p) {
           case 'a': return '\x07';
           case 'b': return '\b';
@@ -993,7 +998,7 @@ StringLiteral 'string literal' =
       }
     )
     /
-    r:[^\\] & { return testIfUnescapedCharIsAvailable(r); }
+    r:[^\\] &{ return testIfUnescapedCharIsAvailable(r); }
       {
         if (!testIfEscapedCharIsAvailable(r)) {
           pushDiagnostic(location(), 'Quotation symbol not allowed here.');
@@ -1001,7 +1006,7 @@ StringLiteral 'string literal' =
         return r;
       }
   )*
-  closer:QuotationMark? & { return testIfQuoteEnds(opener, closer); } {
+  closer:QuotationMark? &{ return testIfQuoteEnds(opener, closer); } {
     diagnoseIfNotTerminated(closer, 'string literal', opener.length);
     return { type: 'Literal', value: chars.join(''), raw: text(), };
   }
@@ -1122,7 +1127,7 @@ FunctionCall 'function call' =
       return args;
     }
   ) {
-    return { type: 'CallExpression', callee: expr, arguments: args ? args : [], };
+    return { type: 'CallExpression', callee: expr, arguments: args ?? [], };
   }
 
 
@@ -1395,7 +1400,7 @@ ExprForceSingle =
 /*
  * BNF> expression, expression
  * Though these are recursively defined as 'expression' in the Grammar Rules, 
- * the spec interpretter sometimes treats them differently.
+ * the spec interpreter sometimes treats them differently.
  * For example, a = 1, b = 2 can not be used for the test expression in if-clause
  * (though it is written "if (expression) statement" in the Grammar Rules).
  */
