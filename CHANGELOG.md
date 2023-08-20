@@ -4,6 +4,17 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+## [1.8.5] -- 2023-08-20
+
+### Changed
+
+- Update Node.js packages, including a vulnerable dependency.
+- Raise the minimum VS Code version to 1.78.0.
+
+### Fixed
+
+- hyphenation errors in API reference.
+
 ### Changed
 
 ## [1.8.4] -- 2023-04-17
@@ -23,7 +34,7 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Fixed
 
-- Overhaul syntax parser
+- Overhaul syntax parser.
   - Fix a handling of quotation mark in a comment line. See [Issue #9](https://github.com/fujidana/vscode-spec-command/issues/9#issue-1385913414)
 
 ## [1.8.1] -- 2022-08-30
@@ -391,7 +402,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
   - syntax highlighting
   - code snippets
 
-[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.4...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.5...HEAD
+[1.8.5]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.4...v1.8.5
 [1.8.4]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.3...v1.8.4
 [1.8.3]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.2...v1.8.3
 [1.8.2]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.1...v1.8.2
