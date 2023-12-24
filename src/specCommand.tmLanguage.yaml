@@ -500,6 +500,6 @@ repository:
         name: invalid.illegal.invalid-identifier.spec-command
   validation-pattern:
     patterns:
-      - match: '[a-zA-Z0-9_?*]+\Z'
+      - match: '(?:[a-zA-Z0-9_*?]|\[\^?(?:[a-zA-Z0-9_](?:\-[a-zA-Z0-9_])?)+\])+\Z'
       - match: .*
         name: invalid.illegal.invalid-pattern.spec-command

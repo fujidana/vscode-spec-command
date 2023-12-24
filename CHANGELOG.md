@@ -9,6 +9,11 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 - Update Node.js packages, including a vulnerable dependency.
 - Raise the minimum VS Code version to 1.85.0.
 
+### Fixed
+
+- Update syntax parser and syntax highlighting rules.
+  - Support the `[...]` pattern used in `lsdef`, etc (this syntax was added in __spec__ release 6.07).
+
 ## [1.8.5] -- 2023-08-20
 
 ### Changed
@@ -18,14 +23,17 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Fixed
 
-- hyphenation errors in API reference.
-
-### Changed
+- hyphenation errors in API reference
 
 ## [1.8.4] -- 2023-04-17
 
+### Changed
+
 - Update Node.js packages, including peggy (ver. 2 -> 3) and ts-pegjs (ver. 3 -> 4).
 - Raise the minimum VS Code version to 1.76.0.
+
+### Fixed
+
 - Modify the syntax parser slightly.
 
 ## [1.8.3] -- 2022-12-29
@@ -40,7 +48,7 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 ### Fixed
 
 - Overhaul syntax parser.
-  - Fix a handling of quotation mark in a comment line. See [Issue #9](https://github.com/fujidana/vscode-spec-command/issues/9#issue-1385913414)
+  - Fix the handling of quotation mark in a comment line. See [Issue #9](https://github.com/fujidana/vscode-spec-command/issues/9#issue-1385913414)
 
 ## [1.8.1] -- 2022-08-30
 
@@ -57,7 +65,7 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Added
 
-- Overhaul a feature to navigate symbols in an editor.
+- Overhaul the feature to navigate symbols in an editor.
   - A comment line that starts with either `# MARK:`, `# TODO:`, or `# FIXME:` are treated as a breadcrumb item.
   - Symbols in an editor are now displayed hierarchically in breadcrumb navigation. Previously they were flat.
   - Breadcrumbs of data-array (e.g., `float array myarray[32]`) now have a different icon from other local variables.
@@ -111,13 +119,9 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [1.7.0] -- 2021-09-14
 
-### Added
-
-- Adapt for a web extension. The extension becomes available in Visual Studio Codespaces (VS Code for the Web).
-
 ### Changed
 
-- Migrate the extension to use webpack.
+- Adapt for a web extension, including migration of transpilation process to webpack. The extension now works both on the Visual Studio Code (desktop version) and on Visual Studio Codespaces (VS Code for the Web).
 
 ## [1.6.0] -- 2021-08-31
 
