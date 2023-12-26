@@ -113,14 +113,14 @@ repository:
               "1": { name: storage.type.function.spec-command }
               "2": { patterns: [{ include: "#list-function-id" }] }
           - ### usage: (local|global|shared)? (<type>)? array <identifier>\[<expression>\]\[<expression>\];
-            match: \b(?:(local|global|shared)\s+)?(?:(float|double|string|u?(?:byte|short|long(?:64)?))\s+)?(array)\s+(\S.*?)(?=$|;|#|"""|}|')
+            match: \b(?:(local|global|shared)\s+)?(?:(float|double|string|u?(?:byte|short|long(?:64)?))\s+)?(array)\s+(.+?)(?=$|;|#|"""|}|')
             captures:
               "1": { name: storage.modifier.access.data-array.spec-command }
               "2": { name: storage.modifier.data-type.data-array.spec-command }
               "3": { name: storage.type.data-array.spec-command }
               "4": { patterns: [{ include: "#list-array-declared" }] }
           - ### usage: extern shared array <spec-identifier>:<id-number>:<array-identifier>;
-            match: \b(extern)\s+(shared)\s+(array)\s+(\S.*?)(?=$|;|#|"""|}|')
+            match: \b(extern)\s+(shared)\s+(array)\s+(.+?)(?=$|;|#|"""|}|')
             captures:
               "1": { name: storage.modifier.extern.data-array.spec-command }
               "2": { name: storage.modifier.access.data-array.spec-command }
@@ -135,12 +135,12 @@ repository:
             end: (?=$|;|#|"""|}|')
             patterns: [{ include: "#expression-single" }]
           - ### (local|global|unglobal) <identifier-list>
-            match: \b(local|global|unglobal)\s+(\S.*?)(?=$|;|#|"""|}|')
+            match: \b(local|global|unglobal)\s+(.+?)(?=$|;|#|"""|}|')
             captures:
               "1": { name: storage.type.variable.spec-command }
               "2": { patterns: [{ include: "#list-variable-declared" }] }
           - ### delete <assoc-elem-list>; delete <accos-array>
-            match: \b(delete)\s+(\S.*?)(?=$|;|#|"""|}|')
+            match: \b(delete)\s+(.+?)(?=$|;|#|"""|}|')
             captures:
               "1": { name: support.function.built-in.macro.spec-command }
               "2": { patterns: [{ include: "#list-array-delete" }] }
@@ -150,11 +150,16 @@ repository:
             match: \b(memstat|savstate|reconfig|getcounts|move_(?:all|cnt)|sync)\s*(?=$|;|#|"""|}|')
             captures:
               "1": { name: support.function.built-in.macro.spec-command }
-          - ### usage: (lscmd|lsdef|prdef|syms) [<pattern> ...]
-            match: \b(ls(?:cmd|def)|prdef|syms)(?:\s*|\s+(.+?))(?=$|;|#|"""|}|')
+          - ### usage: (lscmd|lsdef|prdef) [<pattern> ...]
+            match: \b(ls(?:cmd|def)|prdef)(?:\s*|\s+(.+?))(?=$|;|#|"""|}|')
             captures:
               "1": { name: support.function.built-in.macro.spec-command }
               "2": { patterns: [{ include: "#list-pattern" }] }
+          - ### usage: syms [-v] [+|-BGLADNSICW] [<pattern> ...]
+            match: \b(syms)(?:\s*|\s+(.+?))(?=$|;|#|"""|}|')
+            captures:
+              "1": { name: support.function.built-in.macro.spec-command }
+              "2": { patterns: [{ include: "#list-syms-pattern" }] }
           - ### usage: (print|eprint) <expression-list>
             begin: \b(print|eprint)\b
             beginCaptures:
@@ -474,7 +479,7 @@ repository:
         }
       "6": { name: punctuation.id-separator.spec-command }
   list-pattern: # comma is not allowed as the seprator
-    match: (\S+)(\s|$)
+    match: (\S+)(?:\s+|$)
     captures:
       "1":
         {
@@ -482,6 +487,18 @@ repository:
           patterns: [{ include: "#validation-pattern" }],
         }
       # '2': {name: punctuation.pattern-separator.spec-command}
+  list-syms-pattern:
+    patterns:
+      - match: ([\+\-][a-zA-Z]+)(?:\s+|$)
+        captures:
+          "1": { name: constant.other.option.spec-command }
+      - match: (\S+)(?:\s+|$)
+        captures:
+          "1":
+            {
+              name: entity.name.pattern.spec-command,
+              patterns: [{ include: "#validation-pattern" }],
+            }
   validation-id:
     patterns:
       - match: "\\b(\

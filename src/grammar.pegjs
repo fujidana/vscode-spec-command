@@ -39,8 +39,13 @@
   /**
    * Return a new range object whose 'end' is moved to the 'start' location.
    */
-  function getStartLocation(loc?: FileRange, length: number = 0) {
+  function getStartLocation(loc?: FileRange, length: number = 0, offset: number = 0) {
     const loc2 = loc === undefined ? location() : { ...loc };
+    if (offset !== 0) {
+      loc2.start = { ...loc2.start };
+      loc2.start.offset += offset;
+      loc2.start.column += offset;
+    }
     if (length === 0) {
       loc2.end = loc2.start;
     } else {
@@ -252,6 +257,16 @@ ListSep =
   _0 ',' _0 { return ','; } / _1 { return ' '; }
 CommaSep =
   _0 ',' _0 { return ','; }
+
+sepSpaceOnly =
+  _0 ',' _0 {
+    pushDiagnostic(location(), 'Seprator must be whitespace(s).');
+    return ',';
+  }
+  /
+  _1 {
+    return ' ';
+  }
 
 // # STATEMENTS
  
@@ -745,41 +760,67 @@ AssocElemListItem =
  * <BNF> prdef pattern-list-opt [;]
  */
 PatternStmt =
-  name:('lscmd' / 'lsdef' / 'prdef' / 'syms') !Word _0 items:PatternListItem* _0 Eos {
-    let nodes: any[] = [];
-    if (items && items.length > 0) {
-      nodes = diagnoseListItems(items, 'pattern', 2);
-    }
+  name:('lscmd' / 'lsdef' / 'prdef') items:(
+    _0 Eos { return null; }
+    /
+    _1 @PatternValidated|1.., _1| _1? Eos
+  ) {
     return {
       type: 'MacroStatement',
       callee: { type: 'Identifier', name: name, },
-      arguments: nodes,
+      arguments: items,
     };
   }
-
-PatternListItem =
-  node:PatternValidated sep:ListSep? {
-    return [node, sep, location()];
-  }
   /
-  sep:ListSep {
-    return [undefined, sep, location()];
+  name:'syms' items:(
+    _0 Eos { return null; }
+    /
+    _1 @PatternValidated2|1.., _1| _0 Eos
+  ) {
+    return {
+      type: 'MacroStatement',
+      callee: { type: 'Identifier', name: name, },
+      arguments: items,
+    };
   }
 
 PatternValidated =
   MacroArgument
   /
   p:StringLiteral {
-    pushDiagnostic(location(), 'Expected a pattern.');
+    pushDiagnostic(location(), 'Expected a symbol name.');
     return p;
   }
   /
-  (!__ !Eos .)+ {
-    if (!_patternRegExp.test(text())) {
-      pushDiagnostic(location(), 'Expected a pattern.');
+  p:$(!__ !Eos .)+ {
+    if (!_patternRegExp.test(p)) {
+      pushDiagnostic(location(), 'Expected a symbol name.');
     }
-    return { type: 'literal', value: text(), raw: text(), };
+    return { type: 'literal', value: p, raw: p, };
   }
+
+PatternValidated2 =
+  p:[-+] q:$(!__ !Eos .)+ {
+    const loc = location();
+    if (!/^[a-zA-Z]+$/.test(q)) {
+      pushDiagnostic(loc, 'Invalid optional parameter.');
+    } else if (p === '-') {
+      const matches = q.matchAll(/[^vBGLADNSICWM]+/g);
+      for (const match of matches) {
+        const loc2 = getStartLocation(loc, match[0].length, match.index + 1);
+        pushDiagnostic(loc2, 'Unknown optional parameter.', DiagnosticSeverity.Warning);
+      }
+    } else if (p === '+') {
+      const matches = q.matchAll(/[^BGLADNSICWM]+/g);
+      for (const match of matches) {
+        const loc2 = getStartLocation(loc, match[0].length, match.index + 1);
+        pushDiagnostic(loc2, 'Unknown optional parameter.', DiagnosticSeverity.Warning);
+      }
+    }
+    return { type: 'literal', value: q, raw: q, };
+  }
+  /
+  PatternValidated
 
 /**
  * <BNF> memstat [;]

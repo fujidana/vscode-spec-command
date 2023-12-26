@@ -12,7 +12,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 ### Fixed
 
 - Update syntax parser and syntax highlighting rules.
-  - Support the `[...]` pattern used in `lsdef`, etc (this syntax was added in __spec__ release 6.07).
+  - Support the `[...]` pattern used in several built-in commands such as `lsdef`. This syntax was added in __spec__ release 6.07.
+  - Support optional parameters of built-in `syms` command such as `-v`.
 
 ## [1.8.5] -- 2023-08-20
 
@@ -121,7 +122,7 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Changed
 
-- Adapt for a web extension, including migration of transpilation process to webpack. The extension now works both on the Visual Studio Code (desktop version) and on Visual Studio Codespaces (VS Code for the Web).
+- Adapt for a web extension, including migration of transpiler to webpack. The extension now works both on the Visual Studio Code (desktop version) and on Visual Studio Codespaces (VS Code for the Web).
 
 ## [1.6.0] -- 2021-08-31
 
