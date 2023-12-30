@@ -4,6 +4,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+## [1.8.6] -- 2023-12-30
+
 ### Changed
 
 - Update Node.js packages, including a vulnerable dependency.
@@ -413,7 +415,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
   - syntax highlighting
   - code snippets
 
-[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.5...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.6...HEAD
+[1.8.6]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.5...v1.8.6
 [1.8.5]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.4...v1.8.5
 [1.8.4]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.3...v1.8.4
 [1.8.3]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.2...v1.8.3
