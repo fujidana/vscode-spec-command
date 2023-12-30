@@ -14,6 +14,7 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 - Update syntax parser and syntax highlighting rules.
   - Support the `[...]` pattern used in several built-in commands such as `lsdef`. This syntax was added in __spec__ release 6.07.
   - Support optional parameters of built-in `syms` command such as `-v`.
+- Change the category of built-in imutable symbols from variable to constant. Previously `PI` was the only built-in constant and all the other built-in symbols were variables.
 
 ## [1.8.5] -- 2023-08-20
 
