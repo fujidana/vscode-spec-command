@@ -4,6 +4,10 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+### Added
+
+- built-in symbols introduced by recent __spec__ versions (`STATE_FILE`, `argv[]`, `queue()`) into the IntelliSense database
+
 ## [1.8.6] -- 2023-12-30
 
 ### Changed
@@ -192,8 +196,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Added
 
-- built-in symbols introduced in recent __spec__ versions into the IntelliSense database
-- syntaxes built-in symbols introduced in recent __spec__ versions into syntax highlighting rules and diagnostics:
+- built-in symbols introduced by recent __spec__ versions into the IntelliSense database
+- syntaxes built-in symbols introduced by recent __spec__ versions into syntax highlighting rules and diagnostics:
   - initialization of associative arrays without specifying the array index (__spec__ 6.05.03), e.g., `testarray = [ 123, 456, "testing"]`
   - initialization of 2D associative arrays (__spec__ 6.06.01), e.g. `testarray = [ 1:2:"item", 2:3:"item2" ]`
   - assignment of global and local variables at declaration (__spec__ 6.09.10): e.g., `local tmp[] = [ 1, 2, 3 ]; global VAR = 1.234;`

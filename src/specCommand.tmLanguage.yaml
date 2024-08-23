@@ -208,7 +208,14 @@ repository:
         beginCaptures:
           "1":
             patterns:
-              - match: \b(?:chdir|get(?:env|help|val|sval|line|_history)|time|unix|date|file_info|whatis|calc|eval2?|spec_(?:par|menu)|sleep|open|close|on|off|dofile|qdofile|input|yesno|printf|eprintf|fprintf|tty_(?:cntl|move|fmt)|cdef|clone|strdef|exp(?:10)?|log(?:10)?|pow|srand|rand|sqrt|int|fabs|cos|sin|tan|a(?:cos|sin|tan|tan2)|index|split|sub(?:str)?|length|sprintf|sscanf|rsplit|gsub|gensub|match|to(?:lower|upper)|asc|bcd|dcb|deg|rad|array_(?:dump|read|pipe|plot|copy|op|fit)|plot_(?:cntl|move|range)|splot_cntl|fmt_(?:read|write|close)|h5_(?:attr|file|link|data)|prop_(?:send|watch|get|put)|remote_(?:cmd|eval|async|poll|stat|par)|encode|decode|data_(?:grp|info|nput|get|dump|read|pipe|plot|put|fit|uop|bop|anal)|motor_(?:mne|name|num|par)|read_motors|dial|chg_dial|get_lim|move_info|user|chg_offset|set_lim|mcount|tcount|cnt_(?:mne|name|num)|counter_par|set_sim|wait|stop|mca_(?:par|get|put|sel|spar|sget|sput)|image_(?:par|get|put)|taco_(?:io|db|dc)|tango_(?:io|get|put|db)|epics_(?:par|get|put)|em_io|madoca_io|rpi_io|sock_(?:par|get|put)|ser_(?:par|get|put)|gpib_(?:par|get|put|poll|cntl)|vme_(?:move|get(?:32)?|put(?:32)?)|port_(?:getw?|putw?)|vxi11_(?:par|get|put)|fbus_(?:get|put)|ca_(?:cntl|get|put|fna))\b
+              - match: "\\b(\
+                  chdir|unix|time|date|get(?:env|help|val|sval|line|_history)|file_info|eval2?|sleep|whatis|spec_(?:par|menu)|calc|open|close|on|off|queue|dofile|qdofile|input|yesno|printf|eprintf|fprintf|tty_(?:cntl|move|fmt)|\
+                  cdef|clone|strdef|\
+                  exp(?:10)?|log(?:10)?|sqrt|fabs|int|pow|rand|srand|sin|cos|tan|a(?:sin|cos|tan2?)|index|split|sub(?:str)?|length|sprintf|sscanf|to(?:lower|upper)|rsplit|gsub|gensub|match|asc|bcd|dcb|deg|rad|\
+                  array_(?:dump|copy|read|pipe|plot|fit|op)|plot_(?:cntl|move|range)|splot_cntl|data_(?:grp|info|get|put|nput|uop|anal|read|fit|plot|dump|pipe|bop)|fmt_(?:read|write|close)|prop_(?:send|watch|get|put)|remote_(?:cmd|eval|async|poll|stat|par)|encode|decode|\
+                  motor_(?:mne|name|num|par)|dial|read_motors|move_info|chg_(?:dial|offset)|get_lim|user|set_lim|mcount|tcount|cnt_(?:mne|name|num)|counter_par|set_sim|wait|stop|\
+                  mca_(?:par|get|put|sel|spar|sget|sput)|image_(?:par|get|put)|sock_(?:par|get|put)|ser_(?:par|get|put)|gpib_(?:par|get|put|poll|cntl)|vme_(?:move|get(?:32)?|put(?:32)?)|port_(?:getw?|putw?)|ca_(?:cntl|get|put|fna)|taco_(?:io|db|dc)|tango_(?:io|get|put|db)|epics_(?:par|get|put)|vxi11_(?:par|get|put)|h5_(?:attr|file|link|data)|fbus_(?:get|put)|em_io|madoca_io|rpi_io\
+                  )\\b"
                 name: support.function.built-in.function.spec-command
               - match: .+
                 name: entity.name.function.spec-command
@@ -236,9 +243,9 @@ repository:
         patterns:
           - match: \b(PI)\b
             name: support.constant.spec-command
-          - match: \b(OUTFILES|CCDS|COUNTERS|CWD|DISPLAY|EVAL_(?:ERR|RESULT)|FRESH|GETLINE_EOF|HOME|HOSTNAME|IS_SERVER|MCAS|MOTORS|SPEC(?:D|_PID)?|USER|VERSION|HDF5_VERSION)\b
+          - match: \b(OUTFILES|CCDS|COUNTERS|CWD|DISPLAY|EVAL_(?:ERR|RESULT)|FRESH|GETLINE_EOF|HISTCMD|HOME|HOSTNAME|IS_SERVER|MCAS|MOTORS|SPEC(?:D|_PID)?|STATE_FILE|USER|VERSION|HDF5_VERSION)\b
             name: support.variable.readonly.spec-command
-          - match: \b(A|S|DEBUG|HDW_ERR|DISPLAY|TERM|GTERM|ROWS|COLS|HDF5_ERROR_MODE|argc)\b
+          - match: \b(A|S|DEBUG|HDW_ERR|DISPLAY|TERM|GTERM|ROWS|COLS|HDF5_ERROR_MODE|argc|argv|arg[0-9]+)\b
             name: support.variable.readwrite.spec-command
           - match: \$(#|\*|[0-9]+) # max 25 arguments
             name: variable.other.argument.spec-command
@@ -502,14 +509,19 @@ repository:
   validation-id:
     patterns:
       - match: "\\b(\
-          def|rdef|undef|constant|local|global|unglobal|\
-          shared|extern|float|double|string|u?(?:byte|short|long(?:64)?)|array|delete|\
+          def|rdef|constant|local|global|un(?:def|global)|delete|shared|extern|array|\
+          float|double|string|u?(?:byte|short|long(?:64)?)|\
           if|else|while|for|in|break|continue|exit|return|quit|\
           memstat|savstate|reconfig|getcounts|move_(?:all|cnt)|sync|ls(?:cmd|def)|prdef|syms|print|eprint|history|\
-          chdir|get(?:env|help|val|sval|line|_history)|time|unix|date|file_info|whatis|calc|eval2?|spec_(?:par|menu)|sleep|open|close|on|off|dofile|qdofile|input|yesno|printf|eprintf|fprintf|tty_(?:cntl|move|fmt)|cdef|clone|strdef|exp(?:10)?|log(?:10)?|pow|srand|rand|sqrt|int|fabs|cos|sin|tan|a(?:cos|sin|tan|tan2)|index|split|sub(?:str)?|length|sprintf|sscanf|rsplit|gsub|gensub|match|to(?:lower|upper)|asc|bcd|dcb|deg|rad|array_(?:dump|read|pipe|plot|copy|op|fit)|plot_(?:cntl|move|range)|splot_cntl|fmt_(?:read|write|close)|h5_(?:attr|file|link|data)|prop_(?:send|watch|get|put)|remote_(?:cmd|eval|async|poll|stat|par)|encode|decode|data_(?:grp|info|nput|get|dump|read|pipe|plot|put|fit|uop|bop|anal)|motor_(?:mne|name|num|par)|read_motors|dial|chg_dial|get_lim|move_info|user|chg_offset|set_lim|mcount|tcount|cnt_(?:mne|name|num)|counter_par|set_sim|wait|stop|mca_(?:par|get|put|sel|spar|sget|sput)|image_(?:par|get|put)|taco_(?:io|db|dc)|tango_(?:io|get|put|db)|epics_(?:par|get|put)|em_io|madoca_io|rpi_io|sock_(?:par|get|put)|ser_(?:par|get|put)|gpib_(?:par|get|put|poll|cntl)|vme_(?:move|get(?:32)?|put(?:32)?)|port_(?:getw?|putw?)|vxi11_(?:par|get|put)|fbus_(?:get|put)|ca_(?:cntl|get|put|fna)|\
+          chdir|unix|time|date|get(?:env|help|val|sval|line|_history)|file_info|eval2?|sleep|whatis|spec_(?:par|menu)|calc|open|close|on|off|queue|dofile|qdofile|input|yesno|printf|eprintf|fprintf|tty_(?:cntl|move|fmt)|\
+          cdef|clone|strdef|\
+          exp(?:10)?|log(?:10)?|sqrt|fabs|int|pow|rand|srand|sin|cos|tan|a(?:sin|cos|tan2?)|index|split|sub(?:str)?|length|sprintf|sscanf|to(?:lower|upper)|rsplit|gsub|gensub|match|asc|bcd|dcb|deg|rad|\
+          array_(?:dump|copy|read|pipe|plot|fit|op)|plot_(?:cntl|move|range)|splot_cntl|data_(?:grp|info|get|put|nput|uop|anal|read|fit|plot|dump|pipe|bop)|fmt_(?:read|write|close)|prop_(?:send|watch|get|put)|remote_(?:cmd|eval|async|poll|stat|par)|encode|decode|\
+          motor_(?:mne|name|num|par)|dial|read_motors|move_info|chg_(?:dial|offset)|get_lim|user|set_lim|mcount|tcount|cnt_(?:mne|name|num)|counter_par|set_sim|wait|stop|\
+          mca_(?:par|get|put|sel|spar|sget|sput)|image_(?:par|get|put)|sock_(?:par|get|put)|ser_(?:par|get|put)|gpib_(?:par|get|put|poll|cntl)|vme_(?:move|get(?:32)?|put(?:32)?)|port_(?:getw?|putw?)|ca_(?:cntl|get|put|fna)|taco_(?:io|db|dc)|tango_(?:io|get|put|db)|epics_(?:par|get|put)|vxi11_(?:par|get|put)|h5_(?:attr|file|link|data)|fbus_(?:get|put)|em_io|madoca_io|rpi_io|\
           PI|\
-          OUTFILES|CCDS|COUNTERS|CWD|DISPLAY|EVAL_(?:ERR|RESULT)|FRESH|GETLINE_EOF|HOME|HOSTNAME|IS_SERVER|MCAS|MOTORS|SPEC(?:D|_PID)?|USER|VERSION|HDF5_VERSION|\
-          A|S|DEBUG|HDW_ERR|DISPLAY|TERM|GTERM|ROWS|COLS|HDF5_ERROR_MODE|argc\
+          OUTFILES|CCDS|COUNTERS|CWD|DISPLAY|EVAL_(?:ERR|RESULT)|FRESH|GETLINE_EOF|HISTCMD|HOME|HOSTNAME|IS_SERVER|MCAS|MOTORS|SPEC(?:D|_PID)?|STATE_FILE|USER|VERSION|HDF5_VERSION|\
+          A|S|DEBUG|HDW_ERR|DISPLAY|TERM|GTERM|ROWS|COLS|HDF5_ERROR_MODE|argc|argv|arg[0-9]+\
           )\\b"
         name: invalid.illegal.reserved-identifier.spec-command
       - match: '[a-zA-Z_][a-zA-Z0-9_]*\Z'

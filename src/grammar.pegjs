@@ -13,11 +13,11 @@
 
   const _reservedKeywordRegExp = new RegExp(
     '^('
-    + 'def|rdef|constant|local|global|un(?:def|global)|delete|shared|extern|array'
-    + '|float|double|string|byte|short|long(?:64)?|u(?:byte|short|long(?:64)?)'
-    + '|if|else|while|for|in|break|continue|exit|return|quit'
-    + '|memstat|savstate|reconfig|getcounts|move_(?:all|cnt)|sync'
-    + '|ls(?:cmd|def)|prdef|syms'
+    + 'def|rdef|constant|local|global|un(?:def|global)|delete|shared|extern|array|'
+    + 'float|double|string|u?(?:byte|short|long(?:64)?)|'
+    + 'if|else|while|for|in|break|continue|exit|return|quit|'
+    + 'memstat|savstate|reconfig|getcounts|move_(?:all|cnt)|sync|ls(?:cmd|def)|prdef|syms'
+//    + '|print|eprint|history'
     + ')$'
   );
 

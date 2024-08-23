@@ -106,6 +106,8 @@ constants:
     comments: 'cited from [CSS spec help pages: chg6_09](https://www.certif.com/spec_help/chg6_09.html).'
     description: |-
       contains the process ID of the **spec** process.
+
+      (Added in spec release 6.09.05.)
   HISTCMD:
     signature: HISTCMD
     comments: 'cited from [CSS spec help pages: chg6_10](https://www.certif.com/spec_help/chg6_10.html).'
@@ -113,12 +115,24 @@ constants:
       is the command line history number.
       That is the name used for the same item in the standard bash and zsh shells.
       `HISTCMD` is used in the new standard `highlight` macro.
+
+      (Added in spec release 6.10.01.)
   HDF5_VERSION:
     signature: HDF5_VERSION
     comments: 'cited from [CSS spec help pages: hdf5](https://certif.com/spec_help/hdf5.html).'
     description: |-
-      Contains the HDF5 version used when compiling **spec**, as in "1.8.13".
+      contains the HDF5 version used when compiling **spec**, as in "1.8.13".
       Note, its value will not be set until the first call of one of the above functions.
+  STATE_FILE:
+    signature: STATE_FILE
+    comments: 'cited from [CSS spec help pages: chg6_12](https://www.certif.com/spec_help/chg6_12.html).'
+    description: |-
+      is set to the full path name of the user state file.
+      The `save_state` macro will use its value, which allows the macro to work even if **spec**
+      was invoked with the `-T` or `-U` flags, which create alternate tty or user names that are 
+      used to name the **spec** session's associated state file.
+
+      (Added in spec release 6.12.05.)
 
 variables:
   A:
@@ -262,12 +276,25 @@ variables:
       The default value is 1.
   argc:
     signature: argc
-    comments: 'cited from [CSS spec help pages: chg6_06](https://www.certif.com/spec_help/chg6_06.html).'
+    comments: 'cited from [CSS spec help pages: macros](https://www.certif.com/spec_help/macros.html).'
     description: |-
-      is the number of arguments used to invoke the macro function.
-      The additional variables `arg1`, `arg2`, etc., contain the values of arguments not included in the macro definition, but used in the macro invocation.
-      The argument number corresponds to the position of the argument.
-      If the macro definition defines an argument, there will be no new argument variable created for that position.
+      is a local variable brought into existence within the scope of a macro function.
+      The value of the variable `argc` is the number of arguments used to invoke the macro function.
+
+      The additional variables `arg1`, `arg2`, etc., represent the arguments, whether or not the arguments 
+      were explicitly declared in the macro definition. 
+      The argument number corresponds to the position of the argument, with the first argument being `arg1`.
+
+      (Added in spec release 6.06.11.)
+  argv:
+    signature: argv[]
+    comments: 'cited from [CSS spec help pages: macros](https://www.certif.com/spec_help/macros.html).'
+    description: |-
+      is a local associative array-like variable brought into existence within the scope of a macro function.
+      Elements are numbered starting from "1".
+      The `argv[]` symbol is similar to an associative array with the special property that in addition to number and string values, elements can be associative or data arrays to match the arguments by which the macro function was invoked.
+
+      (Added in spec release 6.12.01.)
 
 # Built-In Functions and Commands
 
@@ -577,6 +604,37 @@ functions:
       Turns off output to `filename`, but keeps it in the list of files available for output.
       If this was the last turned-on file or device, `tty` is turned back on automatically.
       Returns zero for success, −1 if the file wasn’t open.
+  queue:
+    signature: queue(cmd[, option])
+    comments: 'cited from [CSS spec help pages: queue](https://www.certif.com/spec_help/queue.html).'
+    description: |-
+      Schedules commands to be run once at a fixed time in the future or to repeat at an interval.
+      Commands from the queue will normally run while **spec** is waiting for keyboard input.
+      If **spec** is otherwise occupied commands in the queue will be deferred until the next opportunity **spec** has to check the queue.
+      However, a `queue("check")` can be issued within running statements to give commands that are due a chance to run.
+
+      (Added in spec release 6.11.03.)
+    overloads:
+    - signature: queue(cmd, interval)
+      description: |-
+        Schedules `cmd` to be run every interval seconds.
+    - signature: queue(cmd, epoch_time*)
+      description: |-
+        Schedules `cmd` to be run just once at `epoch_time`. The epoch time is the number of seconds from the UNIX epoch of 00:00 GMT 1/1/1970.
+    - signature: queue("list")
+      description: |-
+        Lists commands in the queue, sorted by next run time, along with the configured repetition interval.
+    - signature: queue("check")
+      description: |-
+        Runs commands that are due or overdue.
+    - signature: queue(cmd, "delete")
+      description: |-
+        Deletes `cmd` from the queue.
+        The argument `cmd` may contain the `*`, `?` and `[]` metacharacters.
+        A `*` matches any string, while a `?` matches any single character.
+        With the `[...]` pattern, any string that contains the characters within the square brackets is matched.
+        Two characters separated by a hyphen specify a range of characters that will match.
+        An initial `^` negates the enclosed character set.
 
   ### Reading From Files
 
@@ -989,7 +1047,8 @@ functions:
       If `count` is specified, only that many characters are converted.
       If `start` is specified, the conversion starts at that position, counted starting from 1.
       Returns the original string if no conversions are possible.
-      (Function added in **spec** release 6.08.05.)
+
+      (Added in **spec** release 6.08.05.)
     overloads:
     - signature: tolower(s)
     - signature: tolower(s, count)
@@ -1002,7 +1061,8 @@ functions:
       If `count` is specified, only that many characters are converted.
       If `start` is specified, the conversion starts at that position, counted starting from 1.
       Returns the original string if no conversions are possible.
-      (Function added in **spec** release 6.08.05.)
+
+      (Added in **spec** release 6.08.05.)
     overloads:
     - signature: toupper(s)
     - signature: toupper(s, count)
