@@ -8,7 +8,7 @@ repository:
     patterns:
       - match: \s+
       - match: ;
-        name: punctuation.statement.separator.spec-command
+        name: punctuation.terminator.statement.spec-command
       - include: "#comment"
       - include: "#docstring"
       - include: "#code-block"
@@ -21,44 +21,44 @@ repository:
       code-block:
         begin: \{
         beginCaptures:
-          "0": { name: punctuation.code-block.begin.spec-command }
+          "0": { name: punctuation.section.block.begin.spec-command }
         end: \}
         endCaptures:
-          "0": { name: punctuation.code-block.end.spec-command }
-        name: meta.code-block.spec-command
+          "0": { name: punctuation.section.block.end.spec-command }
+        name: meta.block.spec-command
         patterns: [{ include: "#statement" }]
       control:
         patterns:
           - begin: \b(if)\s*(\()
             beginCaptures:
-              "1": { name: keyword.control.branch.spec-command }
-              "2": { name: punctuation.branch-condition.begin.spec-command }
+              "1": { name: keyword.control.conditional.spec-command }
+              "2": { name: punctuation.section.paren.begin.spec-command }
             end: \)
             endCaptures:
-              "0": { name: punctuation.branch-condition.end.spec-command }
-            contentName: meta.branch-condition.spec-command
+              "0": { name: punctuation.section.paren.end.spec-command }
+            # contentName: meta.conditional.spec-command
             patterns: [{ include: "#expression-single" }]
           - match: \b(ifp|ifd)\b
-            name: keyword.control.branch.spec-command
+            name: keyword.control.conditional.spec-command
           - match: \belse\b
-            name: keyword.control.branch.spec-command
+            name: keyword.control.conditional.spec-command
           - begin: \b(for)\s*(\()
             beginCaptures:
-              "1": { name: keyword.control.flow.spec-command }
-              "2": { name: punctuation.flow-condition.begin.spec-command }
+              "1": { name: keyword.control.loop.spec-command }
+              "2": { name: punctuation.section.paren.begin.spec-command }
             end: \)
             endCaptures:
-              "0": { name: punctuation.flow-condition.end.spec-command }
-            contentName: meta.flow-condition.spec-command
+              "0": { name: punctuation.section.paren.end.spec-command }
+            # contentName: meta.loop.spec-command
             patterns: [{ include: "#for-condition" }]
           - begin: \b(while)\s*(\()
             beginCaptures:
-              "1": { name: keyword.control.flow.spec-command }
-              "2": { name: punctuation.flow-condition.begin.spec-command }
+              "1": { name: keyword.control.loop.spec-command }
+              "2": { name: punctuation.section.paren.begin.spec-command }
             end: \)
             endCaptures:
-              "0": { name: punctuation.flow-condition.end.spec-command }
-            contentName: meta.flow-condition.spec-command
+              "0": { name: punctuation.section.paren.end.spec-command }
+            # contentName: meta.loop.spec-command
             patterns: [{ include: "#expression-single" }]
           - match: \b(break|continue|exit)\s*(?=$|;|#|"""|}|')
             captures:
@@ -73,7 +73,7 @@ repository:
             patterns:
               - include: "#expression-multiple"
               - match: ;
-                name: punctuation.flow-condition.separator.spec-command
+                name: punctuation.terminator.for-loop.spec-command
             # - match: (?:(.+)\s+(in)\s+(.+))\s*(?=\))
             #   captures:
             # - match: .*?\s*(?=\))
@@ -82,56 +82,60 @@ repository:
         patterns:
           - ### usage: def <identifier> ' <statement> ';
             ### usage: def <identifier> ([<arg>...])'{ <statement> }';
-            begin: (def)\s+(\w+)(?:\s*(\()([^'"#)]*)(\)))?\s*(')
+            begin: ((def))\s+(\w+)(?:\s*(\()([^'"#)]*)(\)))?\s*(')
             beginCaptures:
               "1": { name: storage.type.function.spec-command }
-              "2": { name: entity.name.function.spec-command, patterns: [{ include: "#validation-id" }] }
-              "3": { name: punctuation.function-argument.begin.spec-command }
-              "4": { patterns: [{ include: "#func-param-ids" }] }
-              "5": { name: punctuation.function-argument.end.spec-command }
-              "6": { name: punctuation.function-body.begin.spec-command }
+              "2": { name: keyword.declaration.function.spec-command }
+              "3": { name: entity.name.function.spec-command, patterns: [{ include: "#validation-id" }] }
+              "4": { name: punctuation.section.parens.begin.spec-command }
+              "5": { patterns: [{ include: "#func-param-ids" }] }
+              "6": { name: punctuation.section.parens.end.spec-command }
+              "7": { name: punctuation.definition.function.begin.spec-command }
             end: (')\s*(.*?)(?=$|;|#|"""|}|')
             endCaptures:
-              "1": { name: punctuation.function-body.end.spec-command }
+              "1": { name: punctuation.definition.function.end.spec-command }
               "2": { name: invalid.illegal.syntax.spec-command }
-            contentName: meta.function-body.spec-command
+            contentName: meta.function.spec-command
             patterns: [{ include: "#statement" }]
           - ### usage: rdef <identifier> <expression>;
             ### usage: rdef <identifier> ([<arg>...]) <expression>;
-            begin: \b(rdef)\s+(\w+)(?:\s*(\()([^'"#)]*)(\)))?\s+
+            begin: \b((rdef))\s+(\w+)(?:\s*(\()([^'"#)]*)(\)))?\s+
             beginCaptures:
               "1": { name: storage.type.function.spec-command }
-              "2": { name: entity.name.function.spec-command, patterns: [{ include: "#validation-id" }] }
-              "3": { name: punctuation.function-argument.begin.spec-command }
-              "4": { patterns: [{ include: "#func-param-ids" }] }
-              "5": { name: punctuation.function-argument.end.spec-command }
+              "2": { name: keyword.declaration.function.spec-command }
+              "3": { name: entity.name.function.spec-command, patterns: [{ include: "#validation-id" }] }
+              "4": { name: punctuation.section.parens.begin.spec-command }
+              "5": { patterns: [{ include: "#func-param-ids" }] }
+              "6": { name: punctuation.section.parens.end.spec-command }
             end: (?=$|;|#|"""|}|')
             patterns: [{ include: "#expression-single" }]
           - ### usage: undef <identifier>[(,| )<identifier>...];
             match: \b(undef)\s+(\w.*)\s*(?=$|;|#|"""|}|')
             captures:
-              "1": { name: storage.type.function.spec-command }
+              "1": { name: support.function.macro.spec-command }
               "2": { patterns: [{ include: "#list-function-id" }] }
           - ### usage: (local|global|shared)? (<type>)? array <identifier>\[<expression>\]\[<expression>\];
-            match: \b(?:(local|global|shared)\s+)?(?:(float|double|string|u?(?:byte|short|long(?:64)?))\s+)?(array)\s+(.+?)(?=$|;|#|"""|}|')
+            match: \b(?:(local|global|shared)\s+)?(?:(float|double|string|u?(?:byte|short|long(?:64)?))\s+)?((array))\s+(.+?)(?=$|;|#|"""|}|')
             captures:
-              "1": { name: storage.modifier.access.data-array.spec-command }
-              "2": { name: storage.modifier.data-type.data-array.spec-command }
+              "1": { name: storage.modifier.data-array.spec-command }
+              "2": { name: storage.type.data-array.spec-command }
               "3": { name: storage.type.data-array.spec-command }
-              "4": { patterns: [{ include: "#list-array-declared" }] }
+              "4": { name: keyword.declaration.data-array.spec-command }
+              "5": { patterns: [{ include: "#list-array-declared" }] }
           - ### usage: extern shared array <spec-identifier>:<id-number>:<array-identifier>;
-            match: \b(extern)\s+(shared)\s+(array)\s+(.+?)(?=$|;|#|"""|}|')
+            match: \b(extern)\s+(shared)\s+((array))\s+(.+?)(?=$|;|#|"""|}|')
             captures:
-              "1": { name: storage.modifier.extern.data-array.spec-command }
-              "2": { name: storage.modifier.access.data-array.spec-command }
+              "1": { name: storage.modifier.data-array.spec-command }
+              "2": { name: storage.modifier.data-array.spec-command }
               "3": { name: storage.type.data-array.spec-command }
-              "4": { patterns: [{ include: "#list-extern-array"}] }
+              "4": { name: keyword.declaration.data-array.spec-command }
+              "5": { patterns: [{ include: "#list-extern-array"}] }
           - ### usage: constant identifier [=] expression
             begin: \b(constant)\s+(\S+)(?:\s*(=)\s*|\s+)
             beginCaptures:
               "1": { name: storage.type.constant.spec-command }
               "2": { name: variable.other.constant.spec-command, patterns: [{ include: "#validation-id" }] }
-              "3": { name: keyword.operator.arithmetic.assignment.spec-command }
+              "3": { name: keyword.operator.assignment.spec-command }
             end: (?=$|;|#|"""|}|')
             patterns: [{ include: "#expression-single" }]
           - ### (local|global|unglobal) <identifier-list>
@@ -142,41 +146,42 @@ repository:
           - ### delete <assoc-elem-list>; delete <accos-array>
             match: \b(delete)\s+(.+?)(?=$|;|#|"""|}|')
             captures:
-              "1": { name: support.function.built-in.macro.spec-command }
+              "1": { name: support.function.macro.spec-command }
               "2": { patterns: [{ include: "#list-array-delete" }] }
       builtin-macro:
         patterns:
           - ### usage: (memstat|savstate|reconfig|getcounts|move_all|move_cnt|sync)
             match: \b(memstat|savstate|reconfig|getcounts|move_(?:all|cnt)|sync)\s*(?=$|;|#|"""|}|')
             captures:
-              "1": { name: support.function.built-in.macro.spec-command }
+              "1": { name: support.function.macro.spec-command }
           - ### usage: (lscmd|lsdef|prdef) [<pattern> ...]
             match: \b(ls(?:cmd|def)|prdef)(?:\s*|\s+(.+?))(?=$|;|#|"""|}|')
             captures:
-              "1": { name: support.function.built-in.macro.spec-command }
+              "1": { name: support.function.macro.spec-command }
               "2": { patterns: [{ include: "#list-pattern" }] }
           - ### usage: syms [-v] [+|-BGLADNSICW] [<pattern> ...]
             match: \b(syms)(?:\s*|\s+(.+?))(?=$|;|#|"""|}|')
             captures:
-              "1": { name: support.function.built-in.macro.spec-command }
+              "1": { name: support.function.macro.spec-command }
               "2": { patterns: [{ include: "#list-syms-pattern" }] }
           - ### usage: (print|eprint) <expression-list>
             begin: \b(print|eprint)\b
             beginCaptures:
-              "1": { name: support.function.built-in.macro.spec-command }
+              "1": { name: support.function.macro.spec-command }
             end: (?=$|;|#|"""|}|')
             patterns: [{ include: "#expression-multiple" }]
           - ### usage: (history) N?
             begin: \bhistory\b
             beginCaptures:
-              "0": { name: support.function.built-in.macro.spec-command }
+              "0": { name: support.function.macro.spec-command }
             end: (?=$|;|#|"""|}|')
             patterns: [{ include: "#expression-single" }]
       macro-statement:
         patterns:
           - begin: \b([a-zA-Z_][A-Za-z0-9_]*)(?:\s*+(?=$|;|#|"""|}|')|\s++(?!\+|-|\*|/\/|%|>|<|=|&|\|))
             beginCaptures:
-              "1": { name: entity.name.function.macro.spec-command }
+              # "1": { name: variable.function.spec-command }
+              "1": { name: entity.name.function.spec-command }
             end: (?=$|;|#|"""|}|')
             patterns: [{ include: "#expression-single" }]
       expression-statement:
@@ -188,7 +193,7 @@ repository:
     patterns:
       - include: "#expression-single"
       - match: ","
-        name: punctuation.expression.separator.spec-command
+        name: punctuation.separator.spec-command
   expression-single:
     patterns:
       - include: "#expression-block"
@@ -216,29 +221,30 @@ repository:
                   motor_(?:mne|name|num|par)|dial|read_motors|move_info|chg_(?:dial|offset)|get_lim|user|set_lim|mcount|tcount|cnt_(?:mne|name|num)|counter_par|set_sim|wait|stop|\
                   mca_(?:par|get|put|sel|spar|sget|sput)|image_(?:par|get|put)|sock_(?:par|get|put)|ser_(?:par|get|put)|gpib_(?:par|get|put|poll|cntl)|vme_(?:move|get(?:32)?|put(?:32)?)|port_(?:getw?|putw?)|ca_(?:cntl|get|put|fna)|taco_(?:io|db|dc)|tango_(?:io|get|put|db)|epics_(?:par|get|put)|vxi11_(?:par|get|put)|h5_(?:attr|file|link|data)|fbus_(?:get|put)|em_io|madoca_io|rpi_io\
                   )\\b"
-                name: support.function.built-in.function.spec-command
+                name: support.function.function.spec-command
               - match: .+
+                # name: variable.function.spec-command
                 name: entity.name.function.spec-command
                 captures:
                   "0": { patterns: [{ include: "#validation-id" }] }
-          "2": { name: punctuation.definition.arguments.begin.spec-command }
+          "2": { name: punctuation.section.parens.begin.spec-command }
         end: \)
         endCaptures:
-          "0": { name: punctuation.definition.arguments.end.spec-command }
-        contentName: meta.function-argument.spec-command
+          "0": { name: punctuation.section.parens.end.spec-command }
+        # contentName: meta.function.parameters.spec-command
         patterns: [{ include: "#expression-single" }]
       # lvalue_w_uop:
       #   patterns:
       #     - match: (--|\+\+)([a-zA-Z_][a-zA-Z0-9_]*|\$[0-9]+)
       #       name: lvalue.increment-decrement.spec-command
       #       captures:
-      #         "1": { name:  keyword.operator.unary.arithmetic.increment-decrement.spec-command }
+      #         "1": { name:  keyword.operator.arithmetic.increment-decrement.spec-command }
       #         "2": { patterns: [{ include: "#lvalue" }] }
       #     - match: \b([a-zA-Z_][a-zA-Z0-9_]*|\$[0-9]+)(--|\+\+)
       #       name: lvalue.increment-decrement.spec-command
       #       captures:
       #         "1": { patterns: [{ include: "#lvalue" }] }
-      #         "2": { name: keyword.operator.unary.arithmetic.increment-decrement.spec-command }
+      #         "2": { name: keyword.operator.arithmetic.increment-decrement.spec-command }
       lvalue:
         patterns:
           - match: \b(PI)\b
@@ -247,8 +253,9 @@ repository:
             name: support.variable.readonly.spec-command
           - match: \b(A|S|DEBUG|HDW_ERR|DISPLAY|TERM|GTERM|ROWS|COLS|HDF5_ERROR_MODE|argc|argv|arg[0-9]+)\b
             name: support.variable.readwrite.spec-command
-          - match: \$(#|\*|[0-9]+) # max 25 arguments
-            name: variable.other.argument.spec-command
+          - match: \$([*@#$]|[0-9]+) # max 25 arguments
+            # name: variable.language.spec-command
+            name: constant.other.placeholder.spec-command
           - match: \b([a-zA-Z_][a-zA-Z0-9_]*)\b
             name: variable.other.readwrite.spec-command
             captures:
@@ -262,7 +269,7 @@ repository:
           - match: \b(?<!\.)(0)[0-7]+(?![\.\w])
             name: constant.numeric.integer.octal.spec-command
             captures:
-              "1": { name: keyword.other.integer.otcal.spec-command }
+              "1": { name: keyword.other.integer.octal.spec-command }
           - match: \b(?<!\.)(0|[1-9][0-9]*)(?![\.\w])
             name: constant.numeric.integer.decimal.spec-command
           - match: \b(?<!\.)[0-9]+(?:\.[0-9]*)?(?:(e|E)[+-]?[0-9]+)?(?![\.\w])
@@ -279,86 +286,95 @@ repository:
         patterns:
           - begin: \\"
             beginCaptures:
-              "0": { name: punctuation.string.begin.spec-command }
+              "0": { name: punctuation.definition.string.begin.spec-command }
             end: \\"
             endCaptures:
-              "0": { name: punctuation.string.end.spec-command }
+              "0": { name: punctuation.definition.string.end.spec-command }
             name: string.quoted.double.spec-command
             patterns:
-              - match: \\([abfnrt"$\\]|[0-7]{1,3}|\[(?:c(?:d|e)|do|ho|le|m(?:b|d|e|h|r)|nd|s(?:e|o)|u(?:e|p|s))\])
+              - match: \\'
                 name: constant.character.escape.spec-command
-              - match: \\.
-                name: invalid.illegal.unknown-escape.spec-command
+              - include: "#literal-string-common-pattern"
           - begin: \\'
             beginCaptures:
-              "0": { name: punctuation.string.begin.spec-command }
+              "0": { name: punctuation.definition.string.begin.spec-command }
             end: \\'
             endCaptures:
-              "0": { name: punctuation.string.end.spec-command }
+              "0": { name: punctuation.definition.string.end.spec-command }
             name: string.quoted.single.spec-command
             patterns:
-              - match: \\([abfnrt"$\\]|[0-7]{1,3}|\[(?:c(?:d|e)|do|ho|le|m(?:b|d|e|h|r)|nd|s(?:e|o)|u(?:e|p|s))\])
-                name: constant.character.escape.spec-command
-              - match: \\.
-                name: invalid.illegal.unknown-escape.spec-command
+              - match: \\"
+              - include: "#literal-string-common-pattern"
           - begin: '"'
             beginCaptures:
-              "0": { name: punctuation.string.begin.spec-command }
+              "0": { name: punctuation.definition.string.begin.spec-command }
             end: '"'
             endCaptures:
-              "0": { name: punctuation.string.end.spec-command }
+              "0": { name: punctuation.definition.string.end.spec-command }
             name: string.quoted.double.spec-command
             patterns:
-              - match: \\([abfnrt'"$\\]|[0-7]{1,3}|\[(?:c(?:d|e)|do|ho|le|m(?:b|d|e|h|r)|nd|s(?:e|o)|u(?:e|p|s))\])
+              - match: \\['"]
+                name: constant.character.escape.spec-command
+              - include: "#literal-string-common-pattern"
+        repository:
+          literal-string-common-pattern:
+            patterns:
+              - match: \\([abfnrt$\\]|[0-7]{1,3}|\[(?:c(?:d|e)|do|ho|le|m(?:b|d|e|h|r)|nd|s(?:e|o)|u(?:e|p|s))\])
                 name: constant.character.escape.spec-command
               - match: \\.
                 name: invalid.illegal.unknown-escape.spec-command
+              - match: "%(?:%|[-+ ]?(?:[0-9]*(?:\\.[0-9]+)?|\\*)[lhL]?[a-zA-Z]|\\.[0-9])"
+                name: constant.other.placeholder.spec-command
+              - match: \$([*@#$]|[0-9]+) # max 25 arguments
+                # name: variable.language.spec-command
+                name: constant.other.placeholder.spec-command
+
       expression-block:
         begin: \(
         beginCaptures:
-          "0": { name: punctuation.expression-block.begin.spec-command }
+          "0": { name: punctuation.section.parens.begin.spec-command }
         end: \)
         endCaptures:
-          "0": { name: punctuation.expression-block.end.spec-command }
-        name: meta.expression-block.spec-command
+          "0": { name: punctuation.section.parens.end.spec-command }
+        name: meta.parens.spec-command
         patterns: [{ include: "#expression-single" }]
       operator:
         patterns:
           - match: \bin\b
-            name: keyword.operator.binary.access-array-item.spec-command
+            name: keyword.operator.word.access-array-item.spec-command
           - match: --|\+\+
-            name: keyword.operator.unary.arithmetic.increment-decrement.spec-command
+            name: keyword.operator.arithmetic.increment-decrement.spec-command
           - match: (?:<<|>>|\||&|\^)=
             name: keyword.operator.assignment.bitwise.spec-command
           - match: <<|>>
-            name: keyword.operator.binary.bitwise.shift.spec-command
+            name: keyword.operator.bitwise.shift.spec-command
           - match: ==|!=|<=?|>=?
-            name: keyword.operator.binary.arithmetic.comparison.spec-command
+            name: keyword.operator.arithmetic.comparison.spec-command
           - match: "[-+*/%]?="
             name: keyword.operator.assignment.arithmetic.spec-command
           - match: "[-+*/%]"
-            name: keyword.operator.binary.arithmetic.four-operations.spec-command
+            name: keyword.operator.arithmetic.four-operations.spec-command
           - match: \|\||&&
-            name: keyword.operator.binary.logical.and-or.spec-command
+            name: keyword.operator.logical.and-or.spec-command
           - match: \||&|\^
-            name: keyword.operator.binary.bitwise.logical.spec-command
+            name: keyword.operator.bitwise.and-or-not.spec-command
           - match: "!"
-            name: keyword.operator.unary.logical.not.spec-command
+            name: keyword.operator.logical.not.spec-command
           - match: \~
-            name: keyword.operator.unary.bitwise.not.spec-command
+            name: keyword.operator.bitwise.not.spec-command
           - match: (@)([a-zA-Z_][a-zA-Z0-9_]*)\b
             captures:
-              "1": { name: keyword.operator.indirection.spec-command }
+              "1": { name: keyword.operator.other.indirection.spec-command }
               "2": { name: variable.other.indirection.spec-command, patterns: [{ include: "#validation-id" }] }
       array-access:
         patterns:
           - begin: \[
             beginCaptures:
-              "0": { name: punctuation.array.left.spec-command }
+              "0": { name:punctuation.section.brackets.begin.spec-command }
             end: \]
             endCaptures:
-              "0": { name: punctuation.array.right.spec-command }
-            name: meta.array.spec-command
+              "0": { name: punctuation.section.brackets.end.spec-command }
+            name: meta.brackets.spec-command
             patterns: [{ include: "#expression-single" }]
       invalid-word:
         patterns:
@@ -368,14 +384,14 @@ repository:
     match: (#).*$
     name: comment.line.number-sign.spec-command
     captures:
-      "1": { name: punctuation.comment.line.spec-command }
+      "1": { name: punctuation.definition.comment.line.spec-command }
   docstring:
     begin: '"""'
     beginCaptures:
-      "0": { name: punctuation.comment.docstring.begin.spec-command }
+      "0": { name: punctuation.definition.comment.docstring.begin.spec-command }
     end: '"""'
     endCaptures:
-      "0": { name: punctuation.comment.docstring.end.spec-command }
+      "0": { name: punctuation.definition.comment.docstring.end.spec-command }
     name: comment.block.documentation.spec-command #string.quoted.triple.spec-command
   func-param-ids:
     match: ([^,\s]+?)(?:\s*(,)\s*|\s+|$)
@@ -385,7 +401,7 @@ repository:
           name: variable.parameter.spec-command,
           patterns: [{ include: "#validation-id" }],
         }
-      "2": { name: punctuation.id-separator.spec-command }
+      "2": { name: punctuation.separator.spec-command }
   list-variable-declared:
     patterns:
       - begin: ([^,\s\[\]]+)\s*(?:(\[)\s*(\]))?\s*(=)\s*
@@ -395,12 +411,12 @@ repository:
               name: entity.name.variable.spec-command,
               patterns: [{ include: "#validation-id" }],
             }
-          "2": { name: punctuation.array.left.spec-command }
-          "3": { name: punctuation.array.right.spec-command }
-          "4": { name: keyword.operator.arithmetic.assignment.spec-command }
+          "2": { name: punctuation.section.brackets.begin.spec-command }
+          "3": { name: punctuation.section.brackets.end.spec-command }
+          "4": { name: keyword.operator.assignment.spec-command }
         end: (?:\s*(,)\s*|\s+|$)
         endCaptures:
-          "1": { name: punctuation.id-separator.spec-command }
+          "1": { name: punctuation.separator.spec-command }
         # name: meta.variable-init.spec-command
         patterns: [{ include: "#expression-single" }]
       - match: ([^,\s\[\]]+)\s*(?:(\[)\s*(\]))?(?:\s*(,)\s*|\s+|$)
@@ -410,9 +426,9 @@ repository:
               name: entity.name.variable.spec-command,
               patterns: [{ include: "#validation-id" }],
             }
-          "2": { name: punctuation.array.left.spec-command }
-          "3": { name: punctuation.array.right.spec-command }
-          "4": { name: punctuation.id-separator.spec-command }
+          "2": { name: punctuation.section.brackets.begin.spec-command }
+          "3": { name: punctuation.section.brackets.end.spec-command }
+          "4": { name: punctuation.separator.spec-command }
   list-function-id:
     match: ([^,\s]+?)(?:\s*(,)\s*|\s+|$)
     captures:
@@ -421,7 +437,7 @@ repository:
           name: entity.name.function.spec-command,
           patterns: [{ include: "#validation-id" }],
         }
-      "2": { name: punctuation.id-separator.spec-command }
+      "2": { name: punctuation.separator.spec-command }
   list-array-delete: # e.g., arr_a[(2+3)], arr_b["abc"]["def"]
     patterns:
       - begin: ([^,\s]+?)\s*(?=\[)(?!\[\s*\])
@@ -433,7 +449,7 @@ repository:
             }
         end: (?<=\])(?:\s*(,)\s*|\s+|$)
         endCaptures:
-          "1": { name: punctuation.list.separator.spec-command }
+          "1": { name: punctuation.separator.spec-command }
         patterns: [{ include: "#expression-single" }]
       - match: (\w+)(?:\s*(,)\s*|\s+|$)
         patterns: [{ include: "#validation-id" }]
@@ -446,17 +462,17 @@ repository:
               name: entity.name.variable.array.spec-command,
               patterns: [{ include: "#validation-id" }],
             }
-          "2": { name: punctuation.array.left.spec-command }
+          "2": { name: punctuation.section.brackets.begin.spec-command }
           "3": { patterns: [{ include: "#expression-single" }] }
-          "4": { name: punctuation.array.right.spec-command }
-          "5": { name: punctuation.array.left.spec-command }
+          "4": { name: punctuation.section.brackets.end.spec-command }
+          "5": { name: punctuation.section.brackets.begin.spec-command }
           "6": { patterns: [{ include: "#expression-single" }] }
-          "7": { name: punctuation.array.right.spec-command }
-          "8": { name: keyword.operator.arithmetic.assignment.spec-command }
+          "7": { name: punctuation.section.brackets.end.spec-command }
+          "8": { name: keyword.operator.assignment.spec-command }
         end: (?:\s*(,)\s*|\s+|$)
         endCaptures:
-          "1": { name: punctuation.id-separator.spec-command }
-        name: meta.array-init.spec-command
+          "1": { name: punctuation.separator.spec-command }
+        # name: meta.array-init.spec-command
         patterns: [{ include: "#expression-single" }]
       - match: ([^,\s\[\]]+)\s*(?:(\[)([^\]]+)(\]))\s*(?:(\[)([^\]]+)(\]))?
         captures:
@@ -465,26 +481,27 @@ repository:
               name: entity.name.variable.array.spec-command,
               patterns: [{ include: "#validation-id" }],
             }
-          "2": { name: punctuation.array.left.spec-command }
+          "2": { name: punctuation.section.brackets.begin.spec-command }
           "3": { patterns: [{ include: "#expression-single" }] }
-          "4": { name: punctuation.array.right.spec-command }
-          "5": { name: punctuation.array.left.spec-command }
+          "4": { name: punctuation.section.brackets.end.spec-command }
+          "5": { name: punctuation.section.brackets.begin.spec-command }
           "6": { patterns: [{ include: "#expression-single" }] }
-          "7": { name: punctuation.array.right.spec-command }
-          "8": { name: punctuation.id-separator.spec-command }
-  list-extern-array: # e.g., spec:0:arr0, spec:arr1, arr2
+          "7": { name: punctuation.section.brackets.end.spec-command }
+          "8": { name: punctuation.separator.spec-command }
+  list-extern-array:
+    # e.g., spec:0:arr0, spec:arr1, arr2
     match: (?:(\w+?)(:)(?:(\d+)(:))?)?(\w+)(?:\s*(,)\s*|\s+|$)
     captures:
       "1": { name: entity.other.process-version.spec-command }
-      "2": { name: punctuation.extern.separator.spec-command }
+      "2": { name: punctuation.separator.extern-array.spec-command }
       "3": { name: entity.other.process-id.spec-command }
-      "4": { name: punctuation.extern.separator.spec-command }
+      "4": { name: punctuation.separator.extern-array.spec-command }
       "5":
         {
           name: entity.name.variable.array.spec-command,
           patterns: [{ include: "#validation-id" }],
         }
-      "6": { name: punctuation.id-separator.spec-command }
+      "6": { name: punctuation.separator.spec-command }
   list-pattern: # comma is not allowed as the seprator
     match: (\S+)(?:\s+|$)
     captures:
