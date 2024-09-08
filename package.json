@@ -66,6 +66,12 @@
 				"icon": "$(references)"
 			},
 			{
+				"command": "spec-command.previewAST",
+				"title": "Preview spec-command AST",
+				"category": "spec command",
+				"icon": "$(json)"
+			},
+			{
 				"command": "spec-command.execSelectionInTerminal",
 				"title": "Run Selction/Line in Active Terminal",
 				"category": "spec command",
@@ -82,6 +88,10 @@
 			"commandPalette": [
 				{
 					"command": "spec-command.openReferenceManual"
+				},
+				{
+					"command": "spec-command.previewAST",
+					"when": "editorLangId == spec-command"
 				},
 				{
 					"command": "spec-command.execSelectionInTerminal",

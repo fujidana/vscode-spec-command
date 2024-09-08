@@ -72,6 +72,25 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('spec-command');
         this.treeCollection = new Map();
 
+        const previewASTCallback = async () => {
+            const editor = vscode.window.activeTextEditor;
+            if (editor && editor.document.languageId === 'spec-command') {
+                try {
+                    const tree = parse(editor.document.getText());
+                    // const content = JSON.stringify(tree, null, 2);
+                    const content = JSON.stringify(tree, (key, value) => { return key === 'loc' ? undefined : value; }, 2);
+                    const document = await vscode.workspace.openTextDocument({ language: 'json', content: content });
+                    vscode.window.showTextDocument(document);
+                } catch (error) {
+                    if (error instanceof PeggySyntaxError) {
+                        vscode.window.showErrorMessage('Failed in parsing the current editor contents.');
+                    } else {
+                        vscode.window.showErrorMessage('Unknown error.');
+                    }
+                }
+            }
+        };
+
         // command to run selection in terminal
         const execSelectionInTerminalCommandCallback = () => {
             const terminal = vscode.window.activeTerminal;
@@ -251,6 +270,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
 
         context.subscriptions.push(
             // register command handlers
+            vscode.commands.registerCommand('spec-command.previewAST', previewASTCallback),
             vscode.commands.registerCommand('spec-command.execSelectionInTerminal', execSelectionInTerminalCommandCallback),
             vscode.commands.registerCommand('spec-command.execFileInTerminal', execFileInTerminalCommandCallback),
             // register document-event listeners
@@ -337,8 +357,6 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         const functionRefMap: lang.ReferenceMap = new Map();
 
         // const nestedNodes: string[] = [];
-
-        // console.log('<<<Scan start>>>', JSON.stringify(position, undefined, ""));
 
         estraverse.traverse(program, {
             enter: (currentNode, parentNode) => {
@@ -481,7 +499,6 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
             this.storageCollection.set(uriString, new Map());
             return false;
         }
-        // console.log(JSON.stringify(tree, null, 2));
 
         if (diagnoseProblems) {
             const diagnostics = program.exDiagnostics.map(item => new vscode.Diagnostic(lang.convertRange(item.location), item.message, item.severity));
