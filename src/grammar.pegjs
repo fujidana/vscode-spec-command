@@ -11,7 +11,7 @@
   const NULL_EXPRESSION = { type: 'NullExpression' };
   const NULL_LITERAL = { type: 'Literal', value: null, raw: 'null'};
 
-  const _reservedKeywordRegExp = new RegExp(
+  const RESERVED_KEYWORD_REGEXP = new RegExp(
     '^('
     + 'def|rdef|constant|local|global|un(?:def|global)|delete|shared|extern|array|'
     + 'float|double|string|u?(?:byte|short|long(?:64)?)|'
@@ -61,7 +61,7 @@
    */
   function diagnoseIfNotTerminated(closer: string | null | undefined, label: string, loc?: FileRange, openerLength = 1, severity = DiagnosticSeverity.Error) {
     if (!closer) {
-      const loc2 = loc === undefined ? location() : loc;
+      const loc2 = loc ?? location();
       pushDiagnostic(getStartLocation(loc2, openerLength), `Unterminated ${label}.`, severity);
     }
   }
@@ -71,7 +71,7 @@
    */
   function diagnoseIfEmpty<T, U>(obj: T | null | undefined, label: string, alt?: U, loc?: FileRange, severity = DiagnosticSeverity.Error): T | U | null | undefined {
     if (!obj || Array.isArray(obj) && obj.length === 0) {
-      const loc2 = loc === undefined ? location() : loc;
+      const loc2 = loc ?? location();
       pushDiagnostic(loc2, `Expected ${label}.`, severity);
       if (alt !== undefined) {
         return alt;
@@ -901,7 +901,7 @@ Identifier 'identifier' =
 StrictIdentifier =
   name:$([a-zA-Z_][a-zA-Z0-9_]*) {
     const loc = location();
-    if (_reservedKeywordRegExp.test(name)) {
+    if (RESERVED_KEYWORD_REGEXP.test(name)) {
       pushDiagnostic(loc, `${name} is a reserved keyword.`);
     // } else if (name === 'const') {
     //   pushDiagnostic(loc, `Using ${name} for \"constant\"?`, DiagnosticSeverity.Information);
@@ -949,27 +949,30 @@ LValue 'left value' =
     }, id);
   }
 
+/**
+ * Array access.
+ * respective item of the comma-separated index. It can be:
+ * - expression (index)
+ * - expression? : expression? (slice)
+ */
+
 ArrayElem =
-  _0 '[' _0 item0:SlicableIndex? items1ToN:(
-    sep:CommaSep item:SlicableIndex? { return item ?? NULL_LITERAL; }
-  )* _0 closer:']'? {
+  _0 '[' _0 items:(
+    item:(SlicableIndex)? { return item ?? NULL_LITERAL}
+  )|.., CommaSep| _0 closer:']'? {
     diagnoseIfNotTerminated(closer, 'bracket');
-    item0 = item0 ?? NULL_LITERAL;
-    if (items1ToN && items1ToN.length > 0) {
+    if (items.length === 0) {
+      return NULL_LITERAL;
+    } else if (items.length === 1) {
+      return items[0];
+    } else {
       return {
         type: 'SequenceExpression',
-        expressions: [item0, ...items1ToN],
+        expressions: items,
       };
-    } else {
-      return item0;
     }
   }
 
-/**
- * respective item of the comma-separated index. It can be:
- * - expression
- * - expression? : expression?
- */
 SlicableIndex =
   ll:ExprMulti? _0 ':' _0 rr:ExprMulti? {
     return { type: 'BinaryExpression', operator: ':', left: ll ?? NULL_LITERAL, right: rr ?? NULL_LITERAL, };
@@ -1088,17 +1091,12 @@ Exponent =
  * e.g., [var0, 1+2, "test"], ["foo": 0x12, "bar": var1]
  */
 ArrayLiteral 'array literal' =
-  '[' _0 item0:(
-    item:ArrayItem? {
+  '[' _0 items:(
+    (item:ArrayItem? {
       return diagnoseIfEmpty(item, 'an array element', NULL_LITERAL);
-    }
-  ) items1ToN:(
-    sep:CommaSep item:ArrayItem? {
-      return diagnoseIfEmpty(item, 'an array element', NULL_LITERAL);
-    }
-  )* _0 closer:']'? {
+    })|.., CommaSep|
+  ) _0 closer:']'? {
     diagnoseIfNotTerminated(closer, 'bracket');
-    const items = [item0, ...items1ToN];
     
     if (items.some((item: any) => item === NULL_LITERAL)) {
       return NULL_EXPRESSION;
@@ -1460,11 +1458,9 @@ ExprSingleList 'comma-separated expression list' =
   }
 
 ExprSingleListItem =
-  CommaSep @(
-    item:ExprForceSingle? {
-      return diagnoseIfEmpty(item, 'an expression', NULL_LITERAL);
-    }
-  )
+  CommaSep item:ExprForceSingle? {
+    return diagnoseIfEmpty(item, 'an expression', NULL_LITERAL);
+  }
 
 /**
  * Comma-separated expression list in which concatenation of the expressions is also allowed.
@@ -1480,8 +1476,6 @@ ExprMultiList 'comma-separated expression list' =
   }
 
 ExprMultiListItem =
-  CommaSep @(
-    item:ExprMulti? {
-      return diagnoseIfEmpty(item, 'an expression', NULL_LITERAL);
-    }
-  )
+  CommaSep item:ExprMulti? {
+    return diagnoseIfEmpty(item, 'an expression', NULL_LITERAL);
+  }
