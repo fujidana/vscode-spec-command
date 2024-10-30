@@ -4,9 +4,16 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+## [1.8.7] -- 2024-10-30
+
 ### Added
 
 - built-in symbols introduced by recent __spec__ versions (`STATE_FILE`, `argv[]`, `queue()`) into the IntelliSense database
+
+### Changed
+
+- Update Node.js packages, including a vulnerable dependency.
+- Raise the minimum VS Code version to 1.91.0.
 
 ## [1.8.6] -- 2023-12-30
 
@@ -419,7 +426,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
   - syntax highlighting
   - code snippets
 
-[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.6...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.7...HEAD
+[1.8.7]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.6...v1.8.7
 [1.8.6]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.5...v1.8.6
 [1.8.5]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.4...v1.8.5
 [1.8.4]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.3...v1.8.4
