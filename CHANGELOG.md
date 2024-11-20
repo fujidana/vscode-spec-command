@@ -4,7 +4,6 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
-- Bump `plotly.js-basic-dist-min` dependency to 2.35.2.
 - Update other Node.js packages, including a vulnerable dependency.
 - Raise the minimum VS Code version to 1.95.0.
 
