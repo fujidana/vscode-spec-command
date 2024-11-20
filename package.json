@@ -3,9 +3,9 @@
 	"name": "spec-command",
 	"displayName": "spec command",
 	"description": "spec command file support for VS Code",
-	"version": "1.8.7",
+	"version": "1.8.8-alpha",
 	"engines": {
-		"vscode": "^1.91.0"
+		"vscode": "^1.95.0"
 	},
 	"categories": [
 		"Programming Languages",
@@ -344,7 +344,7 @@
 		"test-node": "vscode-test",
 		"pretest-web": "pnpm run compile",
 		"test-web": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/index.js",
-		"lint": "eslint src --ext ts",
+		"lint": "eslint src",
 		"run-in-browser": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. .",
 		"js-yaml:snippets": "js-yaml ./src/specCommand.snippets.yaml > ./syntaxes/specCommand.snippets.json",
 		"js-yaml:apiReference": "js-yaml ./src/specCommand.apiReference.yaml > ./syntaxes/specCommand.apiReference.json",
@@ -357,27 +357,28 @@
 	"devDependencies": {
 		"@types/assert": "^1.5.10",
 		"@types/estraverse": "^5.1.7",
-		"@types/estree": "^1.0.5",
-		"@types/mocha": "^10.0.7",
+		"@types/estree": "^1.0.6",
+		"@types/mocha": "^10.0.9",
 		"@types/node": "20.x",
-		"@types/vscode": "^1.91.0",
+		"@types/vscode": "^1.95.0",
 		"@types/webpack-env": "^1.18.5",
-		"@typescript-eslint/eslint-plugin": "^7.14.1",
-		"@typescript-eslint/parser": "^7.11.0",
-		"@vscode/test-cli": "^0.0.9",
-		"@vscode/test-electron": "^2.4.0",
-		"@vscode/test-web": "^0.0.55",
+		"@typescript-eslint/eslint-plugin": "^8.10.0",
+		"@typescript-eslint/parser": "^8.7.0",
+		"@vscode/test-cli": "^0.0.10",
+		"@vscode/test-electron": "^2.4.1",
+		"@vscode/test-web": "^0.0.63",
 		"assert": "^2.1.0",
-		"eslint": "^8.57.0",
+		"eslint": "^9.13.0",
 		"js-yaml": "^4.1.0",
-		"mocha": "^10.5.2",
+		"mocha": "^10.7.3",
 		"npm-run-all": "^4.1.5",
 		"peggy": "^3.0.2",
 		"process": "^0.11.10",
 		"ts-loader": "^9.5.1",
 		"ts-pegjs": "^4.2.1",
-		"typescript": "^5.4.5",
-		"webpack": "^5.94.0",
+		"typescript": "^5.6.3",
+		"webpack": "^5.95.0",
 		"webpack-cli": "^5.1.4"
-	}
+	},
+	"packageManager": "pnpm@9.14.1+sha512.7f1de9cffea40ff4594c48a94776112a0db325e81fb18a9400362ff7b7247f4fbd76c3011611c9f8ac58743c3dc526017894e07948de9b72052f874ee2edfdcd"
 }
