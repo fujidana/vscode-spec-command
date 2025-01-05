@@ -64,13 +64,13 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
 
         //
         const activeTextEditorDidChangeListener = (event: vscode.TextEditor | undefined) => {
-           const newActiveWorkspaceFolder = event ? vscode.workspace.getWorkspaceFolder(event.document.uri) : undefined;
-           if (this.activeWorkspaceFolder !== newActiveWorkspaceFolder) {
-               this.activeWorkspaceFolder = newActiveWorkspaceFolder;
-               this.updateMnemonicStorage('motors');
-               this.updateMnemonicStorage('counters');
-               this.updateSnippetStorage();
-           }
+            const newActiveWorkspaceFolder = event ? vscode.workspace.getWorkspaceFolder(event.document.uri) : undefined;
+            if (this.activeWorkspaceFolder !== newActiveWorkspaceFolder) {
+                this.activeWorkspaceFolder = newActiveWorkspaceFolder;
+                this.updateMnemonicStorage('motors');
+                this.updateMnemonicStorage('counters');
+                this.updateSnippetStorage();
+            }
         };
 
         // observe the change in configuration

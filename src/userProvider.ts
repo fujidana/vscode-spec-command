@@ -10,7 +10,6 @@ import { getTextDecoder } from './textEncoding';
  * Extention-specific keys for estraverse (not exist in the original Parser AST.)
  */
 const ADDITIONAL_TRAVERSE_KEYS = {
-    /* eslint-disable @typescript-eslint/naming-convention */
     MacroStatement: ['arguments'],
     InvalidStatement: [],
     ExitStatement: [],
@@ -25,7 +24,8 @@ interface CustomProgram extends estree.Program {
 
 /**
  * Get a set of the URIs of supported files from workspaces
- * @returns a promise of Set of a string representation of URIs
+ * 
+ * @returns a promise of a set of URI strings
  */
 async function findFilesInWorkspaces() {
     const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -35,7 +35,6 @@ async function findFilesInWorkspaces() {
         for (const workspaceFolder of workspaceFolders) {
             // refer to `files.associations` configuration property
             const associations = Object.assign(
-                // eslint-disable-next-line @typescript-eslint/naming-convention
                 <Record<string, string>>{ '*.mac': 'spec-command' },
                 vscode.workspace.getConfiguration('files', workspaceFolder).get<Record<string, string>>('associations')
             );
@@ -243,7 +242,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
             for (const oldUri of event.files) {
                 const promise = vscode.workspace.fs.stat(oldUri).then(
                     stat => {
-                        let oldUriStringSet : Set<string> | undefined;
+                        let oldUriStringSet: Set<string> | undefined;
                         if (stat.type === vscode.FileType.File) {
                             oldUriStringSet = new Set([oldUri.toString()]);
                         } else if (stat.type === vscode.FileType.Directory) {
@@ -369,12 +368,11 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                 } else if (!currentNode.type.endsWith('Statement') && !currentNode.type.endsWith('Declaration')) {
                     // if not any type of statements, skip.
                     return estraverse.VisitorOption.Skip;
-                }
-
-                if (!currentNode.loc) {
+                } else if (!currentNode.loc) {
                     console.log('Statement should have location. This may be a bug in the parser.');
                     return;
                 }
+
                 const nodeRange = lang.convertRange(currentNode.loc as FileRange);
                 let refItem: lang.ReferenceItem | undefined;
                 const refItems: lang.ReferenceItem[] = [];
@@ -610,7 +608,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
     }
 
     /**
-     * Required implementation of vscode.DocumentSymbolProvider
+     * Required implementation of `vscode.DocumentSymbolProvider`.
      */
     public provideDocumentSymbols(document: vscode.TextDocument, token: vscode.CancellationToken): vscode.ProviderResult<vscode.SymbolInformation[] | vscode.DocumentSymbol[]> {
         if (token.isCancellationRequested) { return; }
@@ -712,7 +710,9 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
     }
 
     /**
-     * Required implementation of vscode.WorkspaceSymbolProvider
+     * Required implementation of `vscode.WorkspaceSymbolProvider`.
+     * 
+     * This function looks for all symbol definitions that matched with `query` from the workspace.
      */
     public provideWorkspaceSymbols(query: string, token: vscode.CancellationToken): vscode.ProviderResult<vscode.SymbolInformation[]> {
         if (token.isCancellationRequested) { return; }
@@ -720,9 +720,10 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         // exit when the query is not empty and contains characters not allowed in an identifier.
         if (!/^[a-zA-Z0-9_]*$/.test(query)) { return; }
 
-        // create a regular expression that filters symbols using the query
+        // create a regular expression that filters symbols from `query`
+        // e.g., 'abc' => /a.*b.*c/i
         // const regExp = new RegExp(query.replace(/(?=[_A-Z])/g, '.*'), 'i');
-        const regExp = new RegExp(query.split('').join('.*'), 'i'); // e.g., 'abc' => /a.*b.*c/i
+        const regExp = new RegExp(query.split('').join('.*'), 'i');
 
         // seek the identifier
         const symbols: vscode.SymbolInformation[] = [];
@@ -736,12 +737,10 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
             for (const [itemKind, map] of storage.entries()) {
                 const symbolKind = lang.getReferenceItemKindMetadata(itemKind).symbolKind;
                 for (const [identifier, refItem] of map.entries()) {
-                    if (query.length === 0 || regExp.test(identifier)) {
-                        if (refItem.location) {
+                    if ((query.length === 0 || regExp.test(identifier)) && refItem.location) {
                             const name = (itemKind === lang.ReferenceItemKind.Function) ? identifier + '()' : identifier;
                             const location = new vscode.Location(uri, lang.convertRange(refItem.location));
                             symbols.push(new vscode.SymbolInformation(name, symbolKind, '', location));
-                        }
                     }
                 }
             }
@@ -750,17 +749,20 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
     }
 
     /**
-     * Required implementation of vscode.DocumentDropEditProvider
+     * Required implementation of `vscode.DocumentDropEditProvider`.
+     * 
+     * This function is called when a file is dropped into the editor.
+     * This function returns a path string surrrounded by `qdofile()` function.
      */
-    public provideDocumentDropEdits(document: vscode.TextDocument, position: vscode.Position, dataTransfer: vscode.DataTransfer, token: vscode.CancellationToken): vscode.ProviderResult<vscode.DocumentDropEdit> {
-        // The value for 'text/uri-list' key in dataTransfer is a string of file list separated by '\r\n'.
+    public provideDocumentDropEdits(document: vscode.TextDocument, _position: vscode.Position, dataTransfer: vscode.DataTransfer, token: vscode.CancellationToken): vscode.ProviderResult<vscode.DocumentDropEdit> {
+        // The value for 'text/uri-list' key in `dataTransfer` is a string of file list separated by '\r\n'.
         const uriList = dataTransfer.get('text/uri-list');
         if (uriList && typeof uriList.value === 'string') {
-            // adjust path. Append prefix in the configuration for relative path.
             const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
 
             return new vscode.DocumentDropEdit(uriList.value.split('\r\n').map(
                 uriString => {
+                    // Append prefix for relative path, if specified in the configuration.
                     const path = vscode.Uri.parse(uriString).path;
                     let path2: string;
                     if (workspaceFolder && ((path2 = vscode.workspace.asRelativePath(path, false)) !== path)) {
@@ -768,7 +770,6 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                     } else {
                         path2 = path;
                     }
-
                     return `qdofile("${path2}")\n`;
                 }
             ).join(''));

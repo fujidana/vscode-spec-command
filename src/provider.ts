@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import * as lang from './specCommand';
 
-/* eslint-disable @typescript-eslint/naming-convention */
 interface SuppressMessagesConfig {
     'completionItem.label.detail'?: boolean
     'completionItem.label.description'?: boolean
@@ -9,7 +8,6 @@ interface SuppressMessagesConfig {
     'signatureHelp.signatures.documentation'?: boolean
     'hover.contents'?: boolean
 }
-/* eslint-enable @typescript-eslint/naming-convention */
 
 function getShortDescription(item: lang.ReferenceItem, itemKind: lang.ReferenceItemKind, itemUriString: string, documentUriString: string, outputsMarkdown: true): vscode.MarkdownString;
 function getShortDescription(item: lang.ReferenceItem, itemKind: lang.ReferenceItemKind, itemUriString: string, documentUriString: string, outputsMarkdown: false): string;
@@ -34,9 +32,9 @@ function getShortDescription(item: lang.ReferenceItem, itemKind: lang.ReferenceI
             symbolLabel = symbolLabel + ' defined in this file';
         }
     } else {
-        const itemUri = vscode.Uri.parse(itemUriString);
+        // const itemUri = vscode.Uri.parse(itemUriString);
         // itemUriLabel = (itemUri.scheme === 'file') ? vscode.workspace.asRelativePath(itemUri) : itemUriString;
-        itemUriLabel = vscode.workspace.asRelativePath(itemUri);
+        itemUriLabel = vscode.workspace.asRelativePath(vscode.Uri.parse(itemUriString));
         symbolLabel = outputsMarkdown ? 'user-defined ' + symbolLabel : symbolLabel + ' defined in ' + itemUriLabel;
     }
 
@@ -55,7 +53,6 @@ function getShortDescription(item: lang.ReferenceItem, itemKind: lang.ReferenceI
         return mainText;
     }
 }
-
 
 const enum TruncationLevel {
     full = 0,
@@ -129,12 +126,11 @@ function parseSignatureInEditing(line: string, position: number) {
  */
 export class Provider implements vscode.CompletionItemProvider<lang.CompletionItem>, vscode.HoverProvider, vscode.SignatureHelpProvider {
 
-    // vscode.Uri objects can not be used as a key for a Map object because these 
-    // objects having the same string representation can be recognized different,
-    // i.e., uriA.toString() === uriB.toString() but uriA !== uriB.
-    // This is mainly caused by the difference in their minor properties, such as fsPath
-    // (File System Path). To avoid this problem, the string representation of a Uri 
-    // object is used as a key.
+    // In JavaScript, equality comparison (`==` and `===`) of two different objects
+    // are `false` regardless of the equality of their values.
+    // Therefore, we use the string representation of the Uri object.
+    // string is a primitive type, so the equality comparision is based on the value
+    // (i.e., uriA.toString() === uriB.toString() but uriA !== uriB).
 
     protected readonly storageCollection = new Map<string, lang.ReferenceStorage>();
     protected readonly completionItemCollection = new Map<string, lang.CompletionItem[]>();
@@ -161,7 +157,7 @@ export class Provider implements vscode.CompletionItemProvider<lang.CompletionIt
      * Generate completion items from the registered storage and cache it in the map using `uri` as the key.
      * Subclass must invoke it when the storage contents are changed.
      */
-    protected updateCompletionItemsForUriString(uriString: string): vscode.CompletionItem[] | undefined {
+    protected updateCompletionItemsForUriString(uriString: string): lang.CompletionItem[] | undefined {
         const storage = this.storageCollection.get(uriString);
         if (storage) {
             const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages');
@@ -333,9 +329,9 @@ export class Provider implements vscode.CompletionItemProvider<lang.CompletionIt
         for (const storage of this.storageCollection.values()) {
             const map = storage.get(lang.ReferenceItemKind.Function);
             let item: lang.ReferenceItem | undefined;
-            if (map && (item = map.get(signatureHint.signature)) !== undefined) {
-                const overloads = (item.overloads) ? item.overloads : [{ signature: item.signature, description: item.description }];
+            if ((item = map?.get(signatureHint.signature)) !== undefined) {
                 const signatureHelp = new vscode.SignatureHelp();
+                const overloads = item.overloads ?? [{ signature: item.signature, description: item.description }];
 
                 for (const overload of overloads) {
                     // assume that usage.signature must exist.
