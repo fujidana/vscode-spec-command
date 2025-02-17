@@ -4,8 +4,9 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
-- Update other Node.js packages, including a vulnerable dependency.
-- Raise the minimum VS Code version to 1.95.0.
+### Fixed
+
+- Improve syntax highlighting for format specifiers in string literals. Previously several complicated patterns such as `"%*.*f"` and `"%-+10d"` were not colorized as format specifiers.
 
 ## [1.8.7] -- 2024-10-30
 

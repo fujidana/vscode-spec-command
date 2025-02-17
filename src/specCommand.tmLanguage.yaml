@@ -323,7 +323,8 @@ repository:
                 name: constant.character.escape.spec-command
               - match: \\.
                 name: invalid.illegal.unknown-escape.spec-command
-              - match: "%(?:%|[-+ ]?(?:[0-9]*(?:\\.[0-9]+)?|\\*)[lhL]?[a-zA-Z]|\\.[0-9])"
+              - match: "%(?:%|[-+#0 ]*(?:[0-9]+|\\*)?(?:\\.(?:[0-9]+|\\*))?[lhL]?[a-zA-Z]|\\.[0-9])"
+                # SPEC adds %.1 through %.9 as fomrat options for date(). See spec_manA4.pdf for details.
                 name: constant.other.placeholder.spec-command
               - match: \$([*@#$]|[0-9]+) # max 25 arguments
                 # name: variable.language.spec-command
