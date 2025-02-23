@@ -4,6 +4,10 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+### Added
+
+- Add `SPEC_COMMAND` (built-in symbol introduced by __spec__ 6.13.03) into the IntelliSense database.
+
 ### Fixed
 
 - Improve syntax highlighting for format specifiers in string literals. Previously several complicated patterns such as `"%*.*f"` and `"%-+10d"` were not colorized as format specifiers.

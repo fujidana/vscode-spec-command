@@ -133,6 +133,13 @@ constants:
       used to name the **spec** session's associated state file.
 
       (Added in spec release 6.12.05.)
+  SPEC_COMMAND:
+    signature: SPEC_COMMAND
+    comments: 'cited from [CSS spec help pages: chg6_13](https://www.certif.com/spec_help/chg6_13.html).'
+    description: |-
+      is set to the command line by which spec was invoked.
+
+      (Added in spec release 6.13.03.)
 
 variables:
   A:

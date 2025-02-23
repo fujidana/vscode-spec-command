@@ -249,7 +249,7 @@ repository:
         patterns:
           - match: \b(PI)\b
             name: support.constant.spec-command
-          - match: \b(OUTFILES|CCDS|COUNTERS|CWD|DISPLAY|EVAL_(?:ERR|RESULT)|FRESH|GETLINE_EOF|HISTCMD|HOME|HOSTNAME|IS_SERVER|MCAS|MOTORS|SPEC(?:D|_PID)?|STATE_FILE|USER|VERSION|HDF5_VERSION)\b
+          - match: \b(OUTFILES|CCDS|COUNTERS|CWD|DISPLAY|EVAL_(?:ERR|RESULT)|FRESH|GETLINE_EOF|HISTCMD|HOME|HOSTNAME|IS_SERVER|MCAS|MOTORS|SPEC(?:D|_(?:PID|COMMAND))?|STATE_FILE|USER|VERSION|HDF5_VERSION)\b
             name: support.variable.readonly.spec-command
           - match: \b(A|S|DEBUG|HDW_ERR|DISPLAY|TERM|GTERM|ROWS|COLS|HDF5_ERROR_MODE|argc|argv|arg[0-9]+)\b
             name: support.variable.readwrite.spec-command
@@ -538,7 +538,7 @@ repository:
           motor_(?:mne|name|num|par)|dial|read_motors|move_info|chg_(?:dial|offset)|get_lim|user|set_lim|mcount|tcount|cnt_(?:mne|name|num)|counter_par|set_sim|wait|stop|\
           mca_(?:par|get|put|sel|spar|sget|sput)|image_(?:par|get|put)|sock_(?:par|get|put)|ser_(?:par|get|put)|gpib_(?:par|get|put|poll|cntl)|vme_(?:move|get(?:32)?|put(?:32)?)|port_(?:getw?|putw?)|ca_(?:cntl|get|put|fna)|taco_(?:io|db|dc)|tango_(?:io|get|put|db)|epics_(?:par|get|put)|vxi11_(?:par|get|put)|h5_(?:attr|file|link|data)|fbus_(?:get|put)|em_io|madoca_io|rpi_io|\
           PI|\
-          OUTFILES|CCDS|COUNTERS|CWD|DISPLAY|EVAL_(?:ERR|RESULT)|FRESH|GETLINE_EOF|HISTCMD|HOME|HOSTNAME|IS_SERVER|MCAS|MOTORS|SPEC(?:D|_PID)?|STATE_FILE|USER|VERSION|HDF5_VERSION|\
+          OUTFILES|CCDS|COUNTERS|CWD|DISPLAY|EVAL_(?:ERR|RESULT)|FRESH|GETLINE_EOF|HISTCMD|HOME|HOSTNAME|IS_SERVER|MCAS|MOTORS|SPEC(?:D|_(?:PID|COMMAND))?|STATE_FILE|USER|VERSION|HDF5_VERSION|\
           A|S|DEBUG|HDW_ERR|DISPLAY|TERM|GTERM|ROWS|COLS|HDF5_ERROR_MODE|argc|argv|arg[0-9]+\
           )\\b"
         name: invalid.illegal.reserved-identifier.spec-command
