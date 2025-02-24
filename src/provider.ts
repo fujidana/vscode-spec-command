@@ -9,9 +9,7 @@ interface SuppressMessagesConfig {
     'hover.contents'?: boolean
 }
 
-function getShortDescription(item: lang.ReferenceItem, itemKind: lang.ReferenceItemKind, itemUriString: string, documentUriString: string, outputsMarkdown: true): vscode.MarkdownString;
-function getShortDescription(item: lang.ReferenceItem, itemKind: lang.ReferenceItemKind, itemUriString: string, documentUriString: string, outputsMarkdown: false): string;
-function getShortDescription(item: lang.ReferenceItem, itemKind: lang.ReferenceItemKind, itemUriString: string, documentUriString: string, outputsMarkdown: boolean) {
+function getShortDescription(item: lang.ReferenceItem, itemKind: lang.ReferenceItemKind, itemUriString: string, documentUriString: string, markdownFormat: boolean): string {
     let symbolLabel: string;
     let itemUriLabel: string | undefined;
 
@@ -35,7 +33,7 @@ function getShortDescription(item: lang.ReferenceItem, itemKind: lang.ReferenceI
         // const itemUri = vscode.Uri.parse(itemUriString);
         // itemUriLabel = (itemUri.scheme === 'file') ? vscode.workspace.asRelativePath(itemUri) : itemUriString;
         itemUriLabel = vscode.workspace.asRelativePath(vscode.Uri.parse(itemUriString));
-        symbolLabel = outputsMarkdown ? 'user-defined ' + symbolLabel : symbolLabel + ' defined in ' + itemUriLabel;
+        symbolLabel = markdownFormat ? 'user-defined ' + symbolLabel : symbolLabel + ' defined in ' + itemUriLabel;
     }
 
     let mainText = `${item.signature} # ${symbolLabel}`;
@@ -43,15 +41,13 @@ function getShortDescription(item: lang.ReferenceItem, itemKind: lang.ReferenceI
         mainText += `, ${item.overloads.length} overloads`;
     }
 
-    if (outputsMarkdown) {
-        let markdownString = new vscode.MarkdownString().appendCodeblock(mainText);
+    if (markdownFormat) {
+        mainText = '```\n' + mainText + '\n```\n\n';
         if (itemUriLabel) {
-            markdownString = markdownString.appendMarkdown(`_defined in_ [${itemUriLabel}](${itemUriString}).\n\n`);
+            mainText += `_defined in_ [${itemUriLabel}](${itemUriString}).\n\n`;
         }
-        return markdownString;
-    } else {
-        return mainText;
     }
+    return mainText;
 }
 
 const enum TruncationLevel {
@@ -288,7 +284,7 @@ export class Provider implements vscode.CompletionItemProvider<lang.CompletionIt
                 // find the symbol information about the symbol.
                 const item = map.get(selectorName);
                 if (item) {
-                    let mainMarkdown = getShortDescription(item, itemKind, uriString, document.uri.toString(), true);
+                    let mainMarkdown = new vscode.MarkdownString(getShortDescription(item, itemKind, uriString, document.uri.toString(), true));
 
                     // prepare the second line: the description (if it exists)
                     const truncatedString = truncateString(truncationLevel, item);
