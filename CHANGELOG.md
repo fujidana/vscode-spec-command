@@ -4,6 +4,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+## [1.8.8] -- 2025-02-17
+
 ### Added
 
 - Add `SPEC_COMMAND` (built-in symbol introduced by __spec__ 6.13.03) into the IntelliSense database.
@@ -11,6 +13,11 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 ### Fixed
 
 - Improve syntax highlighting for format specifiers in string literals. Previously several complicated patterns such as `"%*.*f"` and `"%-+10d"` were not colorized as format specifiers.
+
+### Changed
+
+- Update Node.js packages, including a vulnerable dependency.
+- Raise the minimum VS Code version to 1.97.0.
 
 ## [1.8.7] -- 2024-10-30
 
@@ -434,7 +441,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
   - syntax highlighting
   - code snippets
 
-[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.7...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.8...HEAD
+[1.8.8]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.7...v1.8.8
 [1.8.7]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.6...v1.8.7
 [1.8.6]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.5...v1.8.6
 [1.8.5]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.4...v1.8.5

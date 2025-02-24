@@ -3,9 +3,9 @@
 	"name": "spec-command",
 	"displayName": "spec command",
 	"description": "spec command file support for VS Code",
-	"version": "1.8.8-alpha",
+	"version": "1.8.8",
 	"engines": {
-		"vscode": "^1.95.0"
+		"vscode": "^1.97.0"
 	},
 	"categories": [
 		"Programming Languages",
@@ -334,7 +334,7 @@
 		}
 	},
 	"scripts": {
-		"vscode:prepublish": "npm-run-all -s peggy js-yaml:* package",
+		"vscode:prepublish": "pnpm run peggy && pnpm run js-yaml && pnpm run package",
 		"compile": "webpack",
 		"watch": "webpack --watch",
 		"package": "webpack --mode production --devtool hidden-source-map",
@@ -346,6 +346,7 @@
 		"test-web": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/index.js",
 		"lint": "eslint src",
 		"run-in-browser": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. .",
+		"js-yaml": "pnpm run js-yaml:snippets && pnpm run js-yaml:apiReference && pnpm run js-yaml:tmLanguage",
 		"js-yaml:snippets": "js-yaml ./src/specCommand.snippets.yaml > ./syntaxes/specCommand.snippets.json",
 		"js-yaml:apiReference": "js-yaml ./src/specCommand.apiReference.yaml > ./syntaxes/specCommand.apiReference.json",
 		"js-yaml:tmLanguage": "js-yaml ./src/specCommand.tmLanguage.yaml > ./syntaxes/specCommand.tmLanguage.json",
@@ -355,30 +356,29 @@
 		"estraverse": "^5.3.0"
 	},
 	"devDependencies": {
-		"@types/assert": "^1.5.10",
+		"@types/assert": "^1.5.11",
 		"@types/estraverse": "^5.1.7",
 		"@types/estree": "^1.0.6",
-		"@types/mocha": "^10.0.9",
+		"@types/mocha": "^10.0.10",
 		"@types/node": "20.x",
-		"@types/vscode": "^1.95.0",
-		"@types/webpack-env": "^1.18.5",
-		"@typescript-eslint/eslint-plugin": "^8.10.0",
-		"@typescript-eslint/parser": "^8.7.0",
+		"@types/vscode": "^1.97.0",
+		"@types/webpack-env": "^1.18.8",
+		"@typescript-eslint/eslint-plugin": "^8.22.0",
+		"@typescript-eslint/parser": "^8.22.0",
 		"@vscode/test-cli": "^0.0.10",
 		"@vscode/test-electron": "^2.4.1",
-		"@vscode/test-web": "^0.0.63",
+		"@vscode/test-web": "^0.0.66",
 		"assert": "^2.1.0",
-		"eslint": "^9.13.0",
+		"eslint": "^9.19.0",
 		"js-yaml": "^4.1.0",
-		"mocha": "^10.7.3",
-		"npm-run-all": "^4.1.5",
+		"mocha": "^11.1.0",
 		"peggy": "^3.0.2",
 		"process": "^0.11.10",
-		"ts-loader": "^9.5.1",
+		"ts-loader": "^9.5.2",
 		"ts-pegjs": "^4.2.1",
-		"typescript": "^5.6.3",
-		"webpack": "^5.95.0",
-		"webpack-cli": "^5.1.4"
+		"typescript": "^5.7.3",
+		"webpack": "^5.97.1",
+		"webpack-cli": "^6.0.1"
 	},
-	"packageManager": "pnpm@9.14.1+sha512.7f1de9cffea40ff4594c48a94776112a0db325e81fb18a9400362ff7b7247f4fbd76c3011611c9f8ac58743c3dc526017894e07948de9b72052f874ee2edfdcd"
+	"packageManager": "pnpm@10.4.1+sha512.c753b6c3ad7afa13af388fa6d808035a008e30ea9993f58c6663e2bc5ff21679aa834db094987129aa4d488b86df57f7b634981b2f827cdcacc698cc0cfb88af"
 }
