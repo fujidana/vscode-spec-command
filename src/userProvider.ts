@@ -4,7 +4,6 @@ import * as estraverse from "estraverse";
 import * as lang from "./specCommand";
 import { Provider } from "./provider";
 import { PeggySyntaxError, parse, FileRange } from './grammar';
-import { getTextDecoder } from './textEncoding';
 
 /**
  * Extention-specific keys for estraverse (not exist in the original Parser AST.)
@@ -15,7 +14,6 @@ const ADDITIONAL_TRAVERSE_KEYS = {
     ExitStatement: [],
     QuitStatement: [],
     NullExpression: [],
-    /* eslint-enable @typescript-eslint/naming-convention */
 };
 
 interface CustomProgram extends estree.Program {
@@ -333,8 +331,9 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
             for (const newUriString of newUriStringSet) {
                 if (!documentUriStringSet.has(newUriString)) {
                     const newUri = vscode.Uri.parse(newUriString);
-                    const textDecoder = getTextDecoder({ languageId: 'spec-command', uri: newUri });
-                    const contents = textDecoder.decode(await vscode.workspace.fs.readFile(newUri));
+                    // const encoding = vscode.workspace.getConfiguration('files', { languageId: 'spec-command', uri: newUri }).get<string>('encoding', 'utf8');
+                    // const contents = await vscode.workspace.decode(await vscode.workspace.fs.readFile(newUri), { encoding });
+                    const contents = await vscode.workspace.decode(await vscode.workspace.fs.readFile(newUri), { uri: newUri });
                     const diagnoseInWorkspace = vscode.workspace.getConfiguration('spec-command.workspace', newUri).get<boolean>('diagnoseProblems', false);
                     this.parseDocumentContents(contents, newUri, false, diagnoseInWorkspace);
                 }
@@ -538,8 +537,9 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         for (const uriString of filesInWorkspaces) {
             if (!documentUriStringSet.has(uriString)) {
                 const uri = vscode.Uri.parse(uriString);
-                const textDecoder = getTextDecoder({ languageId: 'spec-command', uri: uri });
-                const contents = textDecoder.decode(await vscode.workspace.fs.readFile(uri));
+                // const encoding = vscode.workspace.getConfiguration('files', { languageId: 'spec-command', uri: uri }).get<string>('encoding', 'utf8');
+                // const contents = await vscode.workspace.decode(await vscode.workspace.fs.readFile(uri), { encoding });
+                const contents = await vscode.workspace.decode(await vscode.workspace.fs.readFile(uri), { uri });
                 const diagnoseInWorkspace = vscode.workspace.getConfiguration('spec-command.workspace', uri).get<boolean>('diagnoseProblems', false);
                 this.parseDocumentContents(contents, uri, false, diagnoseInWorkspace);
             }
@@ -738,9 +738,9 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                 const symbolKind = lang.getReferenceItemKindMetadata(itemKind).symbolKind;
                 for (const [identifier, refItem] of map.entries()) {
                     if ((query.length === 0 || regExp.test(identifier)) && refItem.location) {
-                            const name = (itemKind === lang.ReferenceItemKind.Function) ? identifier + '()' : identifier;
-                            const location = new vscode.Location(uri, lang.convertRange(refItem.location));
-                            symbols.push(new vscode.SymbolInformation(name, symbolKind, '', location));
+                        const name = (itemKind === lang.ReferenceItemKind.Function) ? identifier + '()' : identifier;
+                        const location = new vscode.Location(uri, lang.convertRange(refItem.location));
+                        symbols.push(new vscode.SymbolInformation(name, symbolKind, '', location));
                     }
                 }
             }

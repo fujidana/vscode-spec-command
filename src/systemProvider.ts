@@ -42,17 +42,19 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
         const apiReferenceUri = vscode.Uri.joinPath(context.extensionUri, 'syntaxes', 'specCommand.apiReference.json');
         vscode.workspace.fs.readFile(apiReferenceUri).then(uint8Array => {
             // convert JSON-formatted file contents to a javascript object.
-            const apiReference: APIReference = JSON.parse(new TextDecoder('utf-8').decode(uint8Array));
+            vscode.workspace.decode(uint8Array).then(decodedString => {
+                const apiReference: APIReference = JSON.parse(decodedString);
 
-            // convert the object to ReferenceMap and register the set.
-            this.storageCollection.set(lang.BUILTIN_URI, new Map([
-                [lang.ReferenceItemKind.Constant, new Map(Object.entries(apiReference.constants))],
-                [lang.ReferenceItemKind.Variable, new Map(Object.entries(apiReference.variables))],
-                [lang.ReferenceItemKind.Macro, new Map(Object.entries(apiReference.macros))],
-                [lang.ReferenceItemKind.Function, new Map(Object.entries(apiReference.functions))],
-                [lang.ReferenceItemKind.Keyword, new Map(Object.entries(apiReference.keywords))],
-            ]));
-            this.updateCompletionItemsForUriString(lang.BUILTIN_URI);
+                // convert the object to ReferenceMap and register the set.
+                this.storageCollection.set(lang.BUILTIN_URI, new Map([
+                    [lang.ReferenceItemKind.Constant, new Map(Object.entries(apiReference.constants))],
+                    [lang.ReferenceItemKind.Variable, new Map(Object.entries(apiReference.variables))],
+                    [lang.ReferenceItemKind.Macro, new Map(Object.entries(apiReference.macros))],
+                    [lang.ReferenceItemKind.Function, new Map(Object.entries(apiReference.functions))],
+                    [lang.ReferenceItemKind.Keyword, new Map(Object.entries(apiReference.keywords))],
+                ]));
+                this.updateCompletionItemsForUriString(lang.BUILTIN_URI);
+            });
         });
 
         // register motor and counter mnemonic storages and snippet storage.
