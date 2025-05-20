@@ -40,21 +40,23 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
 
         // load the API reference file
         const apiReferenceUri = vscode.Uri.joinPath(context.extensionUri, 'syntaxes', 'specCommand.apiReference.json');
-        vscode.workspace.fs.readFile(apiReferenceUri).then(uint8Array => {
+        const promisedStorage = vscode.workspace.fs.readFile(apiReferenceUri).then(uint8Array => {
+            return vscode.workspace.decode(uint8Array, { encoding: 'utf8' });
+        }).then(decodedString => {
             // convert JSON-formatted file contents to a javascript object.
-            vscode.workspace.decode(uint8Array).then(decodedString => {
-                const apiReference: APIReference = JSON.parse(decodedString);
+            const apiReference: APIReference = JSON.parse(decodedString);
 
-                // convert the object to ReferenceMap and register the set.
-                this.storageCollection.set(lang.BUILTIN_URI, new Map([
-                    [lang.ReferenceItemKind.Constant, new Map(Object.entries(apiReference.constants))],
-                    [lang.ReferenceItemKind.Variable, new Map(Object.entries(apiReference.variables))],
-                    [lang.ReferenceItemKind.Macro, new Map(Object.entries(apiReference.macros))],
-                    [lang.ReferenceItemKind.Function, new Map(Object.entries(apiReference.functions))],
-                    [lang.ReferenceItemKind.Keyword, new Map(Object.entries(apiReference.keywords))],
-                ]));
-                this.updateCompletionItemsForUriString(lang.BUILTIN_URI);
-            });
+            // convert the object to ReferenceMap and register the set.
+            const storage: lang.ReferenceStorage = new Map([
+                [lang.ReferenceItemKind.Constant, new Map(Object.entries(apiReference.constants))],
+                [lang.ReferenceItemKind.Variable, new Map(Object.entries(apiReference.variables))],
+                [lang.ReferenceItemKind.Macro, new Map(Object.entries(apiReference.macros))],
+                [lang.ReferenceItemKind.Function, new Map(Object.entries(apiReference.functions))],
+                [lang.ReferenceItemKind.Keyword, new Map(Object.entries(apiReference.keywords))],
+            ]);
+            this.storageCollection.set(lang.BUILTIN_URI, storage);
+            this.updateCompletionItemsForUriString(lang.BUILTIN_URI);
+            return storage;
         });
 
         // register motor and counter mnemonic storages and snippet storage.
@@ -91,41 +93,25 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
         };
 
         // register command to show reference manual as a virtual document
-        const openReferenceManualCallback = () => {
-            const showReferenceManual = async (storage: lang.ReferenceStorage) => {
-                const quickPickItems = [{ key: 'all', label: '$(references) all' }];
-                for (const itemKind of storage.keys()) {
-                    const metadata = lang.getReferenceItemKindMetadata(itemKind);
-                    quickPickItems.push({ key: metadata.label, label: `$(${metadata.iconIdentifier}) ${metadata.label}` });
-                }
-                const quickPickItem = await vscode.window.showQuickPick(quickPickItems);
-                if (quickPickItem) {
-                    const uri = vscode.Uri.parse(lang.BUILTIN_URI).with({ query: quickPickItem.key });
-                    const editor = await vscode.window.showTextDocument(uri, { preview: false });
-                    const flag = vscode.workspace.getConfiguration('spec-command').get<boolean>('showReferenceManualInPreview');
-                    if (flag) {
-                        await vscode.commands.executeCommand('markdown.showPreview');
-                        // await vscode.window.showTextDocument(editor.document);
-                        // vscode.commands.executeCommand('workbench.action.closeActiveEditor');
-                    }
-                }
-            };
+        const openReferenceManualCallback = async () => {
+            const storage = await promisedStorage;
 
-            // The API reference database may have not been loaded 
-            // in case this command activates the extension.
-            // Therefore, wait until the database is loaded or 0.05 * 5 seconds passes.
-            let trial = 0;
-            const timer = setInterval(() => {
-                const storage = this.storageCollection.get(lang.BUILTIN_URI);
-                if (storage) {
-                    clearInterval(timer);
-                    showReferenceManual(storage);
-                } else if (trial >= 5) {
-                    clearInterval(timer);
-                    vscode.window.showErrorMessage('Timeout. The API reference database is not loaded at the moment.');
+            const quickPickItems = [{ key: 'all', label: '$(references) all' }];
+            for (const itemKind of storage.keys()) {
+                const metadata = lang.getReferenceItemKindMetadata(itemKind);
+                quickPickItems.push({ key: metadata.label, label: `$(${metadata.iconIdentifier}) ${metadata.label}` });
+            }
+            const quickPickItem = await vscode.window.showQuickPick(quickPickItems);
+            if (quickPickItem) {
+                const uri = vscode.Uri.parse(lang.BUILTIN_URI).with({ query: quickPickItem.key });
+                const editor = await vscode.window.showTextDocument(uri, { preview: false });
+                const flag = vscode.workspace.getConfiguration('spec-command').get<boolean>('showReferenceManualInPreview');
+                if (flag) {
+                    await vscode.commands.executeCommand('markdown.showPreview');
+                    // await vscode.window.showTextDocument(editor.document);
+                    // vscode.commands.executeCommand('workbench.action.closeActiveEditor');
                 }
-                trial++;
-            }, 50);
+            }
         };
 
         context.subscriptions.push(
