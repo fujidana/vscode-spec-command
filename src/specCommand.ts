@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
-import { FileRange, FilePosition } from './grammar';
+import type { LocationRange, Location } from './grammar';
 
-export function convertPosition(position: FilePosition): vscode.Position {
+export function convertPosition(position: Location): vscode.Position {
     return new vscode.Position(position.line - 1, position.column - 1);
 }
 
-export function convertRange(range: FileRange): vscode.Range {
+export function convertRange(range: LocationRange): vscode.Range {
     return new vscode.Range(convertPosition(range.start), convertPosition(range.end));
 }
 
@@ -116,7 +116,7 @@ export type ReferenceItem = {
     description?: string;
     comments?: string;
     snippet?: string;
-    location?: FileRange;
+    location?: LocationRange;
     overloads?: {
         signature: string;
         description?: string;

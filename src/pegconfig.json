@@ -1,9 +1,6 @@
 {
     "cache": true,
-    "plugins": ["./node_modules/ts-pegjs/dist/tspegjs"],
+    "dts": true,
     "input": "src/grammar.pegjs",
-    "output": "src/grammar.ts",
-    "tspegjs": {
-        "customHeader": "import { DiagnosticSeverity } from 'vscode';\ninterface Diagnostic { location: FileRange, message: string, severity: DiagnosticSeverity };\n"
-    }
+    "output": "src/grammar.js"
 }

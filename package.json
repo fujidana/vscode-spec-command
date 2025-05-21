@@ -372,10 +372,9 @@
 		"eslint": "^9.25.1",
 		"js-yaml": "^4.1.0",
 		"mocha": "^11.1.0",
-		"peggy": "^3.0.2",
+		"peggy": "^5.0.2",
 		"process": "^0.11.10",
 		"ts-loader": "^9.5.2",
-		"ts-pegjs": "^4.2.1",
 		"typescript": "^5.8.3",
 		"webpack": "^5.99.7",
 		"webpack-cli": "^6.0.1"
