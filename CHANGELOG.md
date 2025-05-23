@@ -4,6 +4,10 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix a problem where syntax parser stops working when source code includes unclosed quotation.
+
 ### Changed
 
 - Update Node.js packages.

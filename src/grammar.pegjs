@@ -540,7 +540,8 @@ MacroDef 'macro declaration' =
     _0 Eos? stmt:Stmt*
     closer:QuotationMark? &{ return testIfQuoteEnds(opener, closer); }
     _0 Eos {
-      diagnoseIfNotTerminated(closer, 'macro definition', opener.length);
+      const loc = location();
+      diagnoseIfNotTerminated(closer, 'macro definition', loc, opener.length);
       return stmt;
     }
     / stmt:Stmt? _0 Eos {
@@ -1113,7 +1114,8 @@ StringLiteral 'string literal' =
       }
   )*
   closer:QuotationMark? &{ return testIfQuoteEnds(opener, closer); } {
-    diagnoseIfNotTerminated(closer, 'string literal', opener.length);
+    const loc = location();
+    diagnoseIfNotTerminated(closer, 'string literal', loc, opener.length);
     return { type: 'Literal', value: chars.join(''), raw: text(), };
   }
 
