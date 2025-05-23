@@ -4,15 +4,18 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+## [1.8.9] -- 2025-05-23
+
 ### Fixed
 
-- Fix a problem where syntax parser stops working when source code includes unclosed quotation.
+- Fix a problem where syntax parser stops working when source code includes unclosed quotation (#19).
 
 ### Changed
 
 - Update Node.js packages.
   - Eliminate the dependency on `ts-pegjs` and bump the version of `peggy` from 3 to 5.
 - Raise the minimum VS Code version to 1.100.0.
+  - Replace `TextDecoder().decode()` with `vscode.workspace.decode()` (new API in v1.100), which may improve support of minor text encodings (#6).
 
 ## [1.8.8] -- 2025-02-17
 
@@ -51,7 +54,7 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 - Update syntax parser and syntax highlighting rules.
   - Support the `[...]` pattern used in several built-in commands such as `lsdef`. This syntax was added in __spec__ release 6.07.
-  - Support optional parameters of built-in `syms` command such as `-v`.
+  - Support optional parameters of built-in `syms` command such as `-v`. #11
 - Change the category of built-in imutable symbols from variable to constant. Previously `PI` was the only built-in constant and all the other built-in symbols were variables.
 
 ## [1.8.5] -- 2023-08-20
@@ -451,7 +454,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
   - syntax highlighting
   - code snippets
 
-[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.8...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.9...HEAD
+[1.8.9]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.8...v1.8.9
 [1.8.8]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.7...v1.8.8
 [1.8.7]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.6...v1.8.7
 [1.8.6]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.5...v1.8.6

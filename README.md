@@ -100,10 +100,9 @@ This extension contributes the follwing settings, which are configurable from th
 * `spec-command.workspace.diagnoseProblems` - controls whther problems of files in workspaces are reported.
 * `spec-command.terminal.filePathPrefix` - specifies file path prefix used in "Run File in Active Terminal" command.
 
-The extension also refers to the following built-in settings:
+The extension also refers to the following built-in setting:
 
 * `files.associations`, `files.exclude`: file patterns to filter target files for symbol search in workspaces
-* `files.encoding`: text encoding used in opening files for symbol search in workspaces.
 
 Read [Visual Studio Code User and Workspace Settings](https://code.visualstudio.com/docs/getstarted/settings) for details about the _Settings_ window.
 
@@ -111,6 +110,5 @@ Read [Visual Studio Code User and Workspace Settings](https://code.visualstudio.
 
 * Syntax check by this extension has small differences with actual __spec__ interpreters.
 * Statement continuation by putting a backslash at the end of the line is not fully supported in syntax highlighting.
-* Several text encodings are not supported in symbol serach in workspaces. See GitHub issue #6 for more details.
 
 Also read [GitHub issues](https://github.com/fujidana/vscode-spec-cmmand/issues).
