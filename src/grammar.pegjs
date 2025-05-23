@@ -89,15 +89,15 @@ const _patternRegExp = /^(?:[a-zA-Z0-9_*?]|\[\^?(?:[a-zA-Z0-9_](?:\-[a-zA-Z0-9_]
    * Report an error if closer does not exist.
    * @param {string | null | undefined} closer - closer string
    * @param {string} label - label of the error
-   * @param {LocationRange | undefined} locRange - location range of the error
+   * @param {GrammarSource} source - The source of the grammar.
+   * @param {Location} baseLoc - The base location to be referenced.
    * @param {number} openerLength - length of the opener string
    * @param {number} severity - error severity
    * @returns {void}
    */
-  function diagnoseIfNotTerminated(closer, label, locRange = undefined, openerLength = 1, severity = DiagnosticSeverity.Error) {
+  function diagnoseIfNotTerminated(closer, label, source, baseLoc, openerLength = 1, severity = DiagnosticSeverity.Error) {
     if (!closer) {
-      const range2 = locRange ?? location();
-      pushDiagnostic(getRange(range2.source, range2.start, openerLength), `Unterminated ${label}.`, severity);
+      pushDiagnostic(getRange(source, baseLoc, openerLength), `Unterminated ${label}.`, severity);
     }
   }
 
@@ -301,7 +301,7 @@ Eos 'end of statement' = Eos1  / Eos0
 BlockComment 'block comment' =
   '"""' p:$(!'"""' .)* closer:'"""'? {
     const loc = location();
-    diagnoseIfNotTerminated(closer, 'docstring', loc, 3);
+    diagnoseIfNotTerminated(closer, 'docstring', loc.source, loc.start, 3);
     return { type: 'Block', value: p, loc: loc, };
   }
 
@@ -385,7 +385,7 @@ BlockStmt 'block statement' =
   stmt:(
     '{' _0 Eos? body:Stmt* _0 closer:'}'? {
       const loc = location();
-      diagnoseIfNotTerminated(closer, 'block statement', loc);
+      diagnoseIfNotTerminated(closer, 'block statement', loc.source, loc.start);
       return { type: 'BlockStatement', body: body, loc: loc, };
     }
   ) tail:(_0 @Eos)? {
@@ -407,7 +407,7 @@ IfStmt 'if statement' =
     'if' _0 @(
       '(' _0 expr:ExprForceSingle? _0 closer:')'? {
         const loc = location();
-        diagnoseIfNotTerminated(closer, 'parenthesis for test expression', loc);
+        diagnoseIfNotTerminated(closer, 'parenthesis for test expression in if-statement', loc.source, loc.start);
         return diagnoseIfEmpty(expr, 'a test expression in if-statement', NULL_EXPRESSION, loc);
       }
     )
@@ -434,7 +434,7 @@ WhileStmt 'while statement' =
   'while' _0 test:(
     '(' _0 expr:ExprForceSingle? _0 closer:')'? _0 (Eol / LineComment)? {
       const loc = location();
-      diagnoseIfNotTerminated(closer, 'parenthesis for test expression', loc);
+      diagnoseIfNotTerminated(closer, 'parenthesis for test expression in while-statement', loc.source, loc.start);
       return diagnoseIfEmpty(expr, 'a test expression in while-statement', NULL_EXPRESSION, loc);
     }
   ) body:(
@@ -462,7 +462,8 @@ ForStmt 'for statement' =
         return { type: 'ForInStatement', left: ll, right: rr, each: false, };
       }
     ) _0 closer:')'? {
-      diagnoseIfNotTerminated(closer, 'parenthesis for test expression');
+      const loc = location();
+      diagnoseIfNotTerminated(closer, 'parenthesis for test expression in for-statement', loc.source, loc.start);
       return stmt2;
     }
   ) _0 (Eol / LineComment)? body:(
@@ -531,7 +532,8 @@ QuitStmt 'quit statement' =
 MacroDef 'macro declaration' =
   'def' _1 id:IdentifierValidated _0 params:(
     '(' _0 params:IdListItem* _0 closer:')'? _0 {
-      diagnoseIfNotTerminated(closer, 'parenthesis for function parameters');
+      const loc = location();
+      diagnoseIfNotTerminated(closer, 'parenthesis for function parameters', loc.source, loc.start);
       return params ? diagnoseListItems(params, 'identifier', 1) : [];
     }
   )?
@@ -541,7 +543,7 @@ MacroDef 'macro declaration' =
     closer:QuotationMark? &{ return testIfQuoteEnds(opener, closer); }
     _0 Eos {
       const loc = location();
-      diagnoseIfNotTerminated(closer, 'macro definition', loc, opener.length);
+      diagnoseIfNotTerminated(closer, 'macro definition', loc.source, loc.start, opener.length);
       return stmt;
     }
     / stmt:Stmt? _0 Eos {
@@ -593,7 +595,8 @@ RdefStmt 'rdef statement' =
   'rdef' _1 p:(
     id:IdentifierValidated _0 params:(
       '(' _0 params:IdListItem* _0 closer:')'? _0 {
-        diagnoseIfNotTerminated(closer, 'parenthesis for function parameters');
+        const loc = location();
+        diagnoseIfNotTerminated(closer, 'parenthesis for function parameters', loc.source, loc.start);
         return params ? diagnoseListItems(params, 'identifier', 1) : [];
       }
     )? expr:(
@@ -661,7 +664,7 @@ DataArrayListItem =
     _0 @(
       '[' _0 expr:ExprForceSingle? _0 closer:']'? {
         const loc = location();
-        diagnoseIfNotTerminated(closer, 'bracket for data array', loc);
+        diagnoseIfNotTerminated(closer, 'bracket for data array', loc.source, loc.start);
         return diagnoseIfEmpty(expr, 'an array size expression', NULL_LITERAL, loc);
       }
     )
@@ -722,7 +725,8 @@ VariableDef 'variable declaration' =
 VariableListItem =
   id:IdentifierValidated bracket:(
     _0 @('[' _0 closer:']'? {
-      diagnoseIfNotTerminated(closer, 'bracket');
+      const loc = location();
+      diagnoseIfNotTerminated(closer, 'bracket', loc.source, loc.start);
       return true;
     })
   )? init:(
@@ -1023,7 +1027,8 @@ ArrayElem =
   _0 '[' _0 items:(
     item:(SlicableIndex)? { return item ?? NULL_LITERAL; }
   )|.., CommaSep| _0 closer:']'? {
-    diagnoseIfNotTerminated(closer, 'bracket');
+    const loc = location();
+    diagnoseIfNotTerminated(closer, 'bracket', loc.source, loc.start);
     if (items.length === 0) {
       return NULL_LITERAL;
     } else if (items.length === 1) {
@@ -1115,7 +1120,7 @@ StringLiteral 'string literal' =
   )*
   closer:QuotationMark? &{ return testIfQuoteEnds(opener, closer); } {
     const loc = location();
-    diagnoseIfNotTerminated(closer, 'string literal', loc, opener.length);
+    diagnoseIfNotTerminated(closer, 'string literal', loc.source, loc.start, opener.length);
     return { type: 'Literal', value: chars.join(''), raw: text(), };
   }
 
@@ -1160,8 +1165,9 @@ ArrayLiteral 'array literal' =
       return diagnoseIfEmpty(item, 'an array element', NULL_LITERAL);
     })|.., CommaSep|
   ) _0 closer:']'? {
-    diagnoseIfNotTerminated(closer, 'bracket');
-    
+    const loc = location();
+    diagnoseIfNotTerminated(closer, 'bracket', loc.source, loc.start);
+
     if (items.some(item => item === NULL_LITERAL)) {
       return NULL_EXPRESSION;
     // } else if (items.every((item: any) => item.type === 'Property')) {
@@ -1212,8 +1218,9 @@ ArrayItem =
  */
 ExprBlock 'parentheses that enclose expression' =
   '(' _0 expr:ExprMulti? _0 closer:')'? {
-    expr = diagnoseIfEmpty(location(), 'an expression in the parenthesis', NULL_LITERAL);
-    diagnoseIfNotTerminated(closer, 'parenthesis');
+    const loc = location();
+    expr = diagnoseIfEmpty(loc, 'an expression in the parenthesis', NULL_LITERAL);
+    diagnoseIfNotTerminated(closer, 'parenthesis', loc.source, loc.start);
     return expr;
   }
 
@@ -1226,7 +1233,8 @@ ExprBlock 'parentheses that enclose expression' =
 FunctionCall 'function call' =
   expr:StrictIdentifier _0 args:(
     '(' _0 args:ExprSingleList? _0 closer:')'? {
-      diagnoseIfNotTerminated(closer, 'parenthesis for function parameters');
+      const loc = location();
+      diagnoseIfNotTerminated(closer, 'parenthesis for function parameters', loc.source, loc.start);
       return args;
     }
   ) {
