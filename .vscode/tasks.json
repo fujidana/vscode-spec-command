@@ -4,20 +4,60 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"type": "npm",
-			"script": "compile",
+			"label": "watch",
+			"dependsOn": [
+				"npm: watch:peggy",
+				"npm: watch:webpack"
+			],
+			"presentation": {
+				"reveal": "never"
+			},
 			"group": {
 				"kind": "build",
 				"isDefault": true
-			},
-			"problemMatcher": [
-				"$ts-webpack",
-				"$tslint-webpack"
-			]
+			}
 		},
 		{
 			"type": "npm",
-			"script": "watch",
+			"script": "watch:peggy",
+			"group": "build",
+			"isBackground": true,
+			"problemMatcher": {
+				"owner": "external",
+				"fileLocation": "autoDetect",
+				"source": "peggy-language",
+				"applyTo": "closedDocuments",
+				"pattern": [
+					{
+						"regexp": "^(Error|error|warning|info)\\S*: (.*)$",
+						"severity": 1,
+						"message": 2
+					},
+					{
+						"regexp": "^ --> ([^:]+):(\\d+):(\\d+)$",
+						"file": 1,
+						"line": 2,
+						"column": 3
+					}
+				],
+				"background": {
+					"activeOnStart": false,
+					"beginsPattern": {
+						"regexp": "^\"(.+)\" changed...$",
+						"file": 1
+					},
+					"endsPattern": "^(Wrote|Failed writing): (\".+\")$"
+				}
+			},
+			"label": "npm: watch:peggy",
+			"presentation": {
+				"reveal": "never",
+				"group": "watchers"
+			}
+		},
+		{
+			"type": "npm",
+			"script": "watch:webpack",
 			"group": "build",
 			"isBackground": true,
 			"problemMatcher": [

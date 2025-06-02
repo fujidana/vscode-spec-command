@@ -335,13 +335,17 @@
 	},
 	"scripts": {
 		"vscode:prepublish": "pnpm run peggy && pnpm run js-yaml && pnpm run package",
-		"compile": "webpack",
-		"watch": "webpack --watch",
+		"compile": "pnpm run compile:peggy && pnpm run compile:webpack",
+		"compile:webpack": "webpack",
+		"compile:peggy": "peggy -c ./src/pegconfig.json",
+		"watch": "pnpm run watch:peggy & pnpm run watch:webpack",
+		"watch:webpack": "webpack --watch",
+		"watch:peggy": "peggy -w -c ./src/pegconfig.json",
 		"package": "webpack --mode production --devtool hidden-source-map",
 		"compile-tests": "tsc -p . --outDir out",
 		"watch-tests": "tsc -p . -w --outDir out",
-		"pretest-node": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
-		"test-node": "vscode-test",
+		"pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
+		"test": "vscode-test",
 		"pretest-web": "pnpm run compile",
 		"test-web": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/index.js",
 		"lint": "eslint src",
@@ -349,8 +353,7 @@
 		"js-yaml": "pnpm run js-yaml:snippets && pnpm run js-yaml:apiReference && pnpm run js-yaml:tmLanguage",
 		"js-yaml:snippets": "js-yaml ./src/specCommand.snippets.yaml > ./syntaxes/specCommand.snippets.json",
 		"js-yaml:apiReference": "js-yaml ./src/specCommand.apiReference.yaml > ./syntaxes/specCommand.apiReference.json",
-		"js-yaml:tmLanguage": "js-yaml ./src/specCommand.tmLanguage.yaml > ./syntaxes/specCommand.tmLanguage.json",
-		"peggy": "peggy -c ./src/pegconfig.json"
+		"js-yaml:tmLanguage": "js-yaml ./src/specCommand.tmLanguage.yaml > ./syntaxes/specCommand.tmLanguage.json"
 	},
 	"dependencies": {
 		"estraverse": "^5.3.0"
@@ -372,7 +375,7 @@
 		"eslint": "^9.25.1",
 		"js-yaml": "^4.1.0",
 		"mocha": "^11.1.0",
-		"peggy": "^5.0.2",
+		"peggy": "^5.0.3",
 		"process": "^0.11.10",
 		"ts-loader": "^9.5.2",
 		"typescript": "^5.8.3",
