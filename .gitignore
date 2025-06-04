@@ -6,7 +6,6 @@ node_modules
 *.vsix
 .env
 .DS_Store
-syntaxes/*
-!syntaxes/.gitkeep
+syntaxes/*.json
 src/grammar.d.ts
 src/grammar.js

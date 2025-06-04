@@ -351,9 +351,9 @@
 		"lint": "eslint src",
 		"run-in-browser": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. .",
 		"js-yaml": "pnpm run js-yaml:snippets && pnpm run js-yaml:apiReference && pnpm run js-yaml:tmLanguage",
-		"js-yaml:snippets": "js-yaml ./src/specCommand.snippets.yaml > ./syntaxes/specCommand.snippets.json",
-		"js-yaml:apiReference": "js-yaml ./src/specCommand.apiReference.yaml > ./syntaxes/specCommand.apiReference.json",
-		"js-yaml:tmLanguage": "js-yaml ./src/specCommand.tmLanguage.yaml > ./syntaxes/specCommand.tmLanguage.json"
+		"js-yaml:snippets": "js-yaml syntaxes/specCommand.snippets.yaml > syntaxes/specCommand.snippets.json",
+		"js-yaml:apiReference": "js-yaml syntaxes/specCommand.apiReference.yaml > syntaxes/specCommand.apiReference.json",
+		"js-yaml:tmLanguage": "js-yaml syntaxes/specCommand.tmLanguage.yaml > syntaxes/specCommand.tmLanguage.json"
 	},
 	"dependencies": {
 		"estraverse": "^5.3.0"
