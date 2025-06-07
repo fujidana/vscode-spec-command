@@ -4,6 +4,11 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+### Changed
+
+- Migrate the bundler from `webpack` to `esbuild`.
+- Raise the minimum VS Code version to 1.100.0.
+
 ## [1.8.9] -- 2025-05-23
 
 ### Fixed
@@ -12,8 +17,7 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Changed
 
-- Update Node.js packages.
-  - Eliminate the dependency on `ts-pegjs` and bump the version of `peggy` from 3 to 5.
+- Eliminate the devDependency on `ts-pegjs` and bump the version of `peggy` from 3 to 5.
 - Raise the minimum VS Code version to 1.100.0.
   - Replace `TextDecoder().decode()` with `vscode.workspace.decode()` (new API in v1.100), which may improve support of minor text encodings (#6).
 
@@ -29,7 +33,6 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Changed
 
-- Update Node.js packages, including a vulnerable dependency.
 - Raise the minimum VS Code version to 1.97.0.
 
 ## [1.8.7] -- 2024-10-30
@@ -40,14 +43,12 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Changed
 
-- Update Node.js packages, including a vulnerable dependency.
 - Raise the minimum VS Code version to 1.91.0.
 
 ## [1.8.6] -- 2023-12-30
 
 ### Changed
 
-- Update Node.js packages, including a vulnerable dependency.
 - Raise the minimum VS Code version to 1.85.0.
 
 ### Fixed
@@ -61,7 +62,6 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Changed
 
-- Update Node.js packages, including a vulnerable dependency.
 - Raise the minimum VS Code version to 1.78.0.
 
 ### Fixed
@@ -72,7 +72,7 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Changed
 
-- Update Node.js packages, including peggy (ver. 2 -> 3) and ts-pegjs (ver. 3 -> 4).
+- Update peggy (ver. 2 -> 3) and ts-pegjs (ver. 3 -> 4).
 - Raise the minimum VS Code version to 1.76.0.
 
 ### Fixed
@@ -83,7 +83,6 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Changed
 
-- Update Node.js packages.
 - Raise the minimum VS Code version to 1.74.0.
 
 ## [1.8.2] -- 2022-09-26
@@ -115,8 +114,7 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Changed
 
-- Migrate the package manager to `pnpm`.
-- Update Node.js packages.
+- Migrate the package manager from `npm` to `pnpm`.
 - Raise the minimum VS Code version to 1.70.0.
 
 ## [1.7.4] -- 2022-06-29
@@ -127,14 +125,9 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Changed
 
-- Update Node.js packages.
 - Raise the minimum VS Code version to 1.68.0.
 
 ## [1.7.3] -- 2022-02-16
-
-### Changed
-
-- Update Node.js packages.
 
 ### Fixed
 
@@ -243,7 +236,7 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 - Eliminate non-physical files (for example, virtual files in a git repository) from IntelliSense targets.
 - Change the language identifier of __spec__ command files from `spec-macro` to `spec-cmd`.
 - Refine syntax highlighting rules to __spec__ log files.
-- Update Node.js packages, including migration of the diagnostic engine from pegjs to peggy.
+- Migrate the parser engine from `pegjs` to `peggy`.
 
 ## [1.3.0] - 2021-05-25
 
@@ -302,10 +295,6 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 - hyphenation errors in API reference
 
-### Security
-
-- Update Node.js packages, including a vulnerable dependency.
-
 ## [1.1.2] - 2020-07-08
 
 ### Changed
@@ -322,10 +311,6 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 ### Add
 
 - extension icon
-
-### Security
-
-- Update Node.js packages, including a vulnerable dependency.
 
 ## [1.1.0] - 2020-01-15
 
