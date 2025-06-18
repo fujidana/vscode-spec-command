@@ -28,7 +28,9 @@
 		"url": "https://github.com/fujidana/vscode-spec-command.git"
 	},
 	"homepage": "https://github.com/fujidana/vscode-spec-command#readme",
-	"activationEvents": [],
+	"activationEvents": [
+		"onFileSystem:spec-command"
+	],
 	"main": "./dist/node/extension.js",
 	"browser": "./dist/web/extension.js",
 	"contributes": {
