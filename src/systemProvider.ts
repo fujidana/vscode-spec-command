@@ -198,8 +198,8 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
             return mdText;
         };
 
-        if (uri.scheme === 'spec-command' && uri.authority === 'system') {
-            const storage = this.storageCollection.get(uri.with({ query: '' }).toString());
+        if (lang.BUILTIN_URI === uri.with({ query: '' }).toString()) {
+            const storage = this.storageCollection.get(lang.BUILTIN_URI);
             if (storage) {
                 let mdText = '# __spec__ Reference Manual\n\n';
                 mdText += 'The contents of this page are cited from the _Reference Manual_ section in [PDF version](https://www.certif.com/downloads/css_docs/spec_man.pdf) of the _User manual and Tutorials_, written by [Certified Scientific Software](https://www.certif.com/), except where otherwise noted.\n\n';
