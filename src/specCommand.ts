@@ -16,6 +16,7 @@ export const MOTOR_URI = 'spec-command://system/mnemonic-motor.md';
 export const COUNTER_URI = 'spec-command://system/mnemonic-counter.md';
 export const SNIPPET_URI = 'spec-command://system/code-snippet.md';
 export const ACTIVE_FILE_URI = 'spec-command://user/active-document.md';
+export const AST_URI = 'spec-command://user/ast.json';
 
 export const enum ReferenceItemKind {
     Undefined = 0,

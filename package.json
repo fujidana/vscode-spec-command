@@ -68,8 +68,8 @@
 				"icon": "$(references)"
 			},
 			{
-				"command": "spec-command.previewAST",
-				"title": "Preview spec-command AST",
+				"command": "spec-command.inspectSyntaxTree",
+				"title": "Inspect Syntax Tree (Developer)",
 				"category": "spec command",
 				"icon": "$(json)"
 			},
@@ -92,7 +92,7 @@
 					"command": "spec-command.openReferenceManual"
 				},
 				{
-					"command": "spec-command.previewAST",
+					"command": "spec-command.inspectSyntaxTree",
 					"when": "editorLangId == spec-command"
 				},
 				{
