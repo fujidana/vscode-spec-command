@@ -147,6 +147,13 @@
 					"default": true,
 					"markdownDescription": "Shows a preview (Webview created by built-in Markdown extension) in addition to a markdown source after [Open Reference Manual](command:spec-command.openReferenceManual) command is invoked."
 				},
+				"spec-command.specVersion": {
+					"type": "string",
+					"default": "6.13.4",
+					"markdownDescription": "Specifies the target version of __spec__ software. This affects code completion.",
+					"pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+					"patternErrorMessage": "The value must be in the Semantic Versioning 2.0.0 format. Set \"6.1.2\" for \"6.01.04\" since the format does not allow redundant zeros."
+				},
 				"spec-command.editor.hintVolume.hover": {
 					"type": "string",
 					"default": "full",
@@ -359,7 +366,8 @@
 		"js-yaml:tmLanguage": "js-yaml syntaxes/specCommand.tmLanguage.yaml > syntaxes/specCommand.tmLanguage.json"
 	},
 	"dependencies": {
-		"estraverse": "^5.3.0"
+		"estraverse": "^5.3.0",
+		"semver": "^7.7.2"
 	},
 	"devDependencies": {
 		"@esbuild-plugins/node-globals-polyfill": "^0.2.3",
@@ -368,6 +376,7 @@
 		"@types/estree": "^1.0.8",
 		"@types/mocha": "^10.0.10",
 		"@types/node": "20.x",
+		"@types/semver": "^7.7.0",
 		"@types/vscode": "^1.100.0",
 		"@typescript-eslint/eslint-plugin": "^8.31.1",
 		"@typescript-eslint/parser": "^8.31.1",

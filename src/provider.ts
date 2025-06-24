@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as lang from './specCommand';
+import { SemVer, satisfies } from 'semver';
 
 interface SuppressMessagesConfig {
     'completionItem.label.detail'?: boolean
@@ -56,7 +57,7 @@ const enum TruncationLevel {
     line
 }
 
-function truncateString(level: TruncationLevel, item: { description?: string, comments?: string }): string | undefined {
+function truncateString(level: TruncationLevel, item: { description?: string, deprecated?: lang.VersionRange, available?: lang.VersionRange }): string | undefined {
     let truncatedString;
     if (item.description) {
         if (level === TruncationLevel.full) {
@@ -70,8 +71,16 @@ function truncateString(level: TruncationLevel, item: { description?: string, co
         }
     }
 
-    if (item.comments && level !== TruncationLevel.line) {
-        truncatedString = truncatedString ? truncatedString + '\n\n' + item.comments : item.comments;
+    if (level !== TruncationLevel.line) {
+        if (item.available) {
+            const tmpStr = lang.getVersionRangeDescription(item.available, 'available');
+            truncatedString = truncatedString ? truncatedString + '\n\n' + tmpStr : tmpStr;
+        }
+
+        if (item.deprecated) {
+            const tmpStr = lang.getVersionRangeDescription(item.deprecated, 'deprecated');
+            truncatedString = truncatedString ? truncatedString + '\n\n' + tmpStr : tmpStr;
+        }
     }
 
     return truncatedString;
@@ -130,10 +139,19 @@ export class Provider implements vscode.CompletionItemProvider<lang.CompletionIt
 
     protected readonly storageCollection = new Map<string, lang.ReferenceStorage>();
     protected readonly completionItemCollection = new Map<string, lang.CompletionItem[]>();
+    protected specVersion: SemVer;
 
     constructor(context: vscode.ExtensionContext) {
+        this.specVersion = new SemVer(vscode.workspace.getConfiguration('spec-command').get<string>('specVersion', '6.13.4'));
+
         const configurationChangeListener = (event: vscode.ConfigurationChangeEvent) => {
             if (event.affectsConfiguration('spec-command.suggest.suppressMessages')) {
+                for (const uriString of this.storageCollection.keys()) {
+                    this.updateCompletionItemsForUriString(uriString);
+                }
+            }
+            if (event.affectsConfiguration('spec-command.specVersion')) {
+                this.specVersion = new SemVer(vscode.workspace.getConfiguration('spec-command').get<string>('specVersion', '6.13.4'));
                 for (const uriString of this.storageCollection.keys()) {
                     this.updateCompletionItemsForUriString(uriString);
                 }
@@ -157,8 +175,8 @@ export class Provider implements vscode.CompletionItemProvider<lang.CompletionIt
         const storage = this.storageCollection.get(uriString);
         if (storage) {
             const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages');
-            const suppressDetail = config !== undefined && 'completionItem.label.detail' in config && config['completionItem.label.detail'] === true;
-            const suppressDescription = config !== undefined && 'completionItem.label.description' in config && config['completionItem.label.description'] === true;
+            const suppressDetail = config?.['completionItem.label.detail'] ?? false;
+            const suppressDescription = config?.['completionItem.label.description'] ?? false;
             let description: string | undefined;
 
             if (!suppressDescription) {
@@ -182,11 +200,19 @@ export class Provider implements vscode.CompletionItemProvider<lang.CompletionIt
             const completionItems: lang.CompletionItem[] = [];
             for (const [refItemKind, map] of storage.entries()) {
                 for (const [identifier, item] of map.entries()) {
+                    if (item.available && !satisfies(this.specVersion, item.available.range)) {
+                        // skip items that are not supported in the current spec version
+                        continue;
+                    }
                     const detail = (!suppressDetail && item.signature.startsWith(identifier)) ? item.signature.substring(identifier.length) : undefined;
                     const label: vscode.CompletionItemLabel = { label: identifier, detail: detail, description: description };
                     const completionItem = new lang.CompletionItem(label, uriString, refItemKind);
                     if (item.snippet) {
                         completionItem.insertText = new vscode.SnippetString(item.snippet);
+                    }
+                    if (item.deprecated && satisfies(this.specVersion, item.deprecated.range)) {
+                        // add deprecated tag to the completion item.
+                        completionItem.tags = [vscode.CompletionItemTag.Deprecated];
                     }
                     completionItems.push(completionItem);
                 }

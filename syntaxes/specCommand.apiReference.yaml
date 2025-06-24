@@ -9,6 +9,8 @@ constants:
     signature: CCDS
     description: |-
       is the number of 2D image-type devices being used as determined from reading the *config* file.
+    available:
+      range: '>=5.7.2-9'
   COUNTERS:
     signature: COUNTERS
     description: |-
@@ -33,11 +35,15 @@ constants:
     signature: HOSTNAME
     description: |-
       is a built-in variable containing the platform host name as returned by the *gethostname()* system call.
+    available:
+      range: '>=6.2.0'
   IS_SERVER:
     signature: IS_SERVER
     description: |-
       is a built-in variable that contains the TCP port number on which **spec** is listening if running in server mode.
       Otherwise, the value is zero.
+    available:
+      range: '>=6.2.0'
   MCAS:
     signature: MCAS
     description: |-
@@ -77,6 +83,8 @@ constants:
 
       Note, the special built-in name `"pipe"` is not included in `OUTFILES`.
       The special built-in name `"/dev/null"` includes the full path in both `"name"` and `"path"` to work with the standard macros that always refer to that special file by the full path name.
+    available:
+      range: '>=6.2.0'
   PI:
     signature: PI
     description: |-
@@ -103,43 +111,48 @@ constants:
 
   SPEC_PID:
     signature: SPEC_PID
-    comments: 'cited from [CSS spec help pages: chg6_09](https://www.certif.com/spec_help/chg6_09.html).'
     description: |-
       contains the process ID of the **spec** process.
 
-      (Added in spec release 6.09.05.)
+      cited from [CSS spec help pages: chg6_09](https://www.certif.com/spec_help/chg6_09.html).
+    available:
+      range: '>=6.9.5'
   HISTCMD:
     signature: HISTCMD
-    comments: 'cited from [CSS spec help pages: chg6_10](https://www.certif.com/spec_help/chg6_10.html).'
     description: |-
       is the command line history number.
       That is the name used for the same item in the standard bash and zsh shells.
       `HISTCMD` is used in the new standard `highlight` macro.
 
-      (Added in spec release 6.10.01.)
+      cited from [CSS spec help pages: chg6_10](https://www.certif.com/spec_help/chg6_10.html).
+    available:
+      range: '>=6.10.1'
   HDF5_VERSION:
     signature: HDF5_VERSION
-    comments: 'cited from [CSS spec help pages: hdf5](https://certif.com/spec_help/hdf5.html).'
     description: |-
       contains the HDF5 version used when compiling **spec**, as in "1.8.13".
       Note, its value will not be set until the first call of one of the above functions.
+
+      cited from [CSS spec help pages: hdf5](https://certif.com/spec_help/hdf5.html).
   STATE_FILE:
     signature: STATE_FILE
-    comments: 'cited from [CSS spec help pages: chg6_12](https://www.certif.com/spec_help/chg6_12.html).'
     description: |-
       is set to the full path name of the user state file.
       The `save_state` macro will use its value, which allows the macro to work even if **spec**
       was invoked with the `-T` or `-U` flags, which create alternate tty or user names that are 
       used to name the **spec** session's associated state file.
 
-      (Added in spec release 6.12.05.)
+      cited from [CSS spec help pages: chg6_12](https://www.certif.com/spec_help/chg6_12.html).
+    available:
+      range: '>=6.12.5'
   SPEC_COMMAND:
     signature: SPEC_COMMAND
-    comments: 'cited from [CSS spec help pages: chg6_13](https://www.certif.com/spec_help/chg6_13.html).'
     description: |-
       is set to the command line by which spec was invoked.
 
-      (Added in spec release 6.13.03.)
+      cited from [CSS spec help pages: chg6_13](https://www.certif.com/spec_help/chg6_13.html).
+    available:
+      range: '>=6.13.3'
 
 variables:
   A:
@@ -208,12 +221,16 @@ variables:
       If `EVAL_RESULT` is 1, the command string was a statement or was a statement list that ended in a statement.
       If `EVAL_RESULT` is zero, the command string or last statement in the string was an expression.
       See the `eval()` function on page 80, for details.
+    available:
+      range: '>=6.4.5'
   GETLINE_EOF:
     signature: GETLINE_EOF
     description: |-
       is a built-in variable set by the `getline()` function to distinguish between an end of file, an error or a literal −1 read from the file.
       The value of `GETLINE_EOF` will be 1 if there was an end-of-file condition on the read of the file, −1 if there was an error reading the file or if the file couldn’t be opened and zero if the read was successful.
       See the `getline()` function on page 90.
+    available:
+      range: '>=6.3.5'
   GTERM:
     signature: GTERM
     description: |-
@@ -275,15 +292,15 @@ variables:
 
   HDF5_ERROR_MODE:
     signature: HDF5_ERROR_MODE
-    comments: 'cited from [CSS spec help pages: hdf5](https://certif.com/spec_help/hdf5.html).'
     description: |-
       Sets the verbosity level of error messages.
       Valid values are 1 through 4.
       Higher levels are useful for debugging calls of the above functions in conjunction with the HDF5 library source code.
       The default value is 1.
+
+      cited from [CSS spec help pages: hdf5](https://certif.com/spec_help/hdf5.html).
   argc:
     signature: argc
-    comments: 'cited from [CSS spec help pages: macros](https://www.certif.com/spec_help/macros.html).'
     description: |-
       is a local variable brought into existence within the scope of a macro function.
       The value of the variable `argc` is the number of arguments used to invoke the macro function.
@@ -292,16 +309,19 @@ variables:
       were explicitly declared in the macro definition. 
       The argument number corresponds to the position of the argument, with the first argument being `arg1`.
 
-      (Added in spec release 6.06.11.)
+      cited from [CSS spec help pages: macros](https://www.certif.com/spec_help/macros.html).
+    available:
+      range: '>=6.6.11'
   argv:
     signature: argv[]
-    comments: 'cited from [CSS spec help pages: macros](https://www.certif.com/spec_help/macros.html).'
     description: |-
       is a local associative array-like variable brought into existence within the scope of a macro function.
       Elements are numbered starting from "1".
       The `argv[]` symbol is similar to an associative array with the special property that in addition to number and string values, elements can be associative or data arrays to match the arguments by which the macro function was invoked.
 
-      (Added in spec release 6.12.01.)
+      cited from [CSS spec help pages: macros](https://www.certif.com/spec_help/macros.html).
+    available:
+      range: '>=6.12.1'
 
 # Built-In Functions and Commands
 
@@ -459,6 +479,12 @@ functions:
     description: |-
       Similar to `eval()`, but local symbols in the statement blocks surrounding the `eval2()` function call are visible and can be read or modified.
       To use local variables within the `eval2()` string that won’t be associated with local variables of the same name outside the `eval2()` call, use curly brackets to enclose the statements with the `local` declaration within the string `string`.
+    available:
+      range: '>=6.0.9'
+    deprecated:
+      range: '>=6.8.1'
+      description: |-
+        The `"local_visible"` optional argument causes `eval()` to have the same property.
   sleep:
     signature: sleep(t)
     description: |-
@@ -613,14 +639,15 @@ functions:
       Returns zero for success, −1 if the file wasn’t open.
   queue:
     signature: queue(cmd[, option])
-    comments: 'cited from [CSS spec help pages: queue](https://www.certif.com/spec_help/queue.html).'
     description: |-
       Schedules commands to be run once at a fixed time in the future or to repeat at an interval.
       Commands from the queue will normally run while **spec** is waiting for keyboard input.
       If **spec** is otherwise occupied commands in the queue will be deferred until the next opportunity **spec** has to check the queue.
       However, a `queue("check")` can be issued within running statements to give commands that are due a chance to run.
 
-      (Added in spec release 6.11.03.)
+      cited from [CSS spec help pages: queue](https://www.certif.com/spec_help/queue.html).
+    available:
+      range: '>=6.11.3'
     overloads:
     - signature: queue(cmd, interval)
       description: |-
@@ -897,6 +924,8 @@ functions:
       A clone of a chained macro becomes an ordinary macro.
   strdef:
     signature: strdef(name[, <arr|key[, arr]>])
+    available:
+      range: '>=5.8.2-6'
     overloads:
     - signature: strdef(name[, arr])
       description: |-
@@ -1048,28 +1077,30 @@ functions:
       The function returns the number of items found in the string.
   tolower:
     signature: tolower(s[, count[, start]])
-    comments: 'cited from [CSS spec help pages: funcs](https://www.certif.com/spec_help/funcs.html).'
     description: |-
       Returns a string with upper case letters converted to lower case.
       If `count` is specified, only that many characters are converted.
       If `start` is specified, the conversion starts at that position, counted starting from 1.
       Returns the original string if no conversions are possible.
 
-      (Added in **spec** release 6.08.05.)
+      cited from [CSS spec help pages: funcs](https://www.certif.com/spec_help/funcs.html).
+    available:
+      range: '>=6.8.5'
     overloads:
     - signature: tolower(s)
     - signature: tolower(s, count)
     - signature: tolower(s, count, start)
   toupper:
     signature: toupper(s[, count[, start]])
-    comments: 'cited from [CSS spec help pages: funcs](https://www.certif.com/spec_help/funcs.html).'
     description: |-
       Returns a string with lower case letters converted to upper case.
       If `count` is specified, only that many characters are converted.
       If `start` is specified, the conversion starts at that position, counted starting from 1.
       Returns the original string if no conversions are possible.
 
-      (Added in **spec** release 6.08.05.)
+      cited from [CSS spec help pages: funcs](https://www.certif.com/spec_help/funcs.html).
+    available:
+      range: '>=6.8.5'
     overloads:
     - signature: toupper(s)
     - signature: toupper(s, count)
@@ -1085,6 +1116,8 @@ functions:
       The string `str` is split into elements that are delimited by the regular expression `regex` and the resulting substrings are assigned to successive elements of the array `arr`, starting with element 0.
       The delimiting characters are eliminated.
       Returns the number of elements assigned.
+    available:
+      range: '>=6.3.4'
   sub:
     signature: sub(regex, sub, str)
     description: |-
@@ -1092,6 +1125,8 @@ functions:
       An `&` in the substitute string is replaced with the text that was matched by the regular expression.
       A `\&` (which must be typed as `"\\&"`) will produce a literal `&`.
       Returns the modified string.
+    available:
+      range: '>=6.3.4'
   gsub:
     signature: gsub(regex, sub, str)
     description: |-
@@ -1099,6 +1134,8 @@ functions:
       An `&` in the substitute string is replaced with the text that was matched by the regular expression.
       A `\&` (which must be typed as `"\\&"`) will produce a literal `&`.
       Returns the modified string.
+    available:
+      range: '>=6.3.4'
   gensub:
     signature: gensub(regex, sub, which, str)
     description: |-
@@ -1111,6 +1148,8 @@ functions:
       That sequence will be replaced with the text that matches the *N*th parenthesized subexpression in `regex`.
       A `\0` is replaced with the text that matches the entire regular expression.
       Returns the modified string.
+    available:
+      range: '>=6.3.4'
   match:
     signature: match(str, regex[, arr])
     description: |-
@@ -1120,6 +1159,8 @@ functions:
       If the associative array `arr` is provided, its contents are cleared and new elements are assigned based on the consecutive matching parenthesized subexpressions in `regex`.
       The zeroth element, `arr[0]`, is assigned the entire matching text, while `arr[0]["start"]` is assigned the starting position of the match and `arr[0]["length"]` is assigned the length of the match.
       Elements from 1 onward are assigned matches, positions and lengths of the corresponding matching parenthesized subexpressions in `regex`.
+    available:
+      range: '>=6.3.4'
 
   ### Conversion Functions
 
@@ -1396,6 +1437,8 @@ functions:
       Returns **true**.
   splot_cntl:
     signature: splot_cntl(cmd)
+    available:
+      range: '>=6.2.0'
   data_grp:
     signature: data_grp(grp, npts, wid)
     description: |-
@@ -1660,18 +1703,32 @@ functions:
     - signature: remote_poll(id)
   encode:
     signature: encode(format, obj[, ...])
-    comments: 'cited from [CSS spec help pages: funcs](https://www.certif.com/spec_help/funcs.html).'
     description: |-
-      Returns a string representation of the **spec** data objects `obj ...` in the specified `format`.
-      Currently the only recognized format is `"json"`.
-      See the [encode](https://www.certif.com/spec_help/funcs.html) help file for details.
+      Returns a string representation of the **fspec** data object or objects in the specified `format`.
+
+      In the function, the first argument is the name of the format.
+      Currently, `"json"` and `"base64"` are recognized formats.
+      The argument is case insensitive.
+
+      cited from [CSS spec help pages: encode](https://www.certif.com/spec_help/encode.html).
+    available:
+      range: '>=5.10.1-1'
   decode:
-    signature: decode(format, string)
-    comments: 'cited from [CSS spec help pages: funcs](https://www.certif.com/spec_help/funcs.html).'
+    signature: decode(format, str[, arr])
     description: |-
-      Returns a **spec** data object obtained from the string `str` in `format`.
-      Currently the only recognized format is `"json"`.
-      See the [encode](https://www.certif.com/spec_help/funcs.html) help file for details.
+      If two arguments, returns a **spec** data object obtained from the string representation in `format`.
+      If three arguments, the result will be returned in the array `arr` and the function will return 0 or -1, to indicate success or failure.
+      The type of array for `arr` (associative or data) depends on the decoding format.
+      JSON requires an associative array.
+      Base64 requires a data array.
+
+      In the function, the first argument is the name of the format.
+      Currently, `"json"` and `"base64"` are recognized formats.
+      The argument is case insensitive.
+
+      cited from [CSS spec help pages: encode](https://www.certif.com/spec_help/encode.html).
+    available:
+      range: '>=5.10.1-1'
 
   ## Hardware Functions and Commands
 
@@ -2118,6 +2175,8 @@ functions:
 
   sock_get:
     signature: sock_get("host:port"[, <n|eos|d|mode>])
+    available:
+      range: '>=5.1.1-4'
     overloads:
     - signature: sock_get("host:port")
       description: |-
@@ -2150,6 +2209,8 @@ functions:
         If the incoming data is littleendian use `"short_swap"` or `"long_swap"`.
   sock_put:
     signature: sock_put("host:port", <s|d[, cnt]|cmd[, arg]>)
+    available:
+      range: '>=5.1.1-4'
     overloads:
     - signature: sock_put("host:port", s)
       description: |-
@@ -2166,6 +2227,8 @@ functions:
         Returns the number of bytes written.
   sock_par:
     signature: sock_par("host:port", cmd[, arg])
+    available:
+      range: '>=5.1.1-4'
     description: |-
       Accesses various features for the given socket with values for `cmd` as follows:
 
@@ -2201,6 +2264,16 @@ functions:
         This algorithm increases network efficiency.
         For some clients that send a stream of short packets that receive no replies, this algorithm may cause unwanted delays.
         Set the `"nodelay"` option to 1 to turn off the algorithm, which corresponds to setting the *TCP_NODELAY* option at the system level.
+  sock_io:
+    signature: sock_io("host:port", cmd[, arg])
+    description: |-
+      Connects and communicates with sockets created by other processes on the local or a remote host.
+
+      cited from [CSS spec help pages: sock_io](https://certif.com/spec_help/sock_io.html).
+    deprecated:
+      range: '>= 5.1.1-4'
+      description: |-
+        Please see the [sockets](https://certif.com/spec_help/sockets.html) help file for a description of the `sock_get()`, `sock_put()` and `sock_par()` replacement functions.
 
   ### RS-232 Serial Interfaces
 
@@ -2441,9 +2514,10 @@ functions:
 
   taco_io:
     signature: taco_io(...)
-    comments: 'cited from [CSS spec help pages: esrf](https://certif.com/spec_help/esrf.html).'
     description: |-
       The ESRF data collector system can be accessed using the following functions. All devices must reside on `NETHOST`.
+
+      cited from [CSS spec help pages: esrf](https://certif.com/spec_help/esrf.html).
     overloads:
     - signature: taco_io(dev, cmd [, arg1_in [, arg2_in]] [, array_out]|[, grp, el])
       description: |-
@@ -2512,7 +2586,8 @@ functions:
         Sets the ethernet protocol for the named device.
   taco_db:
     signature: taco_db(...)
-    comments: 'cited from [CSS spec help pages: esrf](https://certif.com/spec_help/esrf.html).'
+    description: |-
+      cited from [CSS spec help pages: esrf](https://certif.com/spec_help/esrf.html).
     overloads:
     - signature: taco_dc(dev, "create", cmd, data_type)
       description: |-
@@ -2567,7 +2642,8 @@ functions:
         Lists all the devices, commands and data types in the data collector for `NETHOST`.
   taco_dc:
     signature: taco_dc(...)
-    comments: 'cited from [CSS spec help pages: esrf](https://certif.com/spec_help/esrf.html).'
+    description: |-
+      cited from [CSS spec help pages: esrf](https://certif.com/spec_help/esrf.html).
     overloads:
     - signature: taco_db(dev, res)
       description: |-
@@ -2583,7 +2659,8 @@ functions:
 
   tango_io:
     signature: tango_io(dev, ...)
-    comments: 'cited from [CSS spec help pages: tango](https://certif.com/spec_help/tango.html).'
+    description: |-
+      cited from [CSS spec help pages: tango](https://certif.com/spec_help/tango.html).
     overloads:
     - signature: tango_io(dev, "?")
       description: |-
@@ -2616,7 +2693,8 @@ functions:
         Sets the data source for *dev*. Allowed values are 0, 1 and 2, with meanings as described above.
   tango_get:
     signature: tango_get(dev, ...)
-    comments: 'cited from [CSS spec help pages: tango](https://certif.com/spec_help/tango.html).'
+    description: |-
+      cited from [CSS spec help pages: tango](https://certif.com/spec_help/tango.html).
     overloads:
     - signature: tango_get(dev, "?")
       description: |-
@@ -2710,7 +2788,8 @@ functions:
         If present, the *extras* array will be two dimensional, with the first index being the attribute name and the second index as above.
   tango_put:
     signature: tango_put(dev, ...)
-    comments: 'cited from [CSS spec help pages: tango](https://certif.com/spec_help/tango.html).'
+    description: |-
+      cited from [CSS spec help pages: tango](https://certif.com/spec_help/tango.html).
     overloads:
     - signature: tango_put(dev, "?")
       description: |-
@@ -2740,7 +2819,6 @@ functions:
   
   epics_get:
     signature: epics_get(ca_name[, type][, count])
-    comments: 'cited from [CSS spec help pages: epics](https://certif.com/spec_help/epics.html).'
     description: |-
       Returns the result of a channel-access get of the process variable *ca_name*, as in `print epics_get("ioc:m1.VAL")`.
       By default, the native data type of the process variable will be retrieved over channel access.
@@ -2754,18 +2832,22 @@ functions:
       Note, any bytes following a null byte in the `DBF_CHAR` array will be lost.
       If a `"monitor"` has been set for the process variable using the `"monitor_set"` option below, the returned result will be the most recent value as set by the monitor call back.
       Otherwise (or if there has been no monitor call back), **spec** will access the process variable value using the standard channel access `ca_array_get()`.
+
+      cited from [CSS spec help pages: epics](https://certif.com/spec_help/epics.html).
   epics_put:
     signature: epics_put(ca_name, value[, wait_time])
-    comments: 'cited from [CSS spec help pages: epics](https://certif.com/spec_help/epics.html).'
     description: |-
       Does a channel-access put of *value*, which can be either a string or a number, to the process variable *ca_name*.
       If the optional *wait_time* argument is set, **spec** will wait for a channel-access `"callback"` to indicate the value has been sent.
       **spec** will wait up to the specified number of seconds for that response.
       Such a feature might come in handy if the channel-access put is to start an acquisition device and one wants to insure the device is started before continuing.
       If the process variable is an array of a `DBF_CHAR` type, any non-array *value*, whether number or string, will be sent via channel access as a string, filling as many elements of the array as the string is long.
+
+      cited from [CSS spec help pages: epics](https://certif.com/spec_help/epics.html).
   epics_par:
     signature: epics_par(...)
-    comments: 'cited from [CSS spec help pages: epics](https://certif.com/spec_help/epics.html).'
+    description: |-
+      cited from [CSS spec help pages: epics](https://certif.com/spec_help/epics.html).
     overloads:
     - signature: epics_par(ca_name, what)
       description: |-
@@ -2793,7 +2875,6 @@ functions:
 
   gpib_par:
     signature: gpib_par(addr, "timeout" [, t])
-    comments: 'cited from [CSS spec help pages: gpib](https://certif.com/spec_help/gpib.html).'
     description: |-
       Returns or sets the timeout for the device with address *addr*.
       The units are seconds.
@@ -2801,11 +2882,14 @@ functions:
       Timeouts are per device (rather than per controller). The timeouts only apply to the user-level GPIB commands.
       Timeouts used by built-in hardware support will continue to apply to that access. (As of **spec** release 5.09.02-3.)
 
+      cited from [CSS spec help pages: gpib](https://certif.com/spec_help/gpib.html).
+
   ### Not documented in spec_manA4.pdf. Instaed, cited from https://certif.com/spec_help/vxi11.html.
 
   vxi11_get:
     signature: vxi11_get(...)
-    comments: 'cited from [CSS spec help pages: vxi11](https://certif.com/spec_help/vxi11.html).'
+    description: |-
+      cited from [CSS spec help pages: vxi11](https://certif.com/spec_help/vxi11.html).
     overloads:
     - signature: vxi11_get("name")
       description: |-
@@ -2830,7 +2914,8 @@ functions:
         If the incoming data is *little endian*, use `"short_swap"` or `"long_swap"`.
   vxi11_put:
     signature: vxi11_put(...)
-    comments: 'cited from [CSS spec help pages: vxi11](https://certif.com/spec_help/vxi11.html).'
+    description: |-
+      cited from [CSS spec help pages: vxi11](https://certif.com/spec_help/vxi11.html).
     overloads:
     - signature: vxi11_put(name, s)
       description: |-
@@ -2847,7 +2932,8 @@ functions:
         Returns the number of bytes written.
   vxi11_par:
     signature: vxi11_par(...)
-    comments: 'cited from [CSS spec help pages: vxi11](https://certif.com/spec_help/vxi11.html).'
+    description: |-
+      cited from [CSS spec help pages: vxi11](https://certif.com/spec_help/vxi11.html).
     overloads:
     - signature: vxi11_par("show")
       description: |-
@@ -2881,7 +2967,8 @@ functions:
 
   h5_file:
     signature: h5_file(...)
-    comments: 'cited from [CSS spec help pages: hdf5](https://certif.com/spec_help/hdf5.html).'
+    description: |-
+      cited from [CSS spec help pages: hdf5](https://certif.com/spec_help/hdf5.html).
     overloads:
     - signature: h5_file(filename, "open"[, "cache=bytes[[:slots]:policy]"])
       description: |-
@@ -2904,7 +2991,8 @@ functions:
         Returns the name of the currently active HDF5 file, or the null string if no file is open.
   h5_attr:
     signature: h5_attr(...)
-    comments: 'cited from [CSS spec help pages: hdf5](https://certif.com/spec_help/hdf5.html).'
+    description: |-
+      cited from [CSS spec help pages: hdf5](https://certif.com/spec_help/hdf5.html).
     overloads:
     - signature: h5_attr(group_path, attribute_name, attribute_value[, option ...])
       description: |-
@@ -2918,7 +3006,8 @@ functions:
         Sets the current group to *group_path*. A call such as `h5_attr("..")` moves the current group up one level.
   h5_data:
     signature: h5_data(...)
-    comments: 'cited from [CSS spec help pages: hdf5](https://certif.com/spec_help/hdf5.html).'
+    description: |-
+      cited from [CSS spec help pages: hdf5](https://certif.com/spec_help/hdf5.html).
     overloads:
     - signature: h5_data(group_path, dataset_name, dataset_value [, option ...])
       description: |-
@@ -2939,15 +3028,17 @@ functions:
         Sets the current group to *group_path*. A call such as `h5_attr("..")` moves the current group up one level.
   h5_link:
     signature: h5_link(group_path, link_name, target_file, target_object)
-    comments: 'cited from [CSS spec help pages: hdf5](https://certif.com/spec_help/hdf5.html).'
     description: |-
       Creates a soft link named *link_name* pointing to the specified target object in the target file*.
+
+      cited from [CSS spec help pages: hdf5](https://certif.com/spec_help/hdf5.html).
+    available:
+      range: '>= 6.3.1'
 
   ### Not documented in spec_manA4.pdf.
 
   get_history:
     signature: get_history(num)
-    comments: 'cited from [CSS spec help pages: chg6_07](https://www.certif.com/spec_help/chg6_07.html).'
     description: |-
       returns entries from the command-line history as a string.
       If `num` is positive, returns the specified history item.
@@ -2955,35 +3046,54 @@ functions:
       If no item exists at the specified number, returns an empty string.
       See the [history](https://www.certif.com/spec_help/history.html) help file for details.
 
+      cited from [CSS spec help pages: chg6_07](https://www.certif.com/spec_help/chg6_07.html).
+    available:
+      range: '>= 6.7.7'
   fbus_get:
     signature: fbus_get(...)
-    comments: 'cited from [CSS spec help pages: chg6_08](https://www.certif.com/spec_help/chg6_08.html).'
     description: |-
       See the new [fbus](https://www.certif.com/spec_help/fbus.html) help file for details.
+    available:
+      range: '>= 5.5.2-1'
   fbus_put:
     signature: fbus_put(...)
-    comments: 'cited from [CSS spec help pages: chg6_08](https://www.certif.com/spec_help/chg6_08.html).'
     description: |-
       See the new [fbus](https://www.certif.com/spec_help/fbus.html) help file for details.
+    available:
+      range: '>= 5.5.2-1'
 
   em_io:
     signature: em_io(...)
-    comments: 'cited from [CSS spec help pages: chg6_08](https://www.certif.com/spec_help/chg6_08.html).'
     description: |-
-      The built-in `em_io()` function has been renamed `madoca_io()`.
-      See the [madoca](https://www.certif.com/spec_help/madoca.html) help file (formerly named [equipman](https://www.certif.com/spec_help/equipman.html)) for details.
+      See the new [equipman](https://certif.com/spec_help/equipman.html) help file for details.
+    available:
+      range: '>= 4.5.10'
+    deprecated:
+      range: '>= 6.8.6'
+      description: |-
+        The built-in `em_io()` function has been renamed `madoca_io()`.
+        See the [madoca](https://www.certif.com/spec_help/madoca.html) help file (formerly named [equipman](https://www.certif.com/spec_help/equipman.html)) for details.
+
+        cited from [CSS spec help pages: chg6_08](https://www.certif.com/spec_help/chg6_08.html).
   madoca_io:
     signature: madoca_io(...)
-    comments: 'cited from [CSS spec help pages: chg6_08](https://www.certif.com/spec_help/chg6_08.html).'
     description: |-
       The built-in `em_io()` function has been renamed `madoca_io()`.
       See the [madoca](https://www.certif.com/spec_help/madoca.html) help file (formerly named [equipman](https://www.certif.com/spec_help/equipman.html)) for details.
+
+      cited from [CSS spec help pages: chg6_08](https://www.certif.com/spec_help/chg6_08.html).
+    available:
+      range: '>= 6.8.6'
   rpi_io:
     signature: rpi_io(...)
-    comments: 'cited from [CSS spec help pages: chg6_09](https://www.certif.com/spec_help/chg6_09.html).'
     description: |-
       is a function for the Raspberry PI platform to allow access to the general purpose I/O (GPIO) pins.
       See the [rpi](https://www.certif.com/spec_help/rpi.html) help file for details.
+
+      cited from [CSS spec help pages: chg6_09](https://www.certif.com/spec_help/chg6_09.html).
+    available:
+      range: '>= 6.9.2'
+
 
 macros:
 

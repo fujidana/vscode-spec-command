@@ -4,6 +4,10 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+### Added
+
+- Add `spec-command.specVersion` setting. It affects the scope of auto-completion (in short, hides unsupported APIs from the auto-completion list). issue [#23](https://github.com/fujidana/vscode-spec-command/issues/23).
+
 ### Changed
 
 - Migrate the bundler from `webpack` to `esbuild`.

@@ -115,7 +115,8 @@ export class CompletionItem extends vscode.CompletionItem {
 export type ReferenceItem = {
     signature: string;
     description?: string;
-    comments?: string;
+    available?: VersionRange;
+    deprecated?: VersionRange;
     snippet?: string;
     location?: LocationRange;
     overloads?: {
@@ -123,6 +124,19 @@ export type ReferenceItem = {
         description?: string;
     }[];
 };
+
+export type VersionRange = {
+    range: string;
+    description?: string;
+};
+
+export function getVersionRangeDescription(versionRange: VersionRange, label: string) {
+    let tmpStr = versionRange.range === '>=0.0.0' ? `[${label} at some time]` : `[${label}: \`${versionRange.range}\`]`;
+    if (versionRange.description) {
+        tmpStr += ' ' + versionRange.description;
+    }
+    return tmpStr;
+}
 
 export type ReferenceMap = Map<string, ReferenceItem>;
 
