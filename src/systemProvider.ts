@@ -191,10 +191,15 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
     public provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken): vscode.ProviderResult<string> {
         if (token.isCancellationRequested) { return; }
 
-        const getFormattedStringForItem = (item: { signature?: string, description?: string, comments?: string }) => {
+        const getFormattedStringForItem = (item: { signature?: string, description?: string, deprecated?: lang.VersionRange, available?: lang.VersionRange }) => {
             let mdText = `\`${item.signature}\``;
             mdText += item.description ? ` \u2014 ${item.description}\n\n` : '\n\n';
-            mdText += item.comments ? `${item.comments}\n\n` : '';
+            if (item.available) {
+                mdText += lang.getVersionRangeDescription(item.available, 'available') + '\n\n';
+            }
+            if (item.deprecated) {
+                mdText += lang.getVersionRangeDescription(item.deprecated, 'deprecated') + '\n\n';
+            }
             return mdText;
         };
 
