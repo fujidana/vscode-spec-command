@@ -40,70 +40,70 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
 
         // load the API reference file
         const apiReferenceUri = vscode.Uri.joinPath(context.extensionUri, 'syntaxes', 'specCommand.apiReference.json');
-        const promisedStorage = vscode.workspace.fs.readFile(apiReferenceUri).then(uint8Array => {
+        const promisedRefBook = vscode.workspace.fs.readFile(apiReferenceUri).then(uint8Array => {
             return vscode.workspace.decode(uint8Array, { encoding: 'utf8' });
         }).then(decodedString => {
             // convert JSON-formatted file contents to a javascript object.
             const apiReference: APIReference = JSON.parse(decodedString);
 
-            // convert the object to ReferenceMap and register the set.
-            const storage: lang.ReferenceStorage = new Map([
-                [lang.ReferenceItemKind.Constant, new Map(Object.entries(apiReference.constants))],
-                [lang.ReferenceItemKind.Variable, new Map(Object.entries(apiReference.variables))],
-                [lang.ReferenceItemKind.Macro, new Map(Object.entries(apiReference.macros))],
-                [lang.ReferenceItemKind.Function, new Map(Object.entries(apiReference.functions))],
-                [lang.ReferenceItemKind.Keyword, new Map(Object.entries(apiReference.keywords))],
-            ]);
-            this.storageCollection.set(lang.BUILTIN_URI, storage);
+            // convert the object of each category to a Map object.
+            const refBook: lang.ReferenceBook = {
+                constant: new Map(Object.entries(apiReference.constants)),
+                variable: new Map(Object.entries(apiReference.variables)),
+                macro: new Map(Object.entries(apiReference.macros)),
+                function: new Map(Object.entries(apiReference.functions)),
+                keyword: new Map(Object.entries(apiReference.keywords)),
+            };
+            this.referenceCollection.set(lang.BUILTIN_URI, refBook);
             this.updateCompletionItemsForUriString(lang.BUILTIN_URI);
-            return storage;
+            return refBook;
         });
 
-        // register motor and counter mnemonic storages and snippet storage.
+        // register reference database for motors, counters and snippets.
         const editor = vscode.window.activeTextEditor;
         this.activeWorkspaceFolder = editor ? vscode.workspace.getWorkspaceFolder(editor.document.uri) : undefined;
-        this.updateMnemonicStorage('motors');
-        this.updateMnemonicStorage('counters');
-        this.updateSnippetStorage();
+        this.updateMnemonicRefBook('motors');
+        this.updateMnemonicRefBook('counters');
+        this.updateSnippetRefBook();
 
         //
         const activeTextEditorDidChangeListener = (event: vscode.TextEditor | undefined) => {
             const newActiveWorkspaceFolder = event ? vscode.workspace.getWorkspaceFolder(event.document.uri) : undefined;
             if (this.activeWorkspaceFolder !== newActiveWorkspaceFolder) {
                 this.activeWorkspaceFolder = newActiveWorkspaceFolder;
-                this.updateMnemonicStorage('motors');
-                this.updateMnemonicStorage('counters');
-                this.updateSnippetStorage();
+                this.updateMnemonicRefBook('motors');
+                this.updateMnemonicRefBook('counters');
+                this.updateSnippetRefBook();
             }
         };
 
         // observe the change in configuration
         const configurationDidChangeListener = (event: vscode.ConfigurationChangeEvent) => {
             if (event.affectsConfiguration('spec-command.suggest.motors', this.activeWorkspaceFolder)) {
-                this.updateMnemonicStorage('motors');
-                this.updateSnippetStorage();
+                this.updateMnemonicRefBook('motors');
+                this.updateSnippetRefBook();
             }
             if (event.affectsConfiguration('spec-command.suggest.counters', this.activeWorkspaceFolder)) {
-                this.updateMnemonicStorage('counters');
-                this.updateSnippetStorage();
+                this.updateMnemonicRefBook('counters');
+                this.updateSnippetRefBook();
             }
             if (event.affectsConfiguration('spec-command.suggest.codeSnippets', this.activeWorkspaceFolder)) {
-                this.updateSnippetStorage();
+                this.updateSnippetRefBook();
             }
         };
 
         // register command to show reference manual as a virtual document
-        const openReferenceManualCallback = async () => {
-            const storage = await promisedStorage;
+        const openReferenceManualCommandHandler = async () => {
+            const refBook = await promisedRefBook;
 
-            const quickPickItems = [{ key: 'all', label: '$(references) all' }];
-            for (const itemKind of storage.keys()) {
-                const metadata = lang.getReferenceItemKindMetadata(itemKind);
-                quickPickItems.push({ key: metadata.label, label: `$(${metadata.iconIdentifier}) ${metadata.label}` });
+            const quickPickItems = [{ category: 'all', label: '$(references) all' }];
+            for (const category of Object.keys(refBook)) {
+                const metadata = lang.referenceCategoryMetadata[category as keyof typeof refBook];
+                quickPickItems.push({ category: category, label: `$(${metadata.iconIdentifier}) ${metadata.label}` });
             }
             const quickPickItem = await vscode.window.showQuickPick(quickPickItems);
             if (quickPickItem) {
-                const uri = vscode.Uri.parse(lang.BUILTIN_URI).with({ query: quickPickItem.key });
+                const uri = vscode.Uri.parse(lang.BUILTIN_URI).with({ query: quickPickItem.category });
                 const editor = await vscode.window.showTextDocument(uri, { preview: false });
                 const flag = vscode.workspace.getConfiguration('spec-command').get<boolean>('showReferenceManualInPreview');
                 if (flag) {
@@ -116,7 +116,7 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
 
         context.subscriptions.push(
             // register command handlers
-            vscode.commands.registerCommand('spec-command.openReferenceManual', openReferenceManualCallback),
+            vscode.commands.registerCommand('spec-command.openReferenceManual', openReferenceManualCommandHandler),
             // register providers
             vscode.workspace.registerTextDocumentContentProvider('spec-command', this),
             // register event handlers
@@ -126,43 +126,43 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
     }
 
     /**
-     * Update the contents of motor or counter mnemonic storage.
+     * Update the reference database for motor or counter mnemonic.
      * Invoked when initialization completed or configuration modified. 
      */
-    private updateMnemonicStorage(kind: 'motors' | 'counters') {
+    private updateMnemonicRefBook(kind: 'motors' | 'counters') {
         const uriString = kind === 'motors' ? lang.MOTOR_URI : lang.COUNTER_URI;
-        const refMap: lang.ReferenceMap = new Map();
+        const refSheet: lang.ReferenceSheet = new Map();
 
         const record = vscode.workspace.getConfiguration('spec-command.suggest', this.activeWorkspaceFolder).get<Record<string, string>>(kind);
         if (record) {
             const regExp = /^[a-zA-Z_][a-zA-Z0-9_]{0,6}$/;
             for (const [key, value] of Object.entries(record)) {
                 if (regExp.test(key)) {
-                    refMap.set(key, { signature: key, description: value });
+                    refSheet.set(key, { signature: key, description: value });
                 }
             }
         }
-        this.storageCollection.set(uriString, new Map([[lang.ReferenceItemKind.Enum, refMap]]));
+        this.referenceCollection.set(uriString, { enum: refSheet });
         this.updateCompletionItemsForUriString(uriString);
     }
 
     /**
-     * Update the contents of motor-mnemonic storage.
+     * Update the reference database for snippets.
      * Invoked when initialization completed or configuration modified. 
      */
-    private updateSnippetStorage() {
-        const refMap: lang.ReferenceMap = new Map();
+    private updateSnippetRefBook() {
+        const refSheet: lang.ReferenceSheet = new Map();
 
         const userTemplates = vscode.workspace.getConfiguration('spec-command.suggest', this.activeWorkspaceFolder).get<Record<string, string>>('codeSnippets');
         const templates = (userTemplates && Object.keys(userTemplates).length) ? Object.assign({}, SNIPPET_TEMPLATES, userTemplates) : SNIPPET_TEMPLATES;
 
-        const motorRefMap = this.storageCollection.get(lang.MOTOR_URI)?.get(lang.ReferenceItemKind.Enum);
-        const counterRefMap = this.storageCollection.get(lang.COUNTER_URI)?.get(lang.ReferenceItemKind.Enum);
-        const motorChoiceString = (motorRefMap && motorRefMap.size > 0) ?
-            '|' + [...motorRefMap.keys()].join(',') + '|' :
+        const motorRefSheet = this.referenceCollection.get(lang.MOTOR_URI)?.['enum'];
+        const counterRefSheet = this.referenceCollection.get(lang.COUNTER_URI)?.['enum'];
+        const motorChoiceString = (motorRefSheet && motorRefSheet.size > 0) ?
+            '|' + [...motorRefSheet.keys()].join(',') + '|' :
             ':motor$1';
-        const counterChoiceString = (counterRefMap && counterRefMap.size > 0) ?
-            '|' + [...counterRefMap.keys()].join(',') + '|' :
+        const counterChoiceString = (counterRefSheet && counterRefSheet.size > 0) ?
+            '|' + [...counterRefSheet.keys()].join(',') + '|' :
             ':counter$1';
 
         // 'mv ${1%MOT} ${2:pos} # motor move' -> Array ["mv ${1%MOT} ${2:pos} # motor move", "mv ${1%MOT} ${2:pos}", "mv", "# motor move", "motor move"]
@@ -178,10 +178,10 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
                 const signature = matches[1].replace(motorRegExp, ':motor$1').replace(counterRegExp, ':counter$1').replace(placeHolderRegExp, '$1').replace(choiceRegExp, 'choice');
                 const snippet = matches[1].replace(motorRegExp, motorChoiceString).replace(counterRegExp, counterChoiceString);
                 const description = matches[2];
-                refMap.set(key, { signature, description, snippet });
+                refSheet.set(key, { signature, description, snippet });
             }
         }
-        this.storageCollection.set(lang.SNIPPET_URI, new Map([[lang.ReferenceItemKind.Snippet, refMap]]));
+        this.referenceCollection.set(lang.SNIPPET_URI, { snippet: refSheet });
         this.updateCompletionItemsForUriString(lang.SNIPPET_URI);
     }
 
@@ -191,7 +191,7 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
     public provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken): vscode.ProviderResult<string> {
         if (token.isCancellationRequested) { return; }
 
-        const getFormattedStringForItem = (item: { signature?: string, description?: string, deprecated?: lang.VersionRange, available?: lang.VersionRange }) => {
+        const getFormattedStringForItem = (item: { signature: string, description?: string, deprecated?: lang.VersionRange, available?: lang.VersionRange }) => {
             let mdText = `\`${item.signature}\``;
             mdText += item.description ? ` \u2014 ${item.description}\n\n` : '\n\n';
             if (item.available) {
@@ -204,28 +204,26 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
         };
 
         if (lang.BUILTIN_URI === uri.with({ query: '' }).toString()) {
-            const storage = this.storageCollection.get(lang.BUILTIN_URI);
-            if (storage) {
+            const refBook = this.referenceCollection.get(lang.BUILTIN_URI);
+            if (refBook) {
                 let mdText = '# __spec__ Reference Manual\n\n';
                 mdText += 'The contents of this page are cited from the _Reference Manual_ section in [PDF version](https://www.certif.com/downloads/css_docs/spec_man.pdf) of the _User manual and Tutorials_, written by [Certified Scientific Software](https://www.certif.com/), except where otherwise noted.\n\n';
 
-                for (const [itemKind, map] of storage.entries()) {
-                    const itemKindLabel = lang.getReferenceItemKindMetadata(itemKind).label;
-
+                for (const [category, refSheet] of Object.entries(refBook)) {
                     // if 'query' is not 'all', skip maps other than the speficed query.
-                    if (uri.query && uri.query !== 'all' && uri.query !== itemKindLabel) {
+                    if (uri.query && uri.query !== 'all' && uri.query !== category) {
                         continue;
                     }
 
                     // add heading for each category
-                    mdText += `## ${itemKindLabel}\n\n`;
+                    mdText += `## ${lang.referenceCategoryMetadata[category as keyof typeof refBook].label}\n\n`;
 
                     // add each item
-                    for (const [key, item] of map.entries()) {
-                        mdText += `### ${key}\n\n`;
-                        mdText += getFormattedStringForItem(item);
-                        if (item.overloads) {
-                            for (const overload of item.overloads) {
+                    for (const [identifier, refItem] of refSheet.entries()) {
+                        mdText += `### ${identifier}\n\n`;
+                        mdText += getFormattedStringForItem(refItem);
+                        if (refItem.overloads) {
+                            for (const overload of refItem.overloads) {
                                 mdText += getFormattedStringForItem(overload);
                             }
                         }

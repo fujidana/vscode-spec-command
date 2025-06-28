@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import * as estree from "estree";
-import * as estraverse from "estraverse";
-import * as lang from "./specCommand";
-import { Provider } from "./provider";
+import * as estree from 'estree';
+import * as estraverse from 'estraverse';
+import * as lang from './specCommand';
+import { Provider } from './provider';
 import { SyntaxError, parse, LocationRange } from './grammar';
 
 /**
@@ -176,7 +176,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                     }
                 } else {
                     // if file does not exist in a workspace folder, clear all.
-                    this.storageCollection.delete(documentUriString);
+                    this.referenceCollection.delete(documentUriString);
                     this.diagnosticCollection.delete(document.uri);
                     this.completionItemCollection.delete(documentUriString);
                 }
@@ -213,10 +213,10 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                         newUriStringSet = new Set([newUri.toString()]);
                     }
                 } else if (stat.type === vscode.FileType.Directory) {
-                    const oldDirUriString = oldUri.toString() + "/";
-                    oldUriStringSet = new Set([...this.storageCollection.keys()].filter(uriString => uriString.startsWith(oldDirUriString)));
+                    const oldDirUriString = oldUri.toString() + '/';
+                    oldUriStringSet = new Set([...this.referenceCollection.keys()].filter(uriString => uriString.startsWith(oldDirUriString)));
 
-                    const newDirUriString = newUri.toString() + "/";
+                    const newDirUriString = newUri.toString() + '/';
                     newUriStringSet = new Set([...filesInWorkspaces].filter(uriString => uriString.startsWith(newDirUriString)));
                 }
             }
@@ -233,8 +233,8 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                         if (stat.type === vscode.FileType.File) {
                             oldUriStringSet = new Set([oldUri.toString()]);
                         } else if (stat.type === vscode.FileType.Directory) {
-                            const oldDirUriString = oldUri.toString() + "/";
-                            oldUriStringSet = new Set([...this.storageCollection.keys()].filter(uriString => uriString.startsWith(oldDirUriString)));
+                            const oldDirUriString = oldUri.toString() + '/';
+                            oldUriStringSet = new Set([...this.referenceCollection.keys()].filter(uriString => uriString.startsWith(oldDirUriString)));
                         }
                         this.applyFileOperation(oldUriStringSet);
                     }
@@ -244,13 +244,13 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         };
 
         // a hander invoked when the configuration is changed
-        const configurationChangeListener = (event: vscode.ConfigurationChangeEvent) => {
+        const configurationDidChangeListener = (event: vscode.ConfigurationChangeEvent) => {
             if (event.affectsConfiguration('spec-command.workspace') || event.affectsConfiguration('files.associations') || event.affectsConfiguration('files.encoding')) {
                 this.refreshCollections();
             }
         };
 
-        const workspaceFoldersChangeListener = (event: vscode.WorkspaceFoldersChangeEvent) => {
+        const workspaceFoldersDidChangeListener = (event: vscode.WorkspaceFoldersChangeEvent) => {
             this.refreshCollections();
         };
 
@@ -272,8 +272,8 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
             vscode.workspace.onWillDeleteFiles(fileWillDeleteListener),
 
             // register other event listeners
-            vscode.workspace.onDidChangeConfiguration(configurationChangeListener),
-            vscode.workspace.onDidChangeWorkspaceFolders(workspaceFoldersChangeListener),
+            vscode.workspace.onDidChangeConfiguration(configurationDidChangeListener),
+            vscode.workspace.onDidChangeWorkspaceFolders(workspaceFoldersDidChangeListener),
 
             // register providers
             vscode.languages.registerDefinitionProvider(lang.SELECTOR, this),
@@ -299,7 +299,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         // unregister metadata for old URIs.
         if (oldUriStringSet) {
             for (const oldUriString of oldUriStringSet) {
-                this.storageCollection.delete(oldUriString);
+                this.referenceCollection.delete(oldUriString);
                 this.diagnosticCollection.delete(vscode.Uri.parse(oldUriString));
                 this.completionItemCollection.delete(oldUriString);
             }
@@ -338,11 +338,11 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
      */
     private collectSymbolsFromTree(program: estree.Program, uriString: string, position?: vscode.Position) {
 
-        const constantRefMap: lang.ReferenceMap = new Map();
-        const variableRefMap: lang.ReferenceMap = new Map();
-        const arrayRefMap: lang.ReferenceMap = new Map();
-        const macroRefMap: lang.ReferenceMap = new Map();
-        const functionRefMap: lang.ReferenceMap = new Map();
+        const constantRefSheet: lang.ReferenceSheet = new Map();
+        const variableRefSheet: lang.ReferenceSheet = new Map();
+        const arrayRefSheet: lang.ReferenceSheet = new Map();
+        const macroRefSheet: lang.ReferenceSheet = new Map();
+        const functionRefSheet: lang.ReferenceSheet = new Map();
 
         // const nestedNodes: string[] = [];
 
@@ -381,7 +381,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                         for (const param of currentNode.params) {
                             if (param.type === 'Identifier') {
                                 refItem = { signature: param.name, location: currentNode.loc as LocationRange };
-                                variableRefMap.set(param.name, refItem);
+                                variableRefSheet.set(param.name, refItem);
                             }
                         }
                     } else if (nodeRange.start.isAfter(position)) {
@@ -396,7 +396,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                             let signatureStr = currentNode.id.name + '(';
                             signatureStr += currentNode.params.map(param => (param.type === 'Identifier') ? param.name : '').join(', ') + ')';
                             refItem = { signature: signatureStr, location: currentNode.loc as LocationRange };
-                            functionRefMap.set(currentNode.id.name, refItem);
+                            functionRefSheet.set(currentNode.id.name, refItem);
                             refItems.push(refItem);
                         }
 
@@ -404,7 +404,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                         // register the id as a traditional macro if parameter is null.
                         if (!position || (parentNode && parentNode.type !== 'Program')) {
                             refItem = { signature: currentNode.id.name, location: currentNode.loc as LocationRange };
-                            macroRefMap.set(currentNode.id.name, refItem);
+                            macroRefSheet.set(currentNode.id.name, refItem);
                             refItems.push(refItem);
                         }
                     }
@@ -419,11 +419,11 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                                 }
                                 refItem = { signature: signatureStr, location: currentNode.loc as LocationRange };
                                 if (currentNode.kind === 'const') {
-                                    constantRefMap.set(declarator.id.name, refItem);
+                                    constantRefSheet.set(declarator.id.name, refItem);
                                 } else if (currentNode.kind === 'let') {
-                                    variableRefMap.set(declarator.id.name, refItem);
+                                    variableRefSheet.set(declarator.id.name, refItem);
                                 } else {
-                                    arrayRefMap.set(declarator.id.name, refItem);
+                                    arrayRefSheet.set(declarator.id.name, refItem);
                                 }
                                 refItems.push(refItem);
                             }
@@ -452,13 +452,13 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
             keys: ADDITIONAL_TRAVERSE_KEYS,
         });
 
-        this.storageCollection.set(uriString, new Map([
-            [lang.ReferenceItemKind.Constant, constantRefMap],
-            [lang.ReferenceItemKind.Variable, variableRefMap],
-            [lang.ReferenceItemKind.Array, arrayRefMap],
-            [lang.ReferenceItemKind.Macro, macroRefMap],
-            [lang.ReferenceItemKind.Function, functionRefMap],
-        ]));
+        this.referenceCollection.set(uriString, {
+            constant: constantRefSheet,
+            variable: variableRefSheet,
+            array: arrayRefSheet,
+            macro: macroRefSheet,
+            function: functionRefSheet,
+        });
     }
 
     // 
@@ -482,8 +482,8 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
                     this.diagnosticCollection.set(uri, [diagnostic]);
                 }
             }
-            // update with an empty map object.
-            this.storageCollection.set(uriString, new Map());
+            // update with an empty object.
+            this.referenceCollection.set(uriString, {});
             return false;
         }
 
@@ -508,7 +508,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
      */
     private async refreshCollections() {
         // clear the caches
-        this.storageCollection.clear();
+        this.referenceCollection.clear();
         this.diagnosticCollection.clear();
         this.completionItemCollection.clear();
 
@@ -575,7 +575,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         const selectorName = document.getText(range);
         if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(selectorName)) { return; }
 
-        // update the storage for local variables for the current cursor position.
+        // update the database for local variables for the current cursor position.
         const program = this.treeCollection.get(document.uri.toString());
         if (program) {
             this.collectSymbolsFromTree(program, lang.ACTIVE_FILE_URI, position);
@@ -583,14 +583,14 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
 
         // seek the identifier
         const locations: vscode.Location[] = [];
-        for (const [uriString, storage] of this.storageCollection.entries()) {
+        for (const [uriString, refBook] of this.referenceCollection.entries()) {
             const uri = (uriString === lang.ACTIVE_FILE_URI) ? document.uri : vscode.Uri.parse(uriString);
 
-            // seek through storages for all types of symbols
-            for (const map of storage.values()) {
-                const item = map.get(selectorName);
-                if (item && item.location) {
-                    locations.push(new vscode.Location(uri, lang.convertRange(item.location)));
+            // scan all types of symbols in the database of the respective files.
+            for (const refSheet of Object.values(refBook)) {
+                const refItem = refSheet.get(selectorName);
+                if (refItem && refItem.location) {
+                    locations.push(new vscode.Location(uri, lang.convertRange(refItem.location)));
                 }
             }
         }
@@ -717,18 +717,18 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
 
         // seek the identifier
         const symbols: vscode.SymbolInformation[] = [];
-        for (const [uriString, storage] of this.storageCollection.entries()) {
+        for (const [uriString, storage] of this.referenceCollection.entries()) {
             // skip storage for local variables
             if (uriString === lang.ACTIVE_FILE_URI) { continue; }
 
             const uri = vscode.Uri.parse(uriString);
 
             // find all items from each storage.
-            for (const [itemKind, map] of storage.entries()) {
-                const symbolKind = lang.getReferenceItemKindMetadata(itemKind).symbolKind;
-                for (const [identifier, refItem] of map.entries()) {
+            for (const [category, refSheet] of Object.entries(storage)) {
+                const symbolKind = lang.referenceCategoryMetadata[category as lang.ReferenceCategory].symbolKind;
+                for (const [identifier, refItem] of refSheet.entries()) {
                     if ((query.length === 0 || regExp.test(identifier)) && refItem.location) {
-                        const name = (itemKind === lang.ReferenceItemKind.Function) ? identifier + '()' : identifier;
+                        const name = (category === 'function') ? identifier + '()' : identifier;
                         const location = new vscode.Location(uri, lang.convertRange(refItem.location));
                         symbols.push(new vscode.SymbolInformation(name, symbolKind, '', location));
                     }

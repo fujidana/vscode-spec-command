@@ -2,19 +2,21 @@ import * as vscode from 'vscode';
 import * as lang from './specCommand';
 import { SemVer, satisfies } from 'semver';
 
-interface SuppressMessagesConfig {
-    'completionItem.label.detail'?: boolean
-    'completionItem.label.description'?: boolean
-    'completionItem.documentation'?: boolean
-    'signatureHelp.signatures.documentation'?: boolean
-    'hover.contents'?: boolean
-}
+const suppressMessagesConfig = {
+    'completionItem.label.detail': false,
+    'completionItem.label.description': false,
+    'completionItem.documentation': false,
+    'signatureHelp.signatures.documentation': false,
+    'hover.contents': false
+};
 
-function getShortDescription(item: lang.ReferenceItem, itemKind: lang.ReferenceItemKind, itemUriString: string, documentUriString: string, markdownFormat: boolean): string {
+type SuppressMessagesConfig = Partial<typeof suppressMessagesConfig>;
+
+function getShortDescription(item: lang.ReferenceItem, category: lang.ReferenceCategory, itemUriString: string, documentUriString: string, markdownFormat: boolean): string {
     let symbolLabel: string;
     let itemUriLabel: string | undefined;
 
-    symbolLabel = lang.getReferenceItemKindMetadata(itemKind).label;
+    symbolLabel = lang.referenceCategoryMetadata[category].label;
 
     if (itemUriString === lang.BUILTIN_URI) {
         symbolLabel = 'built-in ' + symbolLabel;
@@ -137,7 +139,7 @@ export class Provider implements vscode.CompletionItemProvider<lang.CompletionIt
     // string is a primitive type, so the equality comparision is based on the value
     // (i.e., uriA.toString() === uriB.toString() but uriA !== uriB).
 
-    protected readonly storageCollection = new Map<string, lang.ReferenceStorage>();
+    protected readonly referenceCollection = new Map<string, lang.ReferenceBook>();
     protected readonly completionItemCollection = new Map<string, lang.CompletionItem[]>();
     protected specVersion: SemVer;
 
@@ -146,13 +148,13 @@ export class Provider implements vscode.CompletionItemProvider<lang.CompletionIt
 
         const configurationChangeListener = (event: vscode.ConfigurationChangeEvent) => {
             if (event.affectsConfiguration('spec-command.suggest.suppressMessages')) {
-                for (const uriString of this.storageCollection.keys()) {
+                for (const uriString of this.referenceCollection.keys()) {
                     this.updateCompletionItemsForUriString(uriString);
                 }
             }
             if (event.affectsConfiguration('spec-command.specVersion')) {
                 this.specVersion = new SemVer(vscode.workspace.getConfiguration('spec-command').get<string>('specVersion', '6.13.4'));
-                for (const uriString of this.storageCollection.keys()) {
+                for (const uriString of this.referenceCollection.keys()) {
                     this.updateCompletionItemsForUriString(uriString);
                 }
             }
@@ -168,15 +170,15 @@ export class Provider implements vscode.CompletionItemProvider<lang.CompletionIt
     }
 
     /**
-     * Generate completion items from the registered storage and cache it in the map using `uri` as the key.
-     * Subclass must invoke it when the storage contents are changed.
+     * Generate completion items from the registered database and cache it in the map using `uri` as the key.
+     * Subclass must invoke it when the database contents are changed.
      */
     protected updateCompletionItemsForUriString(uriString: string): lang.CompletionItem[] | undefined {
-        const storage = this.storageCollection.get(uriString);
-        if (storage) {
-            const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages');
-            const suppressDetail = config?.['completionItem.label.detail'] ?? false;
-            const suppressDescription = config?.['completionItem.label.description'] ?? false;
+        const refBook = this.referenceCollection.get(uriString);
+        if (refBook) {
+            const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages', suppressMessagesConfig);
+            const suppressDetail = config['completionItem.label.detail'] ?? false;
+            const suppressDescription = config['completionItem.label.description'] ?? false;
             let description: string | undefined;
 
             if (!suppressDescription) {
@@ -198,19 +200,19 @@ export class Provider implements vscode.CompletionItemProvider<lang.CompletionIt
             }
 
             const completionItems: lang.CompletionItem[] = [];
-            for (const [refItemKind, map] of storage.entries()) {
-                for (const [identifier, item] of map.entries()) {
-                    if (item.available && !satisfies(this.specVersion, item.available.range)) {
+            for (const [category, refSheet] of Object.entries(refBook)) {
+                for (const [identifier, refItem] of refSheet.entries()) {
+                    if (refItem.available && !satisfies(this.specVersion, refItem.available.range)) {
                         // skip items that are not supported in the current spec version
                         continue;
                     }
-                    const detail = (!suppressDetail && item.signature.startsWith(identifier)) ? item.signature.substring(identifier.length) : undefined;
+                    const detail = (!suppressDetail && refItem.signature.startsWith(identifier)) ? refItem.signature.substring(identifier.length) : undefined;
                     const label: vscode.CompletionItemLabel = { label: identifier, detail: detail, description: description };
-                    const completionItem = new lang.CompletionItem(label, uriString, refItemKind);
-                    if (item.snippet) {
-                        completionItem.insertText = new vscode.SnippetString(item.snippet);
+                    const completionItem = new lang.CompletionItem(label, uriString, category as keyof typeof refBook);
+                    if (refItem.snippet) {
+                        completionItem.insertText = new vscode.SnippetString(refItem.snippet);
                     }
-                    if (item.deprecated && satisfies(this.specVersion, item.deprecated.range)) {
+                    if (refItem.deprecated && satisfies(this.specVersion, refItem.deprecated.range)) {
                         // add deprecated tag to the completion item.
                         completionItem.tags = [vscode.CompletionItemTag.Deprecated];
                     }
@@ -246,18 +248,18 @@ export class Provider implements vscode.CompletionItemProvider<lang.CompletionIt
     public resolveCompletionItem(completionItem: lang.CompletionItem, token: vscode.CancellationToken): vscode.ProviderResult<lang.CompletionItem> {
         if (token.isCancellationRequested) { return; }
 
-        const refItemKind = completionItem.refItemKind;
+        const category = completionItem.category;
         const refUriString = completionItem.uriString;
 
         const activeEditor = vscode.window.activeTextEditor;
         const documentUriString = activeEditor ? activeEditor.document.uri.toString() : '';
 
-        const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages');
-        const truncationlevel = (config !== undefined && 'completionItem.documentation' in config && config['completionItem.documentation'] === true) ? TruncationLevel.line : TruncationLevel.paragraph;
+        const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages', suppressMessagesConfig);
+        const truncationlevel = config['completionItem.documentation'] === true ? TruncationLevel.line : TruncationLevel.paragraph;
 
         // find the symbol information about the symbol.
         const label = typeof completionItem.label === 'string' ? completionItem.label : completionItem.label.label;
-        const refItem = this.storageCollection.get(refUriString)?.get(refItemKind)?.get(label);
+        const refItem = this.referenceCollection.get(refUriString)?.[category]?.get(label);
         if (refItem === undefined) { return; }
 
         // copy completion item.
@@ -281,7 +283,7 @@ export class Provider implements vscode.CompletionItemProvider<lang.CompletionIt
         }
 
         // set the detail of the completion item
-        newCompletionItem.detail = getShortDescription(refItem, refItemKind, refUriString, documentUriString, false);
+        newCompletionItem.detail = getShortDescription(refItem, category, refUriString, documentUriString, false);
         newCompletionItem.documentation = documentation;
 
         return newCompletionItem;
@@ -293,8 +295,8 @@ export class Provider implements vscode.CompletionItemProvider<lang.CompletionIt
     public provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.ProviderResult<vscode.Hover> {
         if (token.isCancellationRequested) { return; }
 
-        const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages');
-        const truncationLevel = (config !== undefined && 'hover.contents' in config && config['hover.contents'] === true) ? TruncationLevel.paragraph : TruncationLevel.full;
+        const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages', suppressMessagesConfig);
+        const truncationLevel = config['hover.contents'] === true ? TruncationLevel.paragraph : TruncationLevel.full;
 
         const range = document.getWordRangeAtPosition(position);
         if (range === undefined) { return; }
@@ -305,23 +307,23 @@ export class Provider implements vscode.CompletionItemProvider<lang.CompletionIt
         // start to seek if the selection is a proper identifier.
         const contents: vscode.MarkdownString[] = [];
 
-        for (const [uriString, storage] of this.storageCollection.entries()) {
-            for (const [itemKind, map] of storage.entries()) {
+        for (const [uriString, refBook] of this.referenceCollection.entries()) {
+            for (const [category, refSheet] of Object.entries(refBook)) {
                 // find the symbol information about the symbol.
-                const item = map.get(selectorName);
-                if (item) {
-                    let mainMarkdown = new vscode.MarkdownString(getShortDescription(item, itemKind, uriString, document.uri.toString(), true));
+                const refItem = refSheet.get(selectorName);
+                if (refItem) {
+                    let mainMarkdown = new vscode.MarkdownString(getShortDescription(refItem, category as keyof typeof refBook, uriString, document.uri.toString(), true));
 
                     // prepare the second line: the description (if it exists)
-                    const truncatedString = truncateString(truncationLevel, item);
+                    const truncatedString = truncateString(truncationLevel, refItem);
                     if (truncatedString) {
                         mainMarkdown = mainMarkdown.appendMarkdown(truncatedString);
                     }
                     contents.push(mainMarkdown);
 
                     // for overloaded functions, prepare additional markdown blocks
-                    if (item.overloads) {
-                        for (const overload of item.overloads) {
+                    if (refItem.overloads) {
+                        for (const overload of refItem.overloads) {
                             let overloadMarkdown = new vscode.MarkdownString().appendCodeblock(overload.signature);
                             const truncatedString2 = truncateString(truncationLevel, overload);
                             if (truncatedString2) {
@@ -345,15 +347,15 @@ export class Provider implements vscode.CompletionItemProvider<lang.CompletionIt
         const signatureHint = parseSignatureInEditing(document.lineAt(position.line).text, position.character);
         if (signatureHint === undefined) { return; }
 
-        const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages');
-        const truncationLevel = (config !== undefined && 'signatureHelp.signatures.documentation' in config && config['signatureHelp.signatures.documentation'] === true) ? TruncationLevel.paragraph : TruncationLevel.full;
+        const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages', suppressMessagesConfig);
+        const truncationLevel = config['signatureHelp.signatures.documentation'] === true ? TruncationLevel.paragraph : TruncationLevel.full;
 
-        for (const storage of this.storageCollection.values()) {
-            const map = storage.get(lang.ReferenceItemKind.Function);
-            let item: lang.ReferenceItem | undefined;
-            if ((item = map?.get(signatureHint.signature)) !== undefined) {
+        for (const refBook of this.referenceCollection.values()) {
+            const refSheet = refBook['function'];
+            let refItem: lang.ReferenceItem | undefined;
+            if ((refItem = refSheet?.get(signatureHint.signature)) !== undefined) {
                 const signatureHelp = new vscode.SignatureHelp();
-                const overloads = item.overloads ?? [{ signature: item.signature, description: item.description }];
+                const overloads = refItem.overloads ?? [{ signature: refItem.signature, description: refItem.description }];
 
                 for (const overload of overloads) {
                     // assume that usage.signature must exist.
