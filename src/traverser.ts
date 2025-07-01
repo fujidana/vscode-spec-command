@@ -1,21 +1,56 @@
 import * as vscode from 'vscode';
-import * as estree from 'estree';
-import * as estraverse from 'estraverse';
+// import * as estraverse from 'estraverse';
 import * as lang from './specCommand';
 import type { LocationRange } from './grammar';
+import type * as tree from './tree';
+
+const estraverse = require('estraverse');
 
 /**
- * Extention-specific keys for estraverse (not exist in the original Parser AST.)
+ * Visitor keys for spec language.
  */
-const ADDITIONAL_TRAVERSE_KEYS = {
-    MacroStatement: ['arguments'],
-    InvalidStatement: [],
+const VISITOR_KEYS = {
+    Program: ['body'],
+    EmptyStatement: [],
+    BlockStatement: ['body'],
+    IfStatement: ['test', 'consequent', 'alternate'],
+    WhileStatement: ['test', 'body'],
+    ForStatement: ['init', 'test', 'update', 'body'],
+    ForInStatement: ['left', 'right', 'body'],
+    BreakStatement: [], // ['label'],
+    ContinueStatement: [], // ['label'],
+    ReturnStatement: ['argument'],
+    FunctionDeclaration: ['id', 'params', 'body'],
+    VariableDeclaration: ['declarations'],
+    VariableDeclarator: ['id', 'init'],
+    ExpressionStatement: ['expression'],
+    SequenceExpression: ['expressions'],
+    UnaryExpression: ['argument'],
+    BinaryExpression: ['left', 'right'],
+    AssignmentExpression: ['left', 'right'],
+    UpdateExpression: ['argument'],
+    LogicalExpression: ['left', 'right'],
+    ConditionalExpression: ['test', 'consequent', 'alternate'],
+    CallExpression: ['callee', 'arguments'],
+    MemberExpression: ['object', 'properties'], // ['object', 'property'],
+    ObjectExpression: ['properties'],
+    Property: ['key', 'value'],
+    Identifier: ['params'], //[],
+    Literal: [],
+    ArrayPattern: ['elements'],
+
+    // Node types specific to spec.
+    MacroStatement: ['callee', 'arguments'],
     ExitStatement: [],
     QuitStatement: [],
-    NullExpression: [],
+    UnclassifiedStatement: [],
+    IndirectPattern: ['expression'],
+    MemberAccessProperty: ['values'],
+    SliceElement: ['start', 'end'],
+    MacroParameter: [],
 };
 
-export function traverseWholly(program: estree.Program): [lang.ReferenceBook, vscode.DocumentSymbol[]] {
+export function traverseWholly(program: tree.Program): [lang.ReferenceBook, vscode.DocumentSymbol[]] {
     // Create variables to store data.
     const refBook = {
         constant: new Map<string, lang.ReferenceItem>(),
@@ -28,7 +63,7 @@ export function traverseWholly(program: estree.Program): [lang.ReferenceBook, vs
 
     // Traverse the syntax tree.
     estraverse.traverse(program, {
-        enter: (node, parent) => {
+        enter: (node: tree.Node, parent: tree.Node | null) => {
             // console.log('enter', node.type, parent?.type);
 
             if (parent === null && node.type === 'Program') {
@@ -99,18 +134,20 @@ export function traverseWholly(program: estree.Program): [lang.ReferenceBook, vs
             } else if (node.type === 'VariableDeclaration') {
                 // Register a document symbol.
                 for (const declarator of node.declarations) {
-                    if (declarator.type === 'VariableDeclarator' && declarator.id.type === 'Identifier' && declarator.id.loc) {
+                    if (declarator.id.type === 'Identifier' && declarator.id.loc) {
                         const idName = declarator.id.name;
                         const idRange = lang.convertRange(declarator.id.loc as LocationRange);
                         const idDetail = '';
                         // const idDetail = (declarator.init && declarator.init.type === 'Literal' && declarator.init.raw) ? ' = ' + declarator.init.raw : '';
                         let symbolKind: vscode.SymbolKind;
-                        if (node.kind === 'const') {
+                        if (node.dataarray) {
+                            symbolKind = vscode.SymbolKind.Array;
+                        } else if (node.kind === 'const') {
                             symbolKind = vscode.SymbolKind.Constant;
-                        } else if (node.kind === 'let') {
+                        } else if (node.kind === 'local' || node.kind === 'global') {
                             symbolKind = vscode.SymbolKind.Variable;
                         } else {
-                            symbolKind = vscode.SymbolKind.Array;
+                            symbolKind = vscode.SymbolKind.Null;
                         }
                         const symbol = new vscode.DocumentSymbol(idName, idDetail, symbolKind, idRange, idRange);
                         if (symbols.length !== 0 && symbols[symbols.length - 1].range.contains(nodeRange)) {
@@ -124,18 +161,20 @@ export function traverseWholly(program: estree.Program): [lang.ReferenceBook, vs
                 // Register a top-level item as a reference item.
                 if (parent?.type === 'Program') {
                     for (const declarator of node.declarations) {
-                        if (declarator.type === "VariableDeclarator" && declarator.id.type === 'Identifier') {
+                        if (declarator.id.type === 'Identifier') {
                             const signature =
-                                declarator.init && declarator.init.type === 'Literal' ?
+                                declarator.init?.type === 'Literal' ?
                                     `${declarator.id.name} = ${declarator.init.raw}` :
                                     declarator.id.name;
                             const refItem = makeReferenceItem(node, signature);
-                            if (node.kind === 'const') {
+                            if (node.dataarray) {
+                                refBook.array.set(declarator.id.name, refItem);
+                            } else if (node.kind === 'const') {
                                 refBook.constant.set(declarator.id.name, refItem);
-                            } else if (node.kind === 'let') {
+                            } else if (node.kind === 'local' || node.kind === 'global') {
                                 refBook.variable.set(declarator.id.name, refItem);
                             } else {
-                                refBook.array.set(declarator.id.name, refItem);
+                                console.log(`Failed to categorize variable declaration for ${declarator.id.name}`);
                             }
                         }
                     }
@@ -145,13 +184,13 @@ export function traverseWholly(program: estree.Program): [lang.ReferenceBook, vs
         // leave: (node, parent) => {
         //     console.log('leave', node.type, parent?.type);
         // },
-        keys: ADDITIONAL_TRAVERSE_KEYS,
+        keys: VISITOR_KEYS,
     });
 
     return [refBook, symbols];
 }
 
-export function traversePartially(program: estree.Program, position: vscode.Position): lang.ReferenceBook {
+export function traversePartially(program: tree.Program, position: vscode.Position): lang.ReferenceBook {
     // Create variables to store data.
     const refBook = {
         constant: new Map<string, lang.ReferenceItem>(),
@@ -163,7 +202,7 @@ export function traversePartially(program: estree.Program, position: vscode.Posi
 
     // Traverse the syntax tree.
     estraverse.traverse(program, {
-        enter: (node, parent) => {
+        enter: (node: tree.Node, parent: tree.Node | null) => {
             // console.log('enter', node.type, parent?.type);
 
             if (parent === null && node.type === 'Program') {
@@ -212,18 +251,20 @@ export function traversePartially(program: estree.Program, position: vscode.Posi
                     }
                 } else if (node.type === 'VariableDeclaration') {
                     for (const declarator of node.declarations) {
-                        if (declarator.type === "VariableDeclarator" && declarator.id.type === 'Identifier') {
+                        if (declarator.id.type === 'Identifier') {
                             const signature =
-                                declarator.init && declarator.init.type === 'Literal' ?
+                                declarator.init?.type === 'Literal' ?
                                     `${declarator.id.name} = ${declarator.init.raw}` :
                                     declarator.id.name;
                             const refItem = makeReferenceItem(node, signature);
-                            if (node.kind === 'const') {
+                            if (node.dataarray) {
+                                refBook.array.set(declarator.id.name, refItem);
+                            } else if (node.kind === 'const') {
                                 refBook.constant.set(declarator.id.name, refItem);
-                            } else if (node.kind === 'let') {
+                            } else if (node.kind === 'local' || node.kind === 'global') {
                                 refBook.variable.set(declarator.id.name, refItem);
                             } else {
-                                refBook.array.set(declarator.id.name, refItem);
+                                console.log(`Failed to categorize variable declaration for ${declarator.id.name}`);
                             }
                         }
                     }
@@ -233,13 +274,13 @@ export function traversePartially(program: estree.Program, position: vscode.Posi
         // leave: (node, parent) => {
         //     console.log('leave', node.type, parent?.type);
         // },
-        keys: ADDITIONAL_TRAVERSE_KEYS,
+        keys: VISITOR_KEYS,
     });
 
     return refBook;
 }
 
-function makeReferenceItem(node: estree.Node, signature: string): lang.ReferenceItem {
+function makeReferenceItem(node: tree.Node, signature: string): lang.ReferenceItem {
     // Create a reference item from the node and signature string.
     const refItem: lang.ReferenceItem = { signature, location: node.loc as LocationRange };
     if (node.leadingComments && node.leadingComments.length > 0) {

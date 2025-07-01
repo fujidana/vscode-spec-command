@@ -21,12 +21,6 @@ importers:
       '@types/assert':
         specifier: ^1.5.11
         version: 1.5.11
-      '@types/estraverse':
-        specifier: ^5.1.7
-        version: 5.1.7
-      '@types/estree':
-        specifier: ^1.0.8
-        version: 1.0.8
       '@types/mocha':
         specifier: ^10.0.10
         version: 10.0.10
@@ -364,9 +358,6 @@ packages:
 
   '@types/assert@1.5.11':
     resolution: {integrity: sha512-FjS1mxq2dlGr9N4z72/DO+XmyRS3ZZIoVn998MEopAN/OmyN28F4yumRL5pOw2z+hbFLuWGYuF2rrw5p11xM5A==}
-
-  '@types/estraverse@5.1.7':
-    resolution: {integrity: sha512-JRVtdKYZz7VkNp7hMC/WKoiZ8DS3byw20ZGoMZ1R8eBrBPIY7iBaDAS1zcrnXQCwK44G4vbXkimeU7R0VLG8UQ==}
 
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
@@ -2341,10 +2332,6 @@ snapshots:
       playwright-core: 1.53.0
 
   '@types/assert@1.5.11': {}
-
-  '@types/estraverse@5.1.7':
-    dependencies:
-      '@types/estree': 1.0.8
 
   '@types/estree@1.0.8': {}
 

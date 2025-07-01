@@ -1,24 +1,10 @@
 import * as vscode from 'vscode';
-import type * as estree from 'estree';
 import * as lang from './specCommand';
 import { Provider } from './provider';
 import { traversePartially, traverseWholly } from './traverser';
-import { SyntaxError, parse, type LocationRange } from './grammar';
+import { SyntaxError, parse } from './grammar';
+import type * as tree from './tree';
 
-/**
- * Extention-specific keys for estraverse (not exist in the original Parser AST.)
- */
-const ADDITIONAL_TRAVERSE_KEYS = {
-    MacroStatement: ['arguments'],
-    InvalidStatement: [],
-    ExitStatement: [],
-    QuitStatement: [],
-    NullExpression: [],
-};
-
-interface CustomProgram extends estree.Program {
-    exDiagnostics: { locRange: LocationRange, message: string, severity: vscode.DiagnosticSeverity }[];
-}
 
 /**
  * Get a set of the URIs of supported files from workspaces
@@ -61,7 +47,7 @@ async function findFilesInWorkspaces() {
 export class UserProvider extends Provider implements vscode.DefinitionProvider, vscode.DocumentSymbolProvider, vscode.WorkspaceSymbolProvider, vscode.DocumentDropEditProvider, vscode.TextDocumentContentProvider {
 
     private readonly diagnosticCollection: vscode.DiagnosticCollection;
-    private readonly treeCollection: Map<string, CustomProgram>;
+    private readonly treeCollection: Map<string, tree.Program>;
     private readonly symbolCollection: Map<string, vscode.DocumentSymbol[]>;
 
     constructor(context: vscode.ExtensionContext) {
@@ -339,9 +325,9 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
     private parseDocumentContents(contents: string, uri: vscode.Uri, isOpenDocument: boolean, diagnoseProblems: boolean) {
         const uriString = uri.toString();
 
-        let tree: CustomProgram;
+        let tree: tree.Program;
         try {
-            tree = parse(contents) as CustomProgram;
+            tree = parse(contents);
         } catch (error) {
             if (error instanceof SyntaxError) {
                 if (diagnoseProblems) {
@@ -364,7 +350,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         const [refBook, symbols] = traverseWholly(tree);
 
         if (diagnoseProblems) {
-            const diagnostics = tree.exDiagnostics.map(item => new vscode.Diagnostic(lang.convertRange(item.locRange), item.message, item.severity));
+            const diagnostics = tree.problems.map(problem => new vscode.Diagnostic(lang.convertRange(problem.loc), problem.message, problem.severity));
             this.diagnosticCollection.set(uri, diagnostics);
         }
 

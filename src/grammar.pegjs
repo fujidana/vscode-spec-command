@@ -19,6 +19,10 @@
  * @typedef { import('./grammar').LocationRange } LocationRange
  * @typedef { import('./grammar').Location } Location
  * @typedef { import('./grammar').GrammarSource } GrammarSource
+
+* @typedef { import('./tree').Node } Node
+* @typedef { import('./tree').Expression } Expression
+* @typedef { import('./tree').Literal } Literal
  */
 
 // The author is not sure whether the following is a proper way to 
@@ -35,11 +39,6 @@ const DiagnosticSeverity = require('vscode').DiagnosticSeverity;
 //   Hint: 3,
 // };
 
-
-const INVALID_STATEMENT = { type: 'InvalidStatement' };
-const NULL_EXPRESSION = { type: 'NullExpression' };
-const NULL_LITERAL = { type: 'Literal', value: null, raw: 'null'};
-
 const RESERVED_KEYWORD_REGEXP = new RegExp(
   '^('
   + 'def|rdef|constant|local|global|un(?:def|global)|delete|shared|extern|array|'
@@ -50,25 +49,34 @@ const RESERVED_KEYWORD_REGEXP = new RegExp(
   + ')$'
 );
 
-const _ttyCommandRegExp = /^(c(?:d|e)|do|ho|le|m(?:b|d|e|h|r)|nd|s(?:e|o)|u(?:e|p|s))$/;
-const _patternRegExp = /^(?:[a-zA-Z0-9_*?]|\[\^?(?:[a-zA-Z0-9_](?:\-[a-zA-Z0-9_])?)+\])+$/;
+const TTY_COMMAND_REGEXP = /^(c(?:d|e)|do|ho|le|m(?:b|d|e|h|r)|nd|s(?:e|o)|u(?:e|p|s))$/;
+// const SYMBOL_MATCH_REGEXP = /^(?:[a-zA-Z0-9_*?]|\[\^?(?:[a-zA-Z0-9_](?:\-[a-zA-Z0-9_])?)+\])+$/;
 }}
 
 {
-  /** @type { { locRange: LocationRange, message: string, severity: DiagnosticSeverity, }[] } */
-  const _diagnostics = [];
+  /** @type { { message: string, loc: LocationRange, severity: DiagnosticSeverity, }[] } */
+  const _problems = [];
   /** @type { string[] } */
   const _quoteStack = [];
 
   /**
    * create diagnostic object and store it.
-   * @param {LocationRange} locRange - location range
+   * @param {LocationRange} loc - location range
    * @param {string} message - error message
    * @param {number} severity - error severity
    * @returns {void}
    */
-  function pushDiagnostic(locRange, message, severity = DiagnosticSeverity.Error) {
-    _diagnostics.push({ locRange, message, severity });
+  function pushDiagnostic(message, loc = location(), severity = DiagnosticSeverity.Error) {
+    _problems.push({ message, loc, severity });
+  }
+
+  /**
+   * create a null literal.
+   * @param {LocationRange | undefined} loc - location range
+   * @returns { {type: 'Literal', value: null, loc: LocationRange, } }
+   */
+  function getNullLiteral(loc = location()) {
+    return { type: 'Literal', value: null, loc, };
   }
 
   /**
@@ -80,9 +88,19 @@ const _patternRegExp = /^(?:[a-zA-Z0-9_*?]|\[\^?(?:[a-zA-Z0-9_](?:\-[a-zA-Z0-9_]
    * @returns {LocationRange} - The modified location range.
    */
   function getRange(source, baseLoc, length = 0, offset = 0) {
-    const start = { line: baseLoc.line, column: baseLoc.column + offset, offset: baseLoc.offset + offset };
-    const end = { line: start.line, column: start.column + length, offset: start.offset + offset };
+    const start = shiftLocationColumn(baseLoc, offset);
+    const end = shiftLocationColumn(start, length);
     return { source, start, end };
+  }
+
+  /**
+   * Return a new location object.
+   * @param {Location} loc - The base location to be referenced.
+   * @param {number} shift - how many columns to shift.
+   * @returns {Location} - The modified location.
+   */
+  function shiftLocationColumn(loc, shift) {
+    return { line: loc.line, column: loc.column + shift, offset: loc.offset + shift, };
   }
 
   /**
@@ -97,113 +115,66 @@ const _patternRegExp = /^(?:[a-zA-Z0-9_*?]|\[\^?(?:[a-zA-Z0-9_](?:\-[a-zA-Z0-9_]
    */
   function diagnoseIfNotTerminated(closer, label, source, baseLoc, openerLength = 1, severity = DiagnosticSeverity.Error) {
     if (!closer) {
-      pushDiagnostic(getRange(source, baseLoc, openerLength), `Unterminated ${label}.`, severity);
+      pushDiagnostic(`Unterminated ${label}.`, getRange(source, baseLoc, openerLength), severity);
     }
   }
 
   /**
    * Report an error if the object is empty.
-   * @param {any} obj - object to be checked
+   * @template {Node | Array<Node> | null | undefined} T
+   * @param {T} obj - object to be checked
    * @param {string} label - label of the error
-   * @param {any} alt - alternative value to be returned if the object is empty
-   * @param {LocationRange | undefined} locRange - location range of the error
+   * @param {LocationRange | undefined} loc - location range of the error
    * @param {number} severity - error severity
-   * @returns {any} - the object itself if it is not empty, otherwise the alternative value
+   * @returns {T | Literal} - the object itself if it is not empty, otherwise the alternative value
    */
-  function diagnoseIfEmpty(obj, label, alt = undefined, locRange = undefined, severity = DiagnosticSeverity.Error) {
+  function diagnoseIfEmpty(obj, label, loc = undefined, severity = DiagnosticSeverity.Error) {
     if (!obj || Array.isArray(obj) && obj.length === 0) {
-      const range2 = locRange ?? location();
-      pushDiagnostic(range2, `Expected ${label}.`, severity);
-      if (alt !== undefined) {
-        return alt;
-      }
+      const loc2 = loc ?? location();
+      pushDiagnostic(`Expected ${label}.`, loc2, severity);
+      return { type: 'Literal', value: null, loc: loc2, };
     }
     return obj;
   }
 
   /**
-   * Diagnose if any element or separator is missing and return the elements.
-   * @param {Array} elements - array of `[identifier | null, separator, locRange, option?]`
+   * Report an error if the object is empty.
+   * @template {Expression} T
+   * @param {Array<T>} expressions - expressions to be checked
    * @param {string} label - label of the error
-   * @param {number} sepOption - separator option (0: no separator, 1: comma, 2: whitespace)
-   * @returns {Array} - array of elements
+   * @param {number} severity - error severity
+   * @returns {Array<T>} - the array itself after null elements are removed. (literal null is not removed.)
    */
-  function diagnoseListItems(elements, label, sepOption) {
-    const items = [];
-    for (let index = 0; index < elements.length; index++) {
-      const [item, sep, locRange] = elements[index];
-      if (!item) {
-        pushDiagnostic(locRange, `Expected ${label}.`);
-        continue;
+  function diagnoseIfElementIsEmpty(expressions, label = 'an expression', severity = DiagnosticSeverity.Error) {
+    return expressions.filter(expression => {
+      if (!expression) {
+        const loc = location();
+        pushDiagnostic(`Expected ${label}.`, loc, severity);
+        return false;
+      } else if (expression.type === 'Literal' && expression.value === null) {
+        pushDiagnostic(`Expected ${label}.`, expression.loc ?? location(), severity);
       }
-      items.push(item);
-
-      if (index === elements.length - 1) {
-        if (sep === ',') {
-          pushDiagnostic(locRange, 'Trailing comma not allowed.');
-        }
-      } else if (sepOption === 1 && sep !== ',') {
-        pushDiagnostic(locRange, 'Seprator must be a comma.');
-      } else if (sepOption === 2 && sep !== ' ') {
-        pushDiagnostic(locRange, 'Seprator must be a whitespace.');
-      }
-    }
-    return items;
+      return true;
+    });
   }
 
-  /**
-   * Make Variable Declarators from an array of [identifier | null, separator, locRange, option?].
-   * @param {Array} elements - array of `[identifier | null, separator, locRange, option?]`
-   * @param {LocationRange} locRangeAll - location range of the error
-   * @param {string} label - label of the error
-   * @param {boolean} allowsAssign - whether assignment is allowed
-   * @returns {Array} - array of VariableDeclarator objects
-   */
-  function makeDeclarators(elements, locRangeAll, label, allowsAssign) {
-    if (!elements || elements.length === 0) {
-      pushDiagnostic(locRangeAll, `Expected at least one ${label}.`);
-      return [];
-    } else if (elements[elements.length - 1][1] === ',') {
-      pushDiagnostic(elements[elements.length - 1][2], `Trailing comma not allowed.`);
-    } else if (elements.some((item) => item[3].init !== null)) {
-      if (!allowsAssign) {
-        pushDiagnostic(locRangeAll, `Assignment not allowed.`);
-      } else if (elements.length > 1) {
-        pushDiagnostic(locRangeAll, `Only one variable per statement can be declared and initialized.`);
-      }
-    }
-
-    const declarators = [];
-    for (const [identifier, separator, locRange, option] of elements) {
-      if (!identifier) {
-        pushDiagnostic(locRange, `Expected ${label}.`);
-        continue;
-      }
-      let obj = { type: 'VariableDeclarator', id: identifier, loc: locRange };
-      if (option) {
-        Object.assign(obj, option);
-      }
-      declarators.push(obj);
-    }
-    
-    return declarators;
-  }
-
+  // TODO: review code
   /**
    * Make a sequence expression from array.
    * If an array is empty or null, null is returned.
    * If an array has only one Expression, it returns the Expression itself (not array).
    * If an array has two or more expressions, it returns a Sequence Expression containing the elements.
-   * @param {Array | null} elements - array of expressions
+   * @param {Array | null} expressions - array of expressions
    * @returns {Object | null} - SequenceExpression, object or null
    */
-  function makeSequenceExpression(elements) {
-    if (elements === null || elements.length === 0) {
+  function makeSequenceExpression(expressions) {
+    if (expressions === null || expressions.length === 0) {
       return null;
-    } else if (elements.length === 1) {
-      return elements[0];
+    } else if (expressions.length === 1) {
+      return expressions[0];
     } else {
-      return { type: 'SequenceExpression', expressions: elements };
+      diagnoseIfElementIsEmpty(expressions);
+      return { type: 'SequenceExpression', expressions, loc: location(), };
     }
   }
 
@@ -218,7 +189,7 @@ const _patternRegExp = /^(?:[a-zA-Z0-9_*?]|\[\^?(?:[a-zA-Z0-9_](?:\-[a-zA-Z0-9_]
   function getBinaryExpression(head, tails, type = 'BinaryExpression') {
     return tails.reduce((accumulator, currentValue) => {
       const [op, term] = currentValue;
-      return { type: type,  operator: op, left: accumulator, right: term, };
+      return { type: type,  operator: op, left: accumulator, right: term, loc: location(), };
     }, head);
   }
 
@@ -273,61 +244,71 @@ const _patternRegExp = /^(?:[a-zA-Z0-9_*?]|\[\^?(?:[a-zA-Z0-9_](?:\-[a-zA-Z0-9_]
 
 Start =
   body:Stmt* {
-    return { type: 'Program', body: body, exDiagnostics: _diagnostics, };
+    return { type: 'Program', body, problems: _problems, };
   }
-
 
 // # AUXILIARIES
 
-Eol 'end of line' = '\n' / '\r\n'
-Eof 'end of file' = !.
+_Eol 'end of line' = '\n' / '\r\n'
+_Eof 'end of file' = !.
+
+// TODO: review code
 LineComment 'line comment' =
   @(
     '#' p:$(
-      !Eol (
-        !QuotationMark .
+      !_Eol (
+        !_QuotMark .
         /
         q:. !{ return _quoteStack.includes(q); }
       )
-    )* { return { type: 'Line', value: p, loc: location(), }; }
-  ) (Eol / Eos0)
+    )* {
+      return { type: 'Line', value: p, loc: location(), };
+    }
+  ) (_Eol / Eos0)
 
-QuotationMark 'quotation mark' = $('\\'? ('"' / "'"))
+_QuotMark 'quotation mark' = $('\\'? ('"' / "'"))
 
-Eos0 = Eof { } / &QuotationMark { } / &'}' { }
-Eos1 = Eol { } / LineComment / ';' ([ \t]* Eol)? { } 
+Eos0 = _Eof { } / &_QuotMark { } / &'}' { }
+Eos1 = _Eol { } / LineComment / ';' ([ \t]* _Eol)? { } 
 Eos 'end of statement' = Eos1  / Eos0
 
 BlockComment 'block comment' =
-  '"""' p:$(!'"""' .)* closer:'"""'? {
+  '"""' value:$(!'"""' .)* closer:'"""'? {
     const loc = location();
     diagnoseIfNotTerminated(closer, 'docstring', loc.source, loc.start, 3);
-    return { type: 'Block', value: p, loc: loc, };
+    return { type: 'Block', value, loc, };
   }
 
 __ 'whitespace' =
-  $(' ' / '\t' / '\\' Eol / BlockComment {
-    pushDiagnostic(location(), 'Inline docstring not recommended.', DiagnosticSeverity.Information); return text();
+  $(' ' / '\t' / '\\' _Eol / BlockComment {
+    pushDiagnostic('Inline docstring not recommended.', location(), DiagnosticSeverity.Information);
+    return text();
   })
 
-_1 'whitespaces'          = __+
-_0 'optional whitespaces' = __*
+_1 'whitespaces'          = $__+
+_0 'optional whitespaces' = $__*
 
-Word = [a-zA-Z0-9_]
-ListSep =
-  _0 ',' _0 { return ','; } / _1 { return ' '; }
-CommaSep =
-  _0 ',' _0 { return ','; }
+_Word = [a-zA-Z0-9_]
 
-sepSpaceOnly =
-  _0 ',' _0 {
-    pushDiagnostic(location(), 'Seprator must be whitespace(s).');
-    return ',';
-  }
+
+_DelimComma =
+  _0 ',' _0
+
+_DelimCommaWLoc =
+  _0 loc:(','  { return location(); }) _0 { return { loc, }; }
+
+_LooseDelim = 
+  _DelimComma / _1
+
+_LooseDelimComma = 
+  _DelimComma
   /
-  _1 {
-    return ' ';
-  }
+  _1 &_Word { pushDiagnostic('Seprator must be a comma.', location(), ); }
+
+_LooseDelimSpace =
+  l:_DelimCommaWLoc { pushDiagnostic('Seprator must be a whitespace.', l.loc); }
+  /
+  @_1 &_Word
 
 // # STATEMENTS
  
@@ -337,7 +318,9 @@ sepSpaceOnly =
   */
 Stmt 'statement' =
   comments:LeadingComment+ stmt:(_0 @(EmptyStmt1 / NonemptyStmt / EmptyStmt0)) {
-    stmt.leadingComments = comments;
+    if (comments && comments.length > 0) {
+      stmt.leadingComments = comments;
+    }
     return stmt;
   }
   /
@@ -350,7 +333,7 @@ Stmt 'statement' =
  * which is treated as the leading comments of the succeeding statement.
  */
 LeadingComment 'empty statement with comment' =
-  [ \t]* @(LineComment / @BlockComment [ \t]* (Eol / Eos0))
+  [ \t]* @(LineComment / @BlockComment [ \t]* (_Eol / Eos0))
 
 EmptyStmt1 =
   Eos1 {
@@ -365,16 +348,16 @@ EmptyStmt0 =
  * Nonempty statement.
  */
 NonemptyStmt 'nonempty statement' =
-  _0 p:(
+  stmt:(
     BlockStmt
     / IfStmt / WhileStmt / ForStmt / BreakStmt / ContinueStmt / ReturnStmt / ExitStmt / QuitStmt
-    / MacroDef / UndefStmt / RdefStmt / DataArrayDef / VariableDef / ConstantDef
-    / DeleteStmt / PatternStmt / BuiltinMacroStmt / ExprStmt
+    / MacroDef / UndefStmt / DArrayDef / VariableDef / ConstantDef
+    / DeleteStmt / MatchStmt / BuiltinMacroStmt / ExprStmt
   ) {
-    if (!p.loc) {
-      p.loc = location();
+    if (!stmt.loc) {
+      stmt.loc = location();
     }
-    return p;
+    return stmt;
   }
 
 /**
@@ -383,10 +366,12 @@ NonemptyStmt 'nonempty statement' =
  */
 BlockStmt 'block statement' =
   stmt:(
-    '{' _0 Eos? body:Stmt* _0 closer:'}'? {
+    '{' _0 Eos?
+    body:Stmt*
+    _0 closer:'}'? {
       const loc = location();
       diagnoseIfNotTerminated(closer, 'block statement', loc.source, loc.start);
-      return { type: 'BlockStatement', body: body, loc: loc, };
+      return { type: 'BlockStatement', body, loc, };
     }
   ) tail:(_0 @Eos)? {
     if (tail) {
@@ -404,27 +389,25 @@ BlockStmt 'block statement' =
  */
 IfStmt 'if statement' =
   test:(
-    'if' _0 @(
-      '(' _0 expr:ExprForceSingle? _0 closer:')'? {
+    'if' _0 '(' _0 expr:ExprForceSingle? _0 closer:')'? {
         const loc = location();
         diagnoseIfNotTerminated(closer, 'parenthesis for test expression in if-statement', loc.source, loc.start);
-        return diagnoseIfEmpty(expr, 'a test expression in if-statement', NULL_EXPRESSION, loc);
+        return diagnoseIfEmpty(expr, 'a test expression in if-statement', loc);
       }
-    )
     /
-    ('ifd' / 'ifp') { return NULL_EXPRESSION; }
-  ) _0 (Eol / LineComment)? cons:(
-    stmt:NonemptyStmt? {
+    kwd:('ifd' / 'ifp') !_Word { return { type: 'UnclassifiedExpression', raw: kwd, loc: location(),}; }
+  ) _0 (_Eol / LineComment)? consequent:(
+    stmt:(_0 @NonemptyStmt)? {
       return diagnoseIfEmpty(stmt, 'a consequent clause in if-statement');
     }
-  ) alt:(
-    _0 'else' !Word _0 (Eol / LineComment)? @(
-      stmt:NonemptyStmt? {
+  ) alternate:(
+    _0 'else' !_Word _0 (_Eol / LineComment)? @(
+      stmt:(_0 @NonemptyStmt)? {
         return diagnoseIfEmpty(stmt, 'an altenative clause in if-statement');
       }
     )
   )? {
-    return { type: 'IfStatement', test: test, consequent: cons, alternate: alt, loc: location(), };
+    return { type: 'IfStatement', test, consequent, alternate, loc: location(), };
   }
 
 /**
@@ -432,17 +415,17 @@ IfStmt 'if statement' =
  */
 WhileStmt 'while statement' =
   'while' _0 test:(
-    '(' _0 expr:ExprForceSingle? _0 closer:')'? _0 (Eol / LineComment)? {
+    '(' _0 expr:ExprForceSingle? _0 closer:')'? _0 (_Eol / LineComment)? {
       const loc = location();
       diagnoseIfNotTerminated(closer, 'parenthesis for test expression in while-statement', loc.source, loc.start);
-      return diagnoseIfEmpty(expr, 'a test expression in while-statement', NULL_EXPRESSION, loc);
+      return diagnoseIfEmpty(expr, 'a test expression in while-statement', loc);
     }
   ) body:(
-    stmt:NonemptyStmt? {
+    stmt:(_0 @NonemptyStmt)? {
       return diagnoseIfEmpty(stmt, 'a body in while-statement');
     }
   ) {
-    return { type: 'WhileStatement', test: test, body: body, loc: location(), };
+    return { type: 'WhileStatement', test, body, loc: location(), };
   }
   
 /**
@@ -455,19 +438,19 @@ ForStmt 'for statement' =
   'for' _0 stmt:(
     '(' _0 stmt2:(
       init:ExprSingleList? _0 ';' _0 test:ExprForceSingle? _0 ';' _0 update:ExprSingleList? {
-        return { type: 'ForStatement', init: makeSequenceExpression(init), test: test, update: makeSequenceExpression(update), };
+        return { type: 'ForStatement', init: makeSequenceExpression(init), test, update: makeSequenceExpression(update), };
       }
       /
-      ll:Identifier _0 'in' !Word _0 rr:AssocArray {
-        return { type: 'ForInStatement', left: ll, right: rr, each: false, };
+      left:NotMemberPattern _0 'in' !_Word _0 right:MemberExprOrId {
+        return { type: 'ForInStatement', left, right, };
       }
     ) _0 closer:')'? {
       const loc = location();
       diagnoseIfNotTerminated(closer, 'parenthesis for test expression in for-statement', loc.source, loc.start);
       return stmt2;
     }
-  ) _0 (Eol / LineComment)? body:(
-    stmt2:NonemptyStmt? {
+  ) _0 (_Eol / LineComment)? body:(
+    stmt2:(_0 @NonemptyStmt)? {
       return diagnoseIfEmpty(stmt2, 'a body in for-statement');
     }
   ) {
@@ -481,7 +464,7 @@ ForStmt 'for statement' =
  */
 BreakStmt 'break statement' =
   'break' _0 Eos {
-    return { type: 'BreakStatement', label: null, loc: location(), };
+    return { type: 'BreakStatement', loc: location(), };
   }
 
 /**
@@ -489,7 +472,7 @@ BreakStmt 'break statement' =
  */
 ContinueStmt 'continue statement' =
   'continue' _0 Eos {
-    return { type: 'ContinueStatement', label: null, loc: location(), };
+    return { type: 'ContinueStatement', loc: location(), };
   }
 
 /**
@@ -497,8 +480,8 @@ ContinueStmt 'continue statement' =
  * <NOTICE> not documented in Grammar Rules.
  */
 ReturnStmt 'return statement' =
-  'return' !Word _0 p:ExprSingle? _0 Eos {
-    return { type: 'ReturnStatement', argument: p, loc: location(), };
+  'return' !_Word _0 argument:ExprSingle? _0 Eos {
+    return { type: 'ReturnStatement', argument, loc: location(), };
   }
 
 /**
@@ -516,8 +499,8 @@ ExitStmt 'exit statement' =
 QuitStmt 'quit statement' =
   'quit' _0 Eos {
     const loc = location();
-    pushDiagnostic(loc, "The quit command can't be included in a macro.");
-    return { type: 'QuitStatement', loc: loc, };
+    pushDiagnostic("The quit command can't be included in a macro.", loc);
+    return { type: 'QuitStatement', loc, };
   }
 
 
@@ -525,97 +508,59 @@ QuitStmt 'quit statement' =
 
 /**
  * <BNF> def identifier string-constant [;]
+ * <BNF> rdef identifier expression [;]
  *
  * body in FunctionDeclaration in the Parser AST must be BlockStatement or Expression.
  * params in FunctionDeclaration in the Parser AST must not be null.
  */
 MacroDef 'macro declaration' =
-  'def' _1 id:IdentifierValidated _0 params:(
-    '(' _0 params:IdListItem* _0 closer:')'? _0 {
+  kwd:('def' / 'rdef') _1 id:LooseIdValidated _0 params:(
+    '(' _0 params:LooseIdValidated|.., _LooseDelimComma| exComma:_DelimCommaWLoc? _0 closer:')'? _0 {
       const loc = location();
+      if (exComma) {
+        pushDiagnostic('Trailing comma not allowed.', exComma.loc);
+      }
       diagnoseIfNotTerminated(closer, 'parenthesis for function parameters', loc.source, loc.start);
-      return params ? diagnoseListItems(params, 'identifier', 1) : [];
+      return params;
     }
   )?
   _0 body:(
-    opener:QuotationMark &{ return testIfQuoteStarts(opener); }
-    _0 Eos? stmt:Stmt*
-    closer:QuotationMark? &{ return testIfQuoteEnds(opener, closer); }
+    opener:_QuotMark &{ return testIfQuoteStarts(opener); }
+    _0 Eos? stmts:Stmt*
+    closer:_QuotMark? &{ return testIfQuoteEnds(opener, closer); }
     _0 Eos {
       const loc = location();
       diagnoseIfNotTerminated(closer, 'macro definition', loc.source, loc.start, opener.length);
-      return stmt;
+      if (params && (stmts.length !== 1 || stmts[0].type !== 'BlockStatement')) {
+        pushDiagnostic('Function body must be enclosed in curly brackets.', location());
+      }
+      return stmts;
     }
-    / stmt:Stmt? _0 Eos {
-      pushDiagnostic(location(), 'Expected macro definition body, which must be embraced with quotes.');
-      return stmt;
+    /
+    &{ return kwd === 'rdef'; } expression:ExprMulti {
+      return [{ type: 'ExpressionStatement', expression, loc: location(), }];
+    }
+    /
+    stmt:Stmt? _0 Eos {
+      pushDiagnostic('Expected macro definition body, which must be embraced with quotes.', location());
+      return stmt ? [stmt] : [];
     }
   ) {
-    return {
-      type: 'FunctionDeclaration',
-      id: id,
-      params: params,
-      // defaults: [ Expression ],
-      // rest: Identifier | null,
-      body: body,
-      generator: false,
-      expression: false,
-    };
-  }
-
-IdListItem =
-  id:IdentifierValidated sep:ListSep? {
-    return [id, sep, location()];
-  }
-  / sep:ListSep {
-    return [undefined, sep, location()];
+    return { type: 'FunctionDeclaration', id, params, body, rdef: kwd === 'rdef', loc: location(), };
   }
 
 /**
  * <BNF> undef identifier-list [;]
  */
 UndefStmt 'undef statement' =
-  'undef' _1 items:(
-    items:IdListItem* {
-      return diagnoseIfEmpty(items, 'identifiers', []);
+  &'undef' callee:StrictId _1 args:LooseIdValidated|.., _LooseDelim| exComma:_DelimCommaWLoc? _0 Eos {
+    if (exComma) {
+      pushDiagnostic('Trailing comma not allowed.', exComma.loc);
     }
-  ) _0 Eos {
-    const nodes = diagnoseListItems(items, 'identifier', 0);
-    return {
-      type: 'MacroStatement',
-      callee: { type: 'Identifier', name: 'undef', },
-      arguments: nodes,
-    };
-  }
-
-/**
- * <BNF> rdef identifier expression [;]
- */
-RdefStmt 'rdef statement' =
-  'rdef' _1 p:(
-    id:IdentifierValidated _0 params:(
-      '(' _0 params:IdListItem* _0 closer:')'? _0 {
-        const loc = location();
-        diagnoseIfNotTerminated(closer, 'parenthesis for function parameters', loc.source, loc.start);
-        return params ? diagnoseListItems(params, 'identifier', 1) : [];
-      }
-    )? expr:(
-      expr:ExprMulti? {
-        return diagnoseIfEmpty(expr, 'an expression');
-      }
-    ) {
-      return [id, expr];
+    if (args.length === 0) {
+      pushDiagnostic('Expected at least one identifier.', location());
     }
-  )? _0 Eos {
-    if (!p) {
-      pushDiagnostic(location(), 'Expected following identifier and expression.');
-      return INVALID_STATEMENT;
-    }
-    return {
-      type: 'MacroStatement',
-      callee: { type: 'Identifier', name: 'rdef', },
-      arguments: p,
-    };
+    return { type: 'MacroStatement', callee, arguments: args, builtin: true, loc: location(), };
   }
 
 /**
@@ -629,159 +574,163 @@ RdefStmt 'rdef statement' =
  * <BNF>   data-array-type array identifier[expression]
  * <BNF>   array identifier [expression][expression]
  * <BNF>   data-array-type array identifier[expression][expression]
+ *
+ * As of spec 6.10.02, initialization of data arrays is supported.
+ * https://certif.com/spec_help/chg6_10.html
+ *
+ * Though not described in the BNF above, it seems multiple variables can be
+ * declared in a single data-array declaration, like
+ * `array a[5][5], b[5][5], c[5][5]`.
  */
 
-DataArrayDef 'data-array declaration' =
-  scope:(@('local' / 'global' / 'shared') _1)? unit:(@DataArrayUnit _1)? 'array' _1 items:DataArrayListItem* _0 Eos {
-    return {
-      type: 'VariableDeclaration',
-      declarations: makeDeclarators(items, location(), 'array identifier', true),
-      kind: 'var',
-      exType: 'data-array',
-      exScope: scope ?? undefined,
-      exUnit: unit ?? undefined,
-    };
+DArrayDef 'data-array declaration' =
+  kind:(@('local' / 'global' / 'shared') _1)? datatype:(@_DArrayDType _1)? 'array' _1 declarations:DArrayDeclarators _0 Eos {
+    return { type: 'VariableDeclaration', dataarray: true, kind, declarations, datatype, loc: location(),};
   }
-  /
-  'extern' _1 'shared' _1 'array' _1 items:ExternArrayListItem* _0 Eos {
-    return {
-      type: 'VariableDeclaration',
-      declarations: makeDeclarators(items, location(), 'external array identifier', false),
-      kind: 'var',
-      exType: 'data-array',
-      exScope: 'extern',
-      exSize: undefined,
-    };
+  / kind:'extern' _1 'shared' _1 'array' _1 declarations:ExternDArrayDeclarators _0 Eos {
+    return { type: 'VariableDeclaration', dataarray: true, kind, declarations, loc: location(), };
   }
 
-DataArrayUnit =
+_DArrayDType =
   'string' / 'float' / 'double'
   / 'byte' / 'short' / $('long' '64'?)
   / 'ubyte' / 'ushort' / $('ulong' '64'?)
 
-DataArrayListItem =
-  id:IdentifierValidated sizes:(
-    _0 @(
-      '[' _0 expr:ExprForceSingle? _0 closer:']'? {
+DArrayDeclarators =
+  declarators:(
+    memberExpr:MemberExpr init:(
+      _0 op:'=' !'=' _0 term:ExprMulti? {
         const loc = location();
-        diagnoseIfNotTerminated(closer, 'bracket for data array', loc.source, loc.start);
-        return diagnoseIfEmpty(expr, 'an array size expression', NULL_LITERAL, loc);
+        return diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, loc);
       }
-    )
-  )* init:(
-    _0 op:AssignOp _0 term:ExprMulti? {
-      if (op !== '=') {
-        pushDiagnostic(location(), `Invalid operator: \"${op}\". Only \"=\" is allowed.`);
+    )? {
+      const id = memberExpr.object;
+      if (memberExpr.properties.length === 0) {
+        pushDiagnostic('Array size must be specified.', memberExpr.loc);
       }
-      if (!term) {
-        pushDiagnostic(location(), `Expected an expression following \"${op}\" operator.`);
-        term = NULL_LITERAL;
-      } else if (term.type !== 'ObjectExpression' && term.type !== 'ArrayExpression') {
-        pushDiagnostic(location(), 'Only array can be assigned.');
-      }
-      return term;
+      const sizes = memberExpr.properties.map(property => {
+        if (property.type !== 'MemberAccessProperty') {
+          console.log('Unexpected property type:', property.type);
+        } else if (property.values.length === 0) {
+          pushDiagnostic('Array size must be specified.', property.loc);
+        } else if (property.values.length > 1) {
+          pushDiagnostic('Multiple value is not allowed.', property.loc);
+        } else if (property.values.some(value => value.type === 'SliceElement')) {
+          pushDiagnostic('Slice is not allowed.', property.loc);
+        }
+        return property;
+      });
+      return { type: 'VariableDeclarator', id, sizes, loc: location(), };
     }
-  )? sep:ListSep? {
-    if (!sizes || sizes.length === 0) {
-      pushDiagnostic(location(), 'Array size must be sepcified.');
-    } else if (sizes.length > 2) {
-      pushDiagnostic(location(), 'Data array dimension must be 1 or 2.');
+  )|.., _LooseDelimComma| exComma:_DelimCommaWLoc? {
+    if (declarators.length === 0) {
+      pushDiagnostic('Expected at least one declarator.', location());
+    // } else if (declarators.length > 1) {
+    //   pushDiagnostic('Only one declarator is allowed.', location());
     }
-    return [ id, sep, location(), { exSizes: sizes, init: init } ];
+    if (exComma) {
+      pushDiagnostic('Trailing comma not allowed.', exComma.loc);
+    }
+    return declarators;
   }
-  /
-  sep:ListSep {
-    return [ undefined, sep, location(), undefined];
-  }  
 
-ExternArrayListItem =
-  specPid:(
-    spec:$Word+ _0 ':' _0 pid:(@$Word+ _0 ':' _0)? {return [spec, pid]; }
-  )? id:IdentifierValidated sep:ListSep? {
-    const spec = specPid ? specPid[0] : null;
-    const pid = specPid ? specPid[1] : null;
-    return [id, sep, location(), { exSpec: spec, exPid: pid }];
+ExternDArrayDeclarators =
+  declarators:(opt:(@$_Word+ _0 ':' @(_0 @$[0-9]+ _0 ':' _0)?)? id:NotMemberPattern {
+    const declarator = { type: 'VariableDeclarator', id, extern: { raw: text(), }, loc: location(), };
+    if (opt) {
+      declarator.extern.spec = opt[0];
+      if (opt[1]) {
+        declarator.extern.pid = opt[1];
+      }
+    }
+    return declarator;
+  })|.., _LooseDelimComma| exComma:_DelimCommaWLoc?{
+    if (declarators.length === 0) {
+      pushDiagnostic('Expected at least one declarator.', location());
+    } else if (declarators.length > 1) {
+      pushDiagnostic('Only one declarator is allowed.', location());
+    }
+    if (exComma) {
+      pushDiagnostic('Trailing comma not allowed.', exComma.loc);
+    }
+    return declarators;
   }
-  /
-  sep:ListSep {
-    return [undefined, sep, location(), undefined];
-  }
-    
+
 /**
  * <BNF> local identifier-list [;]
  * <BNF> global identifier-list [;]
  * <BNF> unglobal identifier-list [;]
+ *
+ * It seems a delimiter can be either a comma or a whitespace.
  */
 VariableDef 'variable declaration' =
-  scope:('local' / 'global' / 'unglobal') _1 items:VariableListItem* _0 Eos {
-    return {
-      type: 'VariableDeclaration',
-      declarations: makeDeclarators(items, location(), 'variable identifier', scope !== 'unglobal'),
-      kind: 'let',
-      exScope: scope,
-    };
+  // TODO: move `unglobal` to macro statement.
+  kind:('local' / 'global' / 'unglobal') _1 declarations:VariableDeclarators _0 Eos {
+    if (declarations.length === 0) {
+      pushDiagnostic('Expected at least one declarator.', location());
+    } else if (declarations.length > 1 && declarations.some(d => !!d.init)) {
+      pushDiagnostic('Only one declarator is allowed when value is assigned.', location());
+    }
+    return { type: 'VariableDeclaration', dataarray: false, declarations, kind, loc: location(), };
   }
 
-VariableListItem =
-  id:IdentifierValidated bracket:(
-    _0 @('[' _0 closer:']'? {
-      const loc = location();
-      diagnoseIfNotTerminated(closer, 'bracket', loc.source, loc.start);
-      return true;
-    })
-  )? init:(
-    _0 op:AssignOp _0 term:ExprMulti? {
-      const loc = location();
-      if (op !== '=') {
-        pushDiagnostic(loc, `Invalid operator: \"${op}\". Only \"=\" is allowed.`);
-      }
-      return diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, NULL_LITERAL, loc);
-    }
-  )? sep:ListSep? {
-    return [ id, sep, location(), { exType: bracket !== null ? 'assoc-array' : 'scalar', init: init, } ];
-  }
-  /
-  sep:ListSep {
-    return [ undefined, sep, location(), undefined];
-  }
 
 /**
  * <BNF> constant identifier expression [;]
  * <BNF> constant identifier = expression [;]
  */
 ConstantDef 'constant declaration' =
-  'constant' _1 items:(
-    id:IdentifierValidated !Word _0 '='? _0 init:ExprMulti? sep:CommaSep? {
-      return [id, init, sep, location()];
+  'constant' _1 declarations:(
+    id:MemberExprOrId _1 (!'=') init:ExprMulti? {
+      if (!init) {
+        pushDiagnostic('Expected initial value for constant.', location());
+      }
+      const declarator = { type: 'VariableDeclarator', id, init, loc: location(), };
+      return [declarator];
     }
-  )* _0 Eos {
-    if (!items || items.length === 0) {
-      pushDiagnostic(location(), `Expected following identifier and initial value.`);
-      return INVALID_STATEMENT;
+    /
+    VariableDeclarators
+  ) _0 Eos {
+    if (declarations.length === 0) {
+      pushDiagnostic('Expected following identifier and initial value.', location());
+    } else if (declarations.length > 1) {
+      pushDiagnostic('Only single constant can be decleared per statement.', location());
     }
+    return { type: 'VariableDeclaration', dataarray: false, declarations, kind: 'const', loc: location(), };
+  }
 
-    const item = items[0];
-
-    if (items.length > 1) {
-      pushDiagnostic(location(), `Only single constant can be decleared per statement.`);
-    } else if (item[2]) {
-      pushDiagnostic(location(), `Trailing comma not allowed.`);
-    } else if (!item[1]) {
-      pushDiagnostic(item[3], `Expected initial value.`);
-      item[1] = NULL_LITERAL;
+VariableDeclarators =
+  declarators:(
+    memberExpr:MemberExpr init:(
+      _0 op:'=' !'=' _0 term:ExprMulti? {
+        const loc = location();
+        return diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, loc);
+      }
+    )? {
+      const id = memberExpr.object;
+      let assocarray;
+      if (memberExpr.properties.length === 0) {
+        assocarray = false;
+      } else {
+        assocarray = true;
+        if (memberExpr.properties.length > 1) {
+          pushDiagnostic('Too many brackets.', memberExpr.loc);
+        }
+        memberExpr.properties.forEach(property => {
+          if (property.type !== 'MemberAccessProperty') {
+            console.log('Unexpected property type:', property.type);
+          } else if (property.values.length > 0) {
+            pushDiagnostic('Array index or size can not be specified here', property.loc);
+          }
+        });
+      }
+      return { type: 'VariableDeclarator', id, init, assocarray, loc: location(), };
     }
-
-    return {
-      type: 'VariableDeclaration',
-      declarations: [
-        {
-          type: 'VariableDeclarator',
-          id: item[0],
-          init: item[1],
-        },
-      ],
-      kind: 'const',
-    };
+  )|.., _LooseDelim| exComma:_DelimCommaWLoc? {
+    if (exComma) {
+      pushDiagnostic('Trailing comma not allowed.', exComma.loc);
+    }
+    return declarators;
   }
 
 /*
@@ -792,34 +741,24 @@ ConstantDef 'constant declaration' =
  * <BNF> delete assoc-elem-list [;]
  * <BNF> delete assoc-array [;]
  *
+ * It seems a delimiter can be either a comma or a whitespace.
  * The BNF in the Grammar Rules does not seems described correctly.
- * Deleting associative array without specifying indexes, as shown below, yields a syntax error.
+ * Deleting associative array without specifying indexes, as shown below, 
+ * causes a syntax error.
  * > global arr
  * > arr = [1: "foo"];
  * > delete arr
  */
 DeleteStmt 'delete statement' =
-  'delete' _1 items:(
-    items:AssocElemListItem* {
-      return diagnoseIfEmpty(items, 'associative arrays', []);
+  &'delete' callee:StrictId _1 args:MemberExprOrId|.., _LooseDelim| exComma:_DelimCommaWLoc? _0 Eos {
+    if (exComma) {
+      pushDiagnostic('Trailing comma not allowed.', exComma.loc);
     }
-   ) _0 Eos {
-    const nodes = diagnoseListItems(items, 'associative array', 0);
-    return {
-      type: 'UnaryExpression',
-      operator: 'delete',
-      argument: (nodes && nodes.length > 0)? makeSequenceExpression(nodes) : NULL_EXPRESSION,
-      prefix: true,
-    };
-  }
-
-AssocElemListItem =
-  node:AssocArray sep:ListSep? {
-    return [node, sep, location(), undefined];
-  }
-  /
-  sep:ListSep {
-    return [undefined, sep, location(), undefined];
+    if (args.length === 0) {
+      pushDiagnostic('Expected an associative array.', callee.id.loc ?? location());
+    }
+    // TODO: check empty array acess. `delete arr[]`.
+    return { type: 'MacroStatement', callee, arguments: args, builtin: true, loc: location(), };
   }
 
 /**
@@ -828,66 +767,54 @@ AssocElemListItem =
  * <BNF> lsdef pattern-list-opt [;]
  * <BNF> prdef pattern-list-opt [;]
  */
-PatternStmt =
-  name:('lscmd' / 'lsdef' / 'prdef') items:(
-    _0 Eos { return null; }
-    /
-    _1 @PatternValidated|1.., _1| _1? Eos
-  ) {
-    return {
-      type: 'MacroStatement',
-      callee: { type: 'Identifier', name: name, },
-      arguments: items,
-    };
-  }
-  /
-  name:'syms' items:(
-    _0 Eos { return null; }
-    /
-    _1 @PatternValidated2|1.., _1| _0 Eos
-  ) {
-    return {
-      type: 'MacroStatement',
-      callee: { type: 'Identifier', name: name, },
-      arguments: items,
-    };
-  }
-
-PatternValidated =
-  MacroArgument
-  /
-  p:StringLiteral {
-    pushDiagnostic(location(), 'Expected a symbol name.');
-    return p;
-  }
-  /
-  p:$(!__ !Eos .)+ {
-    if (!_patternRegExp.test(p)) {
-      pushDiagnostic(location(), 'Expected a symbol name.');
-    }
-    return { type: 'literal', value: p, raw: p, };
-  }
-
-PatternValidated2 =
-  p:[-+] q:$(!__ !Eos .)+ {
-    const loc = location();
-    if (!/^[a-zA-Z]+$/.test(q)) {
-      pushDiagnostic(loc, 'Invalid optional parameter.');
-    } else if (p === '-') {
-      const matches = q.matchAll(/[^vBGLADNSICWM]+/g);
-      for (const match of matches) {
-        pushDiagnostic(getRange(loc.source, loc.start, match[0].length, match.index + 1), 'Unknown optional parameter.', DiagnosticSeverity.Warning);
+MatchStmt =
+  &('syms' / 'lscmd' / 'lsdef' / 'prdef') callee:StrictId args:(
+    flags:(_1 @(
+      flag:[-+] value:$(!(__ / [-+] / Eos) .)+ {
+        return { type: 'Literal', value, raw: text(), flag, loc: location(), };
       }
-    } else if (p === '+') {
-      const matches = q.matchAll(/[^BGLADNSICWM]+/g);
-      for (const match of matches) {
-        pushDiagnostic(getRange(loc.source, loc.start, match[0].length, match.index + 1), 'Unknown optional parameter.', DiagnosticSeverity.Warning);
-      }
+    )|1.., _0|)? remains:(
+      _1 @(
+        value:$(!(__ / Eos) .)+ {
+          // if (!SYMBOL_MATCH_REGEXP.test(value)) {
+          //   pushDiagnostic('Expected a symbol name.', location());
+          // }
+          return { type: 'literal', value, raw: text(), loc: location()};
+        }
+      )|1.., _1|
+    )? {
+      const flags2 = flags ?? [];
+      const remains2 = remains ?? [];
+      return [...flags2, ...remains2];
     }
-    return { type: 'literal', value: q, raw: q, };
+  ) _0 Eos {
+    args.forEach(arg => {
+      if (arg.type === 'Literal') {
+        if (arg.flag) {
+          if (callee.name === 'syms') {
+            if (arg.flag === '-') {
+              const matches = arg.value.matchAll(/[^vBGLADNSICWM]+/g);
+              for (const match of matches) {
+                pushDiagnostic('Unknown optional parameter.', getRange(arg.loc.source, arg.loc.start, match[0].length, match.index + 1), DiagnosticSeverity.Warning);
+              }
+            } else if (arg.flag === '+') {
+              const matches = arg.value.matchAll(/[^BGLADNSICWM]+/g);
+              for (const match of matches) {
+                pushDiagnostic('Unknown optional parameter.', getRange(arg.loc.source, arg.loc.start, match[0].length, match.index + 1), DiagnosticSeverity.Warning);
+              }
+            }
+          } else {
+            pushDiagnostic(`"${callee.name}" does not support flags.`, arg.loc, DiagnosticSeverity.Warning);
+          }
+        // } else {
+        //   if (!SYMBOL_MATCH_REGEXP.test(arg.value)) {
+        //     pushDiagnostic('Expected a symbol name.', arg.loc);
+        //   }
+        }
+      }
+    });
+    return { type: 'MacroStatement', callee, arguments: args, builtin: true, loc: location(), };
   }
-  /
-  PatternValidated
 
 /**
  * <BNF> memstat [;]
@@ -899,23 +826,17 @@ PatternValidated2 =
  * <BNF> sync [;]
  */
 BuiltinMacroStmt =
-  name:('memstat' / 'savstate' / 'reconfig' / 'getcounts' / 'move_all' / 'move_cnt' / 'sync') _0 Eos {
-    return {
-      type: 'MacroStatement',
-      callee: { type: 'Identifier', name: name, },
-      arguments: [],
-    };
+  &('memstat' / 'savstate' / 'reconfig' / 'getcounts' / 'move_all' / 'move_cnt' / 'sync') callee:StrictId _0 Eos {
+    return { type: 'MacroStatement', callee, arguments: [], builtin: true, loc: location(), };
   }
 
 /**
  * <BNF> expression [;]
  */
 ExprStmt 'expression statement' =
-  items:ExprMultiList _0 Eos {
-    return {
-      type: 'ExpressionStatement',
-      expression: makeSequenceExpression(items),
-    };
+  exprs:ExprMultiList _0 Eos {
+    const expression = makeSequenceExpression(exprs);
+    return { type: 'ExpressionStatement', expression, loc: location(), };
   }
 
 /*
@@ -954,117 +875,128 @@ ExprRule2 =
  * Therefore, it is difficult to gramatically define these symbols.
  * Expediently, this PEG grammar treats them as identifiers.
  */
-Identifier 'identifier' =
-  StrictIdentifier
-  /
-  MacroArgument
-  /
-  op:'@' _0 arg:ExprSingle? {
-    const loc = location();
-    arg = diagnoseIfEmpty(arg, `an expression following \"${op}\" operator`, NULL_LITERAL, loc);
-    return { type: 'UnaryExpression', operator: '@', argument: arg, prefix: true, loc: loc, };
-  }
+NotMemberPattern =
+  IdValidated / IndirectPattern
 
-StrictIdentifier =
+/** Identifier. */
+StrictId =
   name:$([a-zA-Z_][a-zA-Z0-9_]*) {
-    const loc = location();
+    return { type: 'Identifier', name, loc: location(), };
+  }
+
+/** Identifier with validation of not using reserved keywords. */
+IdValidated =
+  items:(
+    ![0-9] @(
+      char:$[a-zA-Z0-9_]+ { return [char, undefined, ]; }
+      /
+      char:$('\\'? '$' ([*@#$] / [0-9]+)) { return [ char, { type: 'MacroParameter', name: char, loc: location(), } ]; }
+    )+ 
+  ) {
+    let name = '';
+    const params = [];
+    items.forEach(item => {
+      name += item[0];
+      if (item[1] !== undefined) {
+        params.push(item[1]);
+      }
+    });
+
+    const node = { type: 'Identifier', name, loc: location(), };
     if (RESERVED_KEYWORD_REGEXP.test(name)) {
-      pushDiagnostic(loc, `${name} is a reserved keyword.`);
+      pushDiagnostic(`${name} is a reserved keyword.`, node.loc);
     // } else if (name === 'const') {
-    //   pushDiagnostic(loc, `Using ${name} for \"constant\"?`, DiagnosticSeverity.Information);
+    //   pushDiagnostic(`Using ${name} for \"constant\"?`, node.loc, DiagnosticSeverity.Information);
     // } else if (name === 'elseif' || name === 'elif') {
-    //   pushDiagnostic(loc, `Using ${name} for \"else if\"?`, DiagnosticSeverity.Information);
+    //   pushDiagnostic(`Using ${name} for \"else if\"?`, node.loc, DiagnosticSeverity.Information);
     }
-    return { type: 'Identifier', name: name, loc: loc, };
+    if (params.length > 0) {
+      node.params = params;
+    }
+    return node;
   }
 
-MacroArgument =
-  name:$('\\'? '$' ('#' / '*' / [0-9]+)) {
-    return { type: 'Identifier', name: name, loc: location(), };
+LooseIdValidated =
+  id:IdValidated
+  /
+  name:$[a-zA-Z0-9_.+\-*/%!?^~\\]+
+  // name:$[^#,'"(){}[\];: \t\r\n\\]+
+  {
+    const loc = location();
+    pushDiagnostic('Invalid identifier.', loc);
+    return { type: 'Identifier', name, loc, };
   }
 
-// / [a-zA-Z0-9_.+\-*/%!?^~\\]+
-IdentifierValidated =
-  Identifier / InvalidExpr
-  // / [a-zA-Z0-9_.+\-*/%!?^~\\]+ {
-  //   pushDiagnostic(location(), 'invalid as an identifier');
-  //   return {
-  //     type: 'Identifier',
-  //     name: text(),
-  //   };
-  // }
+// MacroSymbol =
+//   value:$('\\'? '$' ([*@#$] / [0-9]+)) {
+//     return { type: 'MacroSymbolPattern', value, loc: location(), };
+//   }
 
 /**
+ * > When the @ indirection operator precedes something in parentheses, 
+ * > previously, that something could only be a variable or associative array
+ * > element. With this release, the item in parenthesis can be any expression 
+ * > that evaluates to a variable name on which the @ can operate.
+ * https://certif.com/spec_help/chg6_12.html
+ */
+IndirectPattern =
+  '@' _0 expression:(IdValidated / ExprBlock)? {
+    const loc = location();
+    expression = diagnoseIfEmpty(expression, 'an expression following "@" operator', loc);
+    return { type: 'IndirectPattern', expression, loc, };
+  }
+
+/*
  * <BNF> identifier
  * <BNF> identifier[expression]
  * <BNF> identifier[expression][expression]
  *
  * e.g., _foo12, bar[myfunc(a)], bar[], bar[:], bar[:4], bar[2:], bar[1, 2, 3:5], ...
  */
+
 LValue 'left value' =
-  id:Identifier arrDims:(_0 @ArrayElem)* {
-    if (arrDims && arrDims.length > 2) {
-      pushDiagnostic(location(), 'Array dimension must be 1 or 2.');
+  MemberExprOrId
+
+MemberExpr =
+  object:NotMemberPattern properties:(_0 @MemberAccessProp)* {
+    if (properties.length > 2) {
+      pushDiagnostic('Array dimension must be 2 or less.', location());
     }
-    return arrDims.reduce((accumulator, currentValue) => {
-      return {
-        type: 'MemberExpression',
-        object: accumulator,
-        property: currentValue,
-        computed: true,
-      };
-    }, id);
+    return { type: 'MemberExpression', object, properties, loc: location(), };
   }
 
-/**
- * Array access.
- * respective item of the comma-separated index. It can be:
- * - expression (index)
- * - expression? : expression? (slice)
- */
+MemberExprOrId =
+  expr:MemberExpr {
+    return expr.properties.length === 0 ? expr.object : expr;
+  }
 
-ArrayElem =
-  _0 '[' _0 items:(
-    item:(SlicableIndex)? { return item ?? NULL_LITERAL; }
-  )|.., CommaSep| _0 closer:']'? {
+MemberAccessProp =
+  '[' _0 values:(
+    SliceElement / ExprMulti
+  )|.., _DelimComma| exComma:_DelimCommaWLoc? _0 closer:']'? {
     const loc = location();
-    diagnoseIfNotTerminated(closer, 'bracket', loc.source, loc.start);
-    if (items.length === 0) {
-      return NULL_LITERAL;
-    } else if (items.length === 1) {
-      return items[0];
-    } else {
-      return {
-        type: 'SequenceExpression',
-        expressions: items,
-      };
+    if (exComma) {
+      pushDiagnostic('Trailing comma not allowed.', exComma.loc);
     }
+    diagnoseIfNotTerminated(closer, 'bracket', loc.source, loc.start);
+    return { type: 'MemberAccessProperty', values, loc, };
   }
 
-SlicableIndex =
-  ll:ExprMulti? _0 ':' _0 rr:ExprMulti? {
-    return { type: 'BinaryExpression', operator: ':', left: ll ?? NULL_LITERAL, right: rr ?? NULL_LITERAL, };
+SliceElement =
+  start:ExprMulti? _0 ':' _0 end:ExprMulti? {
+    return { type: 'SliceElement', start: start ?? getNullLiteral(), end: end ?? getNullLiteral(), loc: location(), };
   }
-  /
-  ExprMulti
 
-// same definition as LValue
-AssocArray =
-  id:Identifier arrDims:(_0 @ArrayElem)* {
-    return arrDims.reduce((accumulator, currentValue) => {
-      return { type: 'MemberExpression', object: accumulator, property: currentValue, computed: true, };
-    }, id);
-  }
 
 InvalidExpr =
   '{' Eos? _0 stmts:ExprMultiList? _0 '}'? Eos? {
-    pushDiagnostic(location(), 'Braces are to bundle statements. Use parentheses "()" for expressions.');
-    return NULL_EXPRESSION;
+    pushDiagnostic('Braces are to bundle statements. Use parentheses "()" for expressions.', location());
+    return { type: 'UnclassifiedExpression', raw: text(), loc: location(), };
   }
   /
   value:$[^#,'"(){}[\];: \t\r\n\\]+ {
-    pushDiagnostic(location(), 'Invalid expression. It should be quoted if it is a string.', DiagnosticSeverity.Warning);
-    return { type: 'Literal', value: text(), raw: text(), };
+    pushDiagnostic('Invalid expression. It should be quoted if it is a string.', location(), DiagnosticSeverity.Warning);
+    return { type: 'Literal', value: text(), raw: text(), loc: location(), };
   }
 // +-*/%^&|=
 
@@ -1074,14 +1006,14 @@ InvalidExpr =
  * e.g., "foo,\"bar\"\n123", \'foo\'
  */
 StringLiteral 'string literal' =
-  opener:QuotationMark &{ return testIfQuoteStarts(opener); }
+  opener:_QuotMark &{ return testIfQuoteStarts(opener); }
   chars:(
     '\\' @(
       p:$([0-7][0-7]?[0-7]?) { return String.fromCharCode(parseInt(p, 8)); }
       /
-      p:'[' cmd:$Word+ ']' {
-        if (!_ttyCommandRegExp.test(cmd)) {
-          pushDiagnostic(location(), `${cmd} is not a TTY command.`, DiagnosticSeverity.Warning);
+      p:'[' cmd:$_Word+ ']' {
+        if (!TTY_COMMAND_REGEXP.test(cmd)) {
+          pushDiagnostic(`${cmd} is not a TTY command.`, location(), DiagnosticSeverity.Warning);
         }
         return text();
       }
@@ -1104,7 +1036,7 @@ StringLiteral 'string literal' =
             const loc = location();
             loc.start.offset -= 1;
             loc.start.column -= 1;
-            pushDiagnostic(loc, 'Unknown escape sequence.', DiagnosticSeverity.Warning);
+            pushDiagnostic('Unknown escape sequence.', loc, DiagnosticSeverity.Warning);
             return p;
         }
       }
@@ -1113,15 +1045,15 @@ StringLiteral 'string literal' =
     r:[^\\] &{ return testIfUnescapedCharIsAvailable(r); }
       {
         if (!testIfEscapedCharIsAvailable(r)) {
-          pushDiagnostic(location(), 'Quotation symbol not allowed here.');
+          pushDiagnostic('Quotation symbol not allowed here.', location());
         }
         return r;
       }
   )*
-  closer:QuotationMark? &{ return testIfQuoteEnds(opener, closer); } {
+  closer:_QuotMark? &{ return testIfQuoteEnds(opener, closer); } {
     const loc = location();
     diagnoseIfNotTerminated(closer, 'string literal', loc.source, loc.start, opener.length);
-    return { type: 'Literal', value: chars.join(''), raw: text(), };
+    return { type: 'Literal', value: chars.join(''), raw: text(), loc: location(), };
   }
 
 /** 
@@ -1132,22 +1064,22 @@ StringLiteral 'string literal' =
 NumericLiteral 'numeric literal' =
   // floating-point
   (([0-9]+ (Exponent / '.' [0-9]* Exponent?)) / '.' [0-9]+ Exponent?) {
-    return { type: 'Literal', value: parseFloat(text()), raw: text(), };
+    return { type: 'Literal', value: parseFloat(text()), raw: text(), loc: location(), };
   }
   /
   // hexadecimal integer
   '0' [xX] body:$[0-9a-fA-F]+ {
-    return { type: 'Literal', value: parseInt(body, 16), raw: text(), };
+    return { type: 'Literal', value: parseInt(body, 16), raw: text(), loc: location(),};
   }
   /
   // octal integer
   '0' body:$[0-7]+ {
-    return { type: 'Literal', value: parseInt(body, 8), raw: text(), };
+    return { type: 'Literal', value: parseInt(body, 8), raw: text(), loc: location(), };
   }
   /
   // decimal integer
   [0-9]+ {
-    return { type: 'Literal', value: parseInt(text(), 10), raw: text(), };
+    return { type: 'Literal', value: parseInt(text(), 10), raw: text(), loc: location(), };
   }
 
 // exponential part in floating-point digit, e.g., E+3 in 1.2E+3)
@@ -1162,30 +1094,24 @@ Exponent =
 ArrayLiteral 'array literal' =
   '[' _0 items:(
     (item:ArrayItem? {
-      return diagnoseIfEmpty(item, 'an array element', NULL_LITERAL);
-    })|.., CommaSep|
+      return diagnoseIfEmpty(item, 'an array element');
+    })|.., _DelimComma|
   ) _0 closer:']'? {
     const loc = location();
     diagnoseIfNotTerminated(closer, 'bracket', loc.source, loc.start);
 
-    if (items.some(item => item === NULL_LITERAL)) {
-      return NULL_EXPRESSION;
+    if (items.some(item => item.type === 'Literal' && item.value === null)) {
+      return { type: 'UnclassifiedExpression', raw: text(), loc, };
     // } else if (items.every((item: any) => item.type === 'Property')) {
     //   // every item is a key-value pair.
-    //   return {
-    //     type: 'ObjectExpression',
-    //     properties: items,
-    //   };
+    //   return { type: 'ObjectExpression', properties: items, loc: location(), };
     // } else if (items.every((item: any) => item.type !== 'Property')) {
     //   // every item is an expression (not a key-value pair).
-    //   return {
-    //     type: 'ArrayExpression',
-    //     elements: items,
-    //   };
+    //   return { type: 'ArrayExpression', elements: items, loc: location(), };
     } else {
-    //     pushDiagnostic(location(), 'Mixture of associate-array and data-array literals not allowed.');
-    //     return NULL_EXPRESSION;
-      return { type: 'ObjectExpression', properties: items, };
+    //     pushDiagnostic('Mixture of associate-array and data-array literals not allowed.', location());
+    //     return { type: 'UnclassifiedExpression', raw: text(), loc, };
+      return { type: 'ObjectExpression', properties: items, loc: location(),};
     }
   }
 
@@ -1197,17 +1123,17 @@ ArrayLiteral 'array literal' =
 ArrayItem =
   //  e.g., [ 1: 2: "item", 2: 3: "item2" ]
   key1:ExprMulti? _0 ':' _0 key2:ExprMulti? _0 ':' _0 value:ExprMulti? {
-    key1 = diagnoseIfEmpty(key1, 'a key expression', NULL_LITERAL);
-    key2 = diagnoseIfEmpty(key2, 'a key expression', NULL_LITERAL);
-    value = diagnoseIfEmpty(value, 'a value expression', NULL_LITERAL);
-    return { type: 'Property', key: key1, value: value, kind: 'init', exKey: key2, };
+    key1 = diagnoseIfEmpty(key1, 'a key expression');
+    key2 = diagnoseIfEmpty(key2, 'a key expression');
+    value = diagnoseIfEmpty(value, 'a value expression');
+    return { type: 'Property', key: key1, value: value, kind: 'init', exKey: key2, loc: location(), };
   }
   /
   //  e.g., [ 0: "item", 1: "item2" ]
   key:ExprMulti? _0 ':' _0 value:ExprMulti? {
-    key = diagnoseIfEmpty(key, 'a key expression', NULL_LITERAL);
-    value = diagnoseIfEmpty(value, 'a value expression', NULL_LITERAL);
-    return { type: 'Property', key: key, value: value, kind: 'init', };
+    key = diagnoseIfEmpty(key, 'a key expression');
+    value = diagnoseIfEmpty(value, 'a value expression');
+    return { type: 'Property', key: key, value: value, kind: 'init', loc: location(), };
   }
   / ExprMulti
 
@@ -1219,7 +1145,7 @@ ArrayItem =
 ExprBlock 'parentheses that enclose expression' =
   '(' _0 expr:ExprMulti? _0 closer:')'? {
     const loc = location();
-    expr = diagnoseIfEmpty(loc, 'an expression in the parenthesis', NULL_LITERAL);
+    expr = diagnoseIfEmpty(expr, 'an expression in the parenthesis');
     diagnoseIfNotTerminated(closer, 'parenthesis', loc.source, loc.start);
     return expr;
   }
@@ -1231,14 +1157,17 @@ ExprBlock 'parentheses that enclose expression' =
  * It seems spec does not allow string concatenation of arguments.
  */
 FunctionCall 'function call' =
-  expr:StrictIdentifier _0 args:(
+  expr:IdValidated _0 args:(
     '(' _0 args:ExprSingleList? _0 closer:')'? {
       const loc = location();
+      if (args) {
+        diagnoseIfElementIsEmpty(args, 'an argument for function call');
+      }
       diagnoseIfNotTerminated(closer, 'parenthesis for function parameters', loc.source, loc.start);
       return args;
     }
   ) {
-    return { type: 'CallExpression', callee: expr, arguments: args ?? [], };
+    return { type: 'CallExpression', callee: expr, arguments: args ?? [], loc: location(), };
   }
 
 
@@ -1250,8 +1179,8 @@ FunctionCall 'function call' =
  */
 UnaryExpr 'unary expression' =
   op:('+' / '-' / '!' / '~') _0 arg:ExprSingle? {
-    arg = diagnoseIfEmpty(arg, `an expression following \"${op}\" operator`, NULL_LITERAL);
-    return { type: 'UnaryExpression', operator: op, argument: arg, prefix: true, };
+    arg = diagnoseIfEmpty(arg, `an expression following \"${op}\" operator`);
+    return { type: 'UnaryExpression', operator: op, argument: arg, prefix: true, loc: location(), };
   }
 
 /**
@@ -1261,12 +1190,12 @@ UnaryExpr 'unary expression' =
  * <BNF> lvalue −−
  */
 UpdateExpr 'update expression' =
-  op:('++' / '--') _0 arg:LValue? {
-    arg = diagnoseIfEmpty(arg, `an lvalue following \"${op}\" operator.`, NULL_LITERAL);
-    return { type: 'UpdateExpression', operator: op, argument: arg, prefix: true, };
+  operator:('++' / '--') _0 arg:LValue? {
+    arg = diagnoseIfEmpty(arg, `an lvalue following \"${operator}\" operator.`);
+    return { type: 'UpdateExpression', operator, argument: arg, prefix: true, loc: location(), };
   }
-  / arg:LValue _0 op:('++' / '--') {
-    return { type: 'UpdateExpression', operator: op, argument: arg, prefix: false, };
+  / arg:LValue _0 operator:('++' / '--') {
+    return { type: 'UpdateExpression', operator, argument: arg, prefix: false, loc: location(), };
   }
 
 /**
@@ -1276,7 +1205,7 @@ UpdateExpr 'update expression' =
 ExprRule3 =
   head:ExprRule2 tails:(
     _0 op:$(('*' / '/' / '%') !'=') _0 term:ExprRule2? {
-      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator.`, NULL_LITERAL);
+      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator.`);
       return [op, term];
     }
   )* {
@@ -1290,7 +1219,7 @@ ExprRule3 =
 ExprRule4 =
   head:ExprRule3 tails:(
     _0 op:$(('+' / '-') !'=') _0 term:ExprRule3? {
-      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, NULL_LITERAL);
+      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`);
       return [op, term];
     }
   )* {
@@ -1304,7 +1233,7 @@ ExprRule4 =
 ExprRule5 =
   head:ExprRule4 tails:(
     _0 op:$(('<<' / '>>') !'=') _0 term:ExprRule4? {
-      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, NULL_LITERAL);
+      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`);
       return [op, term];
     }
   )* {
@@ -1318,7 +1247,7 @@ ExprRule5 =
 ExprRule6 =
   head:ExprRule5 tails:(
     _0 op:($('<' !'<' '='?) / $('>' !'>' '='?)) _0 term:ExprRule5? {
-      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, NULL_LITERAL);
+      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`);
       return [op, term];
     }
   )* {
@@ -1332,7 +1261,7 @@ ExprRule6 =
 ExprRule7 =
   head:ExprRule6 tails:(
     _0 op:('==' / '!=') _0 term:ExprRule6? {
-      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, NULL_LITERAL);
+      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`);
       return [op, term];
     }
   )* {
@@ -1346,7 +1275,7 @@ ExprRule7 =
 ExprRule8 =
   head:ExprRule7 tails:(
     _0 op:$('&' ![&=]) _0 term:ExprRule7? {
-      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, NULL_LITERAL);
+      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`);
       return [op, term];
     }
   )* {
@@ -1360,7 +1289,7 @@ ExprRule8 =
 ExprRule9 =
   head:ExprRule8 tails:(
     _0 op:$('^' !'=') _0 term:ExprRule8? {
-      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, NULL_LITERAL);
+      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`);
       return [op, term];
     }
   )* {
@@ -1374,7 +1303,7 @@ ExprRule9 =
 ExprRule10 =
   head:ExprRule9 tails:(
     _0 op:$('|' ![|=]) _0 term:ExprRule9? {
-      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, NULL_LITERAL);
+      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`);
       return [op, term];
     }
   )* {
@@ -1388,7 +1317,7 @@ ExprRule10 =
 ExprRule11 =
   head:ExprRule10 tails:(
     _0 op:'&&' _0 term:ExprRule10? {
-      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, NULL_LITERAL);
+      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`);
       return [op, term];
     }
   )* {
@@ -1402,7 +1331,7 @@ ExprRule11 =
 ExprRule12 =
   head:ExprRule11 tails:(
     _0 op:'||' _0 term:ExprRule11? {
-      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, NULL_LITERAL);
+      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`);
       return [op, term];
     }
   )* {
@@ -1415,16 +1344,15 @@ ExprRule12 =
  */
 ExprRule13 =
   head: ExprRule12 tails:(
-    _0 '?' _0 cons:ExprRule12? _0 alt:(':' _0 @ExprRule12?)? {
-      alt = diagnoseIfEmpty(alt, `an altenative expression following \":\" opearator`, NULL_LITERAL);
-      cons = diagnoseIfEmpty(cons, `a consequent expression following \"?\" opearator`, NULL_LITERAL);
-      return [cons, alt];
+    _0 '?' _0 left:ExprRule12? _0 right:(':' _0 @ExprRule12?)? {
+      left = diagnoseIfEmpty(left, 'a consequent expression following "?" operator');
+      right = diagnoseIfEmpty(right, 'an alternative expression following ":" operator');
+      return [left, right];
     }
   )* {
     return tails.reduce((accumulator, currentValue) => {
-      const cons = currentValue[0];
-      const alt = currentValue[1];
-      return { type: 'ConditionalExpression', test: accumulator, left: cons, right: alt, };
+      const [left, right]  = currentValue;
+      return { type: 'ConditionalExpression', test: accumulator, left, right, loc: location(), };
     }, head);
   }
 
@@ -1434,20 +1362,19 @@ ExprRule13 =
  */
 ExprRule14 =
   head:ExprRule13 tail:(
-    _0 op:AssignOp _0 term:ExprMulti? {
-      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, NULL_LITERAL);
-      return [op, term];
+    _0 operator:AssignOp _0 right:ExprMulti? {
+      right = diagnoseIfEmpty(right, `an expression following \"${operator}\" operator`);
+      return [operator, right];
     }
   )? {
     if (!tail) {
       return head;
     } else {
-      if (head.type !== 'Identifier' && head.type !== 'MemberExpression') {
-        pushDiagnostic(location(), 'Left-side value must be assignable.');
+      if (head.type !== 'Identifier' && head.type !== 'IndirectPattern' && head.type !== 'MemberExpression') {
+        pushDiagnostic('Left-side value must be assignable.', location());
       }
-      const op = tail[0];
-      const term = tail[1];
-      return { type: 'AssignmentExpression', operator: op, left: head, right: term, };
+      const [operator, right] = tail;
+      return { type: 'AssignmentExpression', operator, left: head, right, loc: location(), };
     }
   }
 
@@ -1466,8 +1393,8 @@ AssignOp =
  */
 ExprRule15 =
   head:ExprRule14 tails:(
-    _0 op:'in' !Word _0 term:AssocArray? {
-      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`, NULL_LITERAL);
+    _0 op:'in' !_Word _0 term:MemberExprOrId? {
+      term = diagnoseIfEmpty(term, `an expression following \"${op}\" operator`);
       return [op, term];
     }
   )* {
@@ -1486,7 +1413,7 @@ ExprMulti =
   head:ExprSingle tails:(
     spaces:_0 term:ExprSingle {
       if (!spaces || spaces.length === 0) {
-        pushDiagnostic(location(), 'Expressions should be separated with whitespace.', DiagnosticSeverity.Information);
+        pushDiagnostic('Expressions should be separated with whitespace.', location(), DiagnosticSeverity.Information);
       }
       return [' ', term];
     }
@@ -1501,7 +1428,7 @@ ExprMulti =
 ExprForceSingle =
   head:ExprSingle tails:(
     _0 tail:ExprSingle {
-      pushDiagnostic(location(), 'Expression concatenation not allowed.');
+      pushDiagnostic('Expression concatenation not allowed.', location());
       return [' ', tail];
     }
   )* {
@@ -1518,38 +1445,18 @@ ExprForceSingle =
 
 /**
  * Comma-separated expression list in which concatenation of the expressions is not allowed.
+ * This just inserts a null literal when nothing is placed between commas.
  */
 ExprSingleList 'comma-separated expression list' =
-  item0:ExprForceSingle items1ToN:ExprSingleListItem* {
-    return [item0, ...items1ToN];
-  }
+  expr:ExprForceSingle !_DelimComma { return [expr]; }
   /
-  items1ToN:ExprSingleListItem+ {
-    const loc = location();
-    pushDiagnostic(getRange(loc.source, loc.start), 'Expected an expression.');
-    return [NULL_LITERAL, ...items1ToN];
-  }
-
-ExprSingleListItem =
-  CommaSep item:ExprForceSingle? {
-    return diagnoseIfEmpty(item, 'an expression', NULL_LITERAL);
-  }
+  @(expr:ExprForceSingle? { return expr ?? getNullLiteral(); })|2.., _DelimComma|
 
 /**
- * Comma-separated expression list in which concatenation of the expressions is also allowed.
+ * Comma-separated expression list in which concatenation of the expressions is allowed.
+ * This just inserts a null literal when nothing is placed between commas.
  */
 ExprMultiList 'comma-separated expression list' =
-  item0:ExprMulti items1ToN:ExprMultiListItem* {
-    return [item0, ...items1ToN];
-  }
+  expr:ExprMulti !_DelimComma { return [expr];}
   /
-  items1ToN:ExprMultiListItem+ {
-    const loc = location();
-    pushDiagnostic(getRange(loc.source, loc.start), 'Expected an expression.');
-    return [NULL_LITERAL, ...items1ToN];
-  }
-
-ExprMultiListItem =
-  CommaSep item:ExprMulti? {
-    return diagnoseIfEmpty(item, 'an expression', NULL_LITERAL);
-  }
+  @(expr:ExprMulti? { return expr ?? getNullLiteral(); })|2.., _DelimComma|
