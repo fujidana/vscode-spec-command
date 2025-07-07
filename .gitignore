@@ -7,5 +7,5 @@ node_modules
 .env
 .DS_Store
 syntaxes/*.json
-src/grammar.d.ts
-src/grammar.js
+src/parser.d.ts
+src/parser.js

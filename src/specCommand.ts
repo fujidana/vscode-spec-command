@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import type { LocationRange, Location } from './grammar';
+import type { LocationRange, Location } from './parser';
 
 export const SELECTOR = { language: 'spec-command' };
 // export const SELECTOR = [{ scheme: 'file', language: 'spec-command' }, { scheme: 'untitled', language: 'spec-command' }];

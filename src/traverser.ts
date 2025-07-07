@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 // import * as estraverse from 'estraverse';
 import * as lang from './specCommand';
-import type { LocationRange } from './grammar';
+import type { LocationRange } from './parser';
 import type * as tree from './tree';
 
 const estraverse = require('estraverse');

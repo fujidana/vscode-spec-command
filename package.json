@@ -345,9 +345,9 @@
 	"scripts": {
 		"vscode:prepublish": "pnpm run js-yaml && pnpm run package",
 		"compile": "pnpm run compile:peggy && pnpm run check-types && pnpm run lint && node esbuild.js",
-		"compile:peggy": "peggy -c ./src/pegconfig.json",
+		"compile:peggy": "peggy --dts --cache src/parser.peggy",
 		"watch": "npm-run-all -p watch:*",
-		"watch:peggy": "peggy -w -c ./src/pegconfig.json",
+		"watch:peggy": "peggy -w --dts --cache src/parser.peggy",
 		"watch:esbuild": "node esbuild.js --watch",
 		"watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
 		"package": "pnpm run compile:peggy && pnpm run check-types && pnpm run lint && node esbuild.js --production",

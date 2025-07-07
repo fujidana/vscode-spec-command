@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as lang from './specCommand';
 import { Provider } from './provider';
 import { traversePartially, traverseWholly } from './traverser';
-import { SyntaxError, parse } from './grammar';
+import { SyntaxError, parse } from './parser';
 import type * as tree from './tree';
 
 

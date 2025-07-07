@@ -16,9 +16,9 @@
 
 /**
  * JSDoc-style type definitions.
- * @typedef { import('./grammar').LocationRange } LocationRange
- * @typedef { import('./grammar').Location } Location
- * @typedef { import('./grammar').GrammarSource } GrammarSource
+ * @typedef { import('./parser').LocationRange } LocationRange
+ * @typedef { import('./parser').Location } Location
+ * @typedef { import('./parser').GrammarSource } GrammarSource
 
 * @typedef { import('./tree').Node } Node
 * @typedef { import('./tree').Expression } Expression

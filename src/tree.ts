@@ -40,7 +40,7 @@ The license of the referred file is as follows:
  */
 
 import type { DiagnosticSeverity } from 'vscode';
-import type { LocationRange } from './grammar';
+import type { LocationRange } from './parser';
 
 /**
  * Node having a similar structure as `estree.BaseNodeWithoutComments`.
