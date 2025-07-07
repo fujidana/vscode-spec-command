@@ -1,13 +1,5 @@
 import * as vscode from 'vscode';
-import type { LocationRange, Location } from './grammar';
-
-export function convertPosition(position: Location): vscode.Position {
-    return new vscode.Position(position.line - 1, position.column - 1);
-}
-
-export function convertRange(range: LocationRange): vscode.Range {
-    return new vscode.Range(convertPosition(range.start), convertPosition(range.end));
-}
+import type { LocationRange, Location } from './parser';
 
 export const SELECTOR = { language: 'spec-command' };
 // export const SELECTOR = [{ scheme: 'file', language: 'spec-command' }, { scheme: 'untitled', language: 'spec-command' }];
@@ -18,100 +10,15 @@ export const SNIPPET_URI = 'spec-command://system/code-snippet.md';
 export const ACTIVE_FILE_URI = 'spec-command://user/active-document.md';
 export const AST_URI = 'spec-command://user/ast.json';
 
-export const enum ReferenceItemKind {
-    Undefined = 0,
-    Constant,
-    Variable,
-    Array,
-    Macro,
-    Function,
-    Keyword,
-    Snippet,
-    Enum,
+export function convertPosition(position: Location): vscode.Position {
+    return new vscode.Position(position.line - 1, position.column - 1);
 }
 
-type ReferenceItemKindMetadata = { label: string, iconIdentifier: string, completionItemKind: vscode.CompletionItemKind | undefined, symbolKind: vscode.SymbolKind };
-
-export function getReferenceItemKindMetadata(refItemKind: ReferenceItemKind) : ReferenceItemKindMetadata {
-    switch (refItemKind) {
-        case ReferenceItemKind.Constant:
-            return {
-                label: "constant",
-                iconIdentifier: 'symbol-constant',
-                completionItemKind: vscode.CompletionItemKind.Constant,
-                symbolKind: vscode.SymbolKind.Constant
-            };
-        case ReferenceItemKind.Variable:
-            return {
-                label: "variable",
-                iconIdentifier: 'symbol-variable',
-                completionItemKind: vscode.CompletionItemKind.Variable,
-                symbolKind: vscode.SymbolKind.Variable
-            };
-            case ReferenceItemKind.Array:
-                return {
-                    label: "data-array",
-                    iconIdentifier: 'symbol-array',
-                    completionItemKind: vscode.CompletionItemKind.Variable,
-                    symbolKind: vscode.SymbolKind.Array
-                };
-            case ReferenceItemKind.Macro:
-            return {
-                label: "macro",
-                iconIdentifier: 'symbol-module',
-                completionItemKind: vscode.CompletionItemKind.Module,
-                symbolKind: vscode.SymbolKind.Module
-            };
-        case ReferenceItemKind.Function:
-            return {
-                label: "function",
-                iconIdentifier: 'symbol-function',
-                completionItemKind: vscode.CompletionItemKind.Function,
-                symbolKind: vscode.SymbolKind.Function
-            };
-        case ReferenceItemKind.Keyword:
-            return {
-                label: "keyword",
-                iconIdentifier: 'symbol-keyword',
-                completionItemKind: vscode.CompletionItemKind.Keyword,
-                symbolKind: vscode.SymbolKind.Null // no corresponding value
-            };
-        case ReferenceItemKind.Snippet:
-            return {
-                label: "snippet",
-                iconIdentifier: 'symbol-snippet',
-                completionItemKind: vscode.CompletionItemKind.Snippet,
-                symbolKind: vscode.SymbolKind.Null // no corresponding value
-            };
-        case ReferenceItemKind.Enum:
-            return {
-                label: "member",
-                iconIdentifier: 'symbol-enum-member',
-                completionItemKind: vscode.CompletionItemKind.EnumMember,
-                symbolKind: vscode.SymbolKind.EnumMember
-            };
-        case ReferenceItemKind.Undefined:
-            return {
-                label: "unknown symbol",
-                iconIdentifier: 'symbol-null',
-                completionItemKind: undefined,
-                symbolKind: vscode.SymbolKind.Null
-            };
-    }
+export function convertRange(range: LocationRange): vscode.Range {
+    return new vscode.Range(convertPosition(range.start), convertPosition(range.end));
 }
 
-export class CompletionItem extends vscode.CompletionItem {
-    readonly uriString: string;
-    readonly refItemKind: ReferenceItemKind;
-
-    constructor(label: string | vscode.CompletionItemLabel, uriString: string, refItemKind: ReferenceItemKind) {
-        super(label, getReferenceItemKindMetadata(refItemKind).completionItemKind);
-        this.uriString = uriString;
-        this.refItemKind = refItemKind;
-    };
-}
-
-// 'overloads' parameter is for built-in macros and functions.
+// 'overloads' parameter is used only by built-in macros and functions.
 export type ReferenceItem = {
     signature: string;
     description?: string;
@@ -130,6 +37,16 @@ export type VersionRange = {
     description?: string;
 };
 
+export type ReferenceSheet = Map<string, ReferenceItem>;
+
+const ReferenceCategoryNames = ['undefined', 'constant', 'variable', 'array', 'macro', 'function', 'keyword', 'snippet', 'enum'] as const;
+
+export type ReferenceCategory = typeof ReferenceCategoryNames[number];
+export type ReferenceBook = { [K in ReferenceCategory]?: ReferenceSheet; };
+// export type ReferenceBook = Map<ReferenceCategory, ReferenceSheet>;
+
+type ReferenceCategoryMetadata = { label: string, iconIdentifier: string, completionItemKind: vscode.CompletionItemKind | undefined, symbolKind: vscode.SymbolKind };
+
 export function getVersionRangeDescription(versionRange: VersionRange, label: string) {
     let tmpStr = versionRange.range === '>=0.0.0' ? `[${label} at some time]` : `[${label}: \`${versionRange.range}\`]`;
     if (versionRange.description) {
@@ -138,6 +55,70 @@ export function getVersionRangeDescription(versionRange: VersionRange, label: st
     return tmpStr;
 }
 
-export type ReferenceMap = Map<string, ReferenceItem>;
+export const referenceCategoryMetadata: { [K in ReferenceCategory]: ReferenceCategoryMetadata } = {
+    constant: {
+        label: 'constant',
+        iconIdentifier: 'symbol-constant',
+        completionItemKind: vscode.CompletionItemKind.Constant,
+        symbolKind: vscode.SymbolKind.Constant
+    },
+    variable: {
+        label: 'variable',
+        iconIdentifier: 'symbol-variable',
+        completionItemKind: vscode.CompletionItemKind.Variable,
+        symbolKind: vscode.SymbolKind.Variable
+    },
+    array: {
+        label: 'data-array',
+        iconIdentifier: 'symbol-array',
+        completionItemKind: vscode.CompletionItemKind.Variable,
+        symbolKind: vscode.SymbolKind.Array
+    },
+    macro: {
+        label: 'macro',
+        iconIdentifier: 'symbol-module',
+        completionItemKind: vscode.CompletionItemKind.Module,
+        symbolKind: vscode.SymbolKind.Module
+    },
+    function: {
+        label: 'function',
+        iconIdentifier: 'symbol-function',
+        completionItemKind: vscode.CompletionItemKind.Function,
+        symbolKind: vscode.SymbolKind.Function
+    },
+    keyword: {
+        label: 'keyword',
+        iconIdentifier: 'symbol-keyword',
+        completionItemKind: vscode.CompletionItemKind.Keyword,
+        symbolKind: vscode.SymbolKind.Null // no corresponding value
+    },
+    snippet: {
+        label: 'snippet',
+        iconIdentifier: 'symbol-snippet',
+        completionItemKind: vscode.CompletionItemKind.Snippet,
+        symbolKind: vscode.SymbolKind.Null // no corresponding value
+    },
+    enum: {
+        label: 'member',
+        iconIdentifier: 'symbol-enum-member',
+        completionItemKind: vscode.CompletionItemKind.EnumMember,
+        symbolKind: vscode.SymbolKind.EnumMember
+    },
+    undefined: {
+        label: 'unknown symbol',
+        iconIdentifier: 'symbol-null',
+        completionItemKind: undefined,
+        symbolKind: vscode.SymbolKind.Null
+    }
+};
 
-export type ReferenceStorage = Map<ReferenceItemKind, ReferenceMap>;
+export class CompletionItem extends vscode.CompletionItem {
+    readonly uriString: string;
+    readonly category: ReferenceCategory;
+
+    constructor(label: string | vscode.CompletionItemLabel, uriString: string, category: ReferenceCategory) {
+        super(label, referenceCategoryMetadata[category].completionItemKind);
+        this.uriString = uriString;
+        this.category = category;
+    };
+}

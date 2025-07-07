@@ -345,9 +345,9 @@
 	"scripts": {
 		"vscode:prepublish": "pnpm run js-yaml && pnpm run package",
 		"compile": "pnpm run compile:peggy && pnpm run check-types && pnpm run lint && node esbuild.js",
-		"compile:peggy": "peggy -c ./src/pegconfig.json",
+		"compile:peggy": "peggy --dts --cache src/parser.peggy",
 		"watch": "npm-run-all -p watch:*",
-		"watch:peggy": "peggy -w -c ./src/pegconfig.json",
+		"watch:peggy": "peggy -w --dts --cache src/parser.peggy",
 		"watch:esbuild": "node esbuild.js --watch",
 		"watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
 		"package": "pnpm run compile:peggy && pnpm run check-types && pnpm run lint && node esbuild.js --production",
@@ -372,8 +372,6 @@
 	"devDependencies": {
 		"@esbuild-plugins/node-globals-polyfill": "^0.2.3",
 		"@types/assert": "^1.5.11",
-		"@types/estraverse": "^5.1.7",
-		"@types/estree": "^1.0.8",
 		"@types/mocha": "^10.0.10",
 		"@types/node": "20.x",
 		"@types/semver": "^7.7.0",
