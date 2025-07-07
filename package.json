@@ -316,6 +316,18 @@
 					"scope": "resource",
 					"description": "Controls whether diagnostic results of files in a workspace are listed in 'Problems' view. If disabled, only syntax problems of files opened by editors are listed."
 				},
+				"spec-command.experimental.problems.rules": {
+					"type": "object",
+					"scope": "resource",
+					"markdownDescription": "Controls whether specific types of diagnostics are shown in the Problem view.",
+					"properties": {
+						"no-local-outside-block": {
+							"type": "boolean",
+							"default": false
+						}
+					},
+					"additionalProperties": false
+				},
 				"spec-command.terminal.filePathPrefix": {
 					"type": "string",
 					"default": "",

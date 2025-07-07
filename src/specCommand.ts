@@ -122,3 +122,9 @@ export class CompletionItem extends vscode.CompletionItem {
         this.category = category;
     };
 }
+
+export const defaultDiagnosticRules = {
+    'no-local-outside-block': false,
+};
+
+export type DiagnosticRules = typeof defaultDiagnosticRules;

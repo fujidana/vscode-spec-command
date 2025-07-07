@@ -235,7 +235,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
 
         // a hander invoked when the configuration is changed
         const configurationDidChangeListener = (event: vscode.ConfigurationChangeEvent) => {
-            if (event.affectsConfiguration('spec-command.workspace') || event.affectsConfiguration('files.associations') || event.affectsConfiguration('files.encoding')) {
+            if (event.affectsConfiguration('spec-command.workspace') || event.affectsConfiguration('files.associations') || event.affectsConfiguration('files.encoding') || event.affectsConfiguration('spec-command.experimental.problems.rules')) {
                 this.refreshCollections();
             }
         };
@@ -346,8 +346,8 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
             // this.updateCompletionItemsForUriString(uriString);
             return false;
         }
-
-        const [refBook, symbols, traverserDiagnostics] = traverseWholly(tree, diagnoseProblems);
+        const diagnosticRules = diagnoseProblems ? vscode.workspace.getConfiguration('spec-command.experimental.problems', uri).get('rules', lang.defaultDiagnosticRules) : undefined;
+        const [refBook, symbols, traverserDiagnostics] = traverseWholly(tree, diagnosticRules);
 
         if (diagnoseProblems) {
             const parseDiagnostics = tree.problems.map(problem => new vscode.Diagnostic(lang.convertRange(problem.loc), problem.message, problem.severity));

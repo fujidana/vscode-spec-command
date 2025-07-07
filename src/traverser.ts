@@ -50,7 +50,7 @@ const VISITOR_KEYS = {
     MacroParameter: [],
 };
 
-export function traverseWholly(program: tree.Program, diagnose: boolean): [lang.ReferenceBook, vscode.DocumentSymbol[], vscode.Diagnostic[]] {
+export function traverseWholly(program: tree.Program, diagnosticRules: lang.DiagnosticRules | undefined): [lang.ReferenceBook, vscode.DocumentSymbol[], vscode.Diagnostic[]] {
     // Create variables to store data.
     const refBook = {
         constant: new Map<string, lang.ReferenceItem>(),
@@ -180,9 +180,9 @@ export function traverseWholly(program: tree.Program, diagnose: boolean): [lang.
                     }
 
                     // Diagnose problems.
-                    if (diagnose) {
+                    if (diagnosticRules && diagnosticRules['no-local-outside-block']) {
                         if (node.kind === 'local' && blockStack.length === 0) {
-                            diagnostics.push(new vscode.Diagnostic(nodeRange, 'Local variable declaration outside of a block.', vscode.DiagnosticSeverity.Warning));
+                            diagnostics.push(new vscode.Diagnostic(nodeRange, 'Local variable declaration outside a block.', vscode.DiagnosticSeverity.Warning));
                         }
                     }
                 } else if (node.type === 'BlockStatement') {
