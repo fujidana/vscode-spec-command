@@ -347,11 +347,11 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
             return false;
         }
 
-        const [refBook, symbols] = traverseWholly(tree);
+        const [refBook, symbols, traverserDiagnostics] = traverseWholly(tree, diagnoseProblems);
 
         if (diagnoseProblems) {
-            const diagnostics = tree.problems.map(problem => new vscode.Diagnostic(lang.convertRange(problem.loc), problem.message, problem.severity));
-            this.diagnosticCollection.set(uri, diagnostics);
+            const parseDiagnostics = tree.problems.map(problem => new vscode.Diagnostic(lang.convertRange(problem.loc), problem.message, problem.severity));
+            this.diagnosticCollection.set(uri, parseDiagnostics.concat(traverserDiagnostics));
         }
 
         if (isOpenDocument) {
