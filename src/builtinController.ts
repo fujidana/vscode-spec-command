@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import * as lang from "./specCommand";
-import { Provider } from "./provider";
+import * as lang from "./language";
+import { Controller } from "./controller";
 
 interface APIReference {
     constants: lang.ReferenceItem[];
@@ -30,15 +30,15 @@ const SNIPPET_TEMPLATES: Record<string, string> = {
 };
 
 /**
- * Provider subclass that manages built-in symbols and motor mnemonics user added in VS Code configuraion.
+ * A controller subclass that manages built-in symbols and motor mnemonics.
  */
-export class SystemProvider extends Provider implements vscode.TextDocumentContentProvider {
+export class BuiltinController extends Controller implements vscode.TextDocumentContentProvider {
     private activeWorkspaceFolder: vscode.WorkspaceFolder | undefined;
 
     constructor(context: vscode.ExtensionContext) {
         super(context);
 
-        // load the API reference file
+        // Load built-in reference database from the JSON file.
         const apiReferenceUri = vscode.Uri.joinPath(context.extensionUri, 'syntaxes', 'specCommand.apiReference.json');
         const promisedRefBook = vscode.workspace.fs.readFile(apiReferenceUri).then(uint8Array => {
             return vscode.workspace.decode(uint8Array, { encoding: 'utf8' });
@@ -59,14 +59,14 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
             return refBook;
         });
 
-        // register reference database for motors, counters and snippets.
+        // Initialize reference database for motors, counters and snippets.
         const editor = vscode.window.activeTextEditor;
         this.activeWorkspaceFolder = editor ? vscode.workspace.getWorkspaceFolder(editor.document.uri) : undefined;
         this.updateMnemonicRefBook('motors');
         this.updateMnemonicRefBook('counters');
         this.updateSnippetRefBook();
 
-        //
+        /** Event listener for active text editor changes. */
         const activeTextEditorDidChangeListener = (event: vscode.TextEditor | undefined) => {
             const newActiveWorkspaceFolder = event ? vscode.workspace.getWorkspaceFolder(event.document.uri) : undefined;
             if (this.activeWorkspaceFolder !== newActiveWorkspaceFolder) {
@@ -77,7 +77,7 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
             }
         };
 
-        // observe the change in configuration
+        /** Event listener for configuration changes. */
         const configurationDidChangeListener = (event: vscode.ConfigurationChangeEvent) => {
             if (event.affectsConfiguration('spec-command.suggest.motors', this.activeWorkspaceFolder)) {
                 this.updateMnemonicRefBook('motors');
@@ -92,7 +92,7 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
             }
         };
 
-        // register command to show reference manual as a virtual document
+        /** Command handler for opening the reference manual. */
         const openReferenceManualCommandHandler = async () => {
             const refBook = await promisedRefBook;
 
@@ -114,6 +114,7 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
             }
         };
 
+        // Register command and event handlers.
         context.subscriptions.push(
             // register command handlers
             vscode.commands.registerCommand('spec-command.openReferenceManual', openReferenceManualCommandHandler),
@@ -153,8 +154,8 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
     private updateSnippetRefBook() {
         const refSheet: lang.ReferenceSheet = new Map();
 
-        const userTemplates = vscode.workspace.getConfiguration('spec-command.suggest', this.activeWorkspaceFolder).get<Record<string, string>>('codeSnippets');
-        const templates = (userTemplates && Object.keys(userTemplates).length) ? Object.assign({}, SNIPPET_TEMPLATES, userTemplates) : SNIPPET_TEMPLATES;
+        const userTemplates = vscode.workspace.getConfiguration('spec-command.suggest', this.activeWorkspaceFolder).get<Record<string, string>>('codeSnippets', {});
+        const templates = Object.assign({}, SNIPPET_TEMPLATES, userTemplates);
 
         const motorRefSheet = this.referenceCollection.get(lang.MOTOR_URI)?.['enum'];
         const counterRefSheet = this.referenceCollection.get(lang.COUNTER_URI)?.['enum'];
@@ -186,7 +187,7 @@ export class SystemProvider extends Provider implements vscode.TextDocumentConte
     }
 
     /**
-     * required implementation of vscode.TextDocumentContentProvider
+     * Required implementation of vscode.TextDocumentContentProvider.
      */
     public provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken): vscode.ProviderResult<string> {
         if (token.isCancellationRequested) { return; }

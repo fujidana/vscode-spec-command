@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import * as lang from './specCommand';
-import { Provider } from './provider';
+import * as lang from './language';
+import { Controller } from './controller';
 import { traversePartially, traverseWholly } from './traverser';
 import { SyntaxError, parse } from './parser';
 import type * as tree from './tree';
@@ -18,8 +18,8 @@ async function findFilesInWorkspaces() {
     if (workspaceFolders) {
         for (const workspaceFolder of workspaceFolders) {
             // refer to `files.associations` configuration property
-            const associations = Object.assign(
-                <Record<string, string>>{ '*.mac': 'spec-command' },
+            const associations: Record<string, string> = Object.assign(
+                { '*.mac': 'spec-command' },
                 vscode.workspace.getConfiguration('files', workspaceFolder).get<Record<string, string>>('associations')
             );
 
@@ -41,10 +41,9 @@ async function findFilesInWorkspaces() {
 }
 
 /**
- * Provider class for user's documents.
- * This class manages documents opened in editors and other documents in the current workspaces.
+ * A controller subclass that handles files and documents in the current workspace.
  */
-export class UserProvider extends Provider implements vscode.DefinitionProvider, vscode.DocumentSymbolProvider, vscode.WorkspaceSymbolProvider, vscode.DocumentDropEditProvider, vscode.TextDocumentContentProvider {
+export class FileController extends Controller implements vscode.DefinitionProvider, vscode.DocumentSymbolProvider, vscode.WorkspaceSymbolProvider, vscode.DocumentDropEditProvider, vscode.TextDocumentContentProvider {
 
     private readonly diagnosticCollection: vscode.DiagnosticCollection;
     private readonly treeCollection: Map<string, tree.Program>;
@@ -122,7 +121,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
             terminal.sendText(`qdofile("${path}")`);
         };
 
-        // a hander invoked when the document is changed
+        /**  Event handler invoked when the document is changed. */
         const textDocumentDidChangeListener = (event: vscode.TextDocumentChangeEvent) => {
             const document = event.document;
             if (vscode.languages.match(lang.SELECTOR, document) && document.uri.scheme !== 'git') {
@@ -130,23 +129,27 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
             }
         };
 
-        // a hander invoked when the document is opened
-        // this is also invoked after the user manually changed the language id
+        /**
+         * Event handler invoked when the document is opened.
+         * It is also invoked after the user manually changed the language identifier.
+         */
         const textDocumentDidOpenListener = (document: vscode.TextDocument) => {
             if (vscode.languages.match(lang.SELECTOR, document) && document.uri.scheme !== 'git') {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
             }
         };
 
-        // a hander invoked when the document is saved
+        /** Event handler invoked when the document is saved. */
         const textDocumentDidSaveListener = (document: vscode.TextDocument) => {
             if (vscode.languages.match(lang.SELECTOR, document) && document.uri.scheme !== 'git') {
                 this.parseDocumentContents(document.getText(), document.uri, true, true);
             }
         };
 
-        // a hander invoked when the document is closed
-        // this is also invoked after the user manually changed the language id
+        /**
+         * Event handler invoked when the document is closed.
+         * It is also invoked after the user manually changed the language identifier.
+         */
         const textDocumentDidCloseListener = async (document: vscode.TextDocument) => {
             if (vscode.languages.match(lang.SELECTOR, document)) {
                 const documentUriString = document.uri.toString();
@@ -180,7 +183,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         //     }
         // };
 
-        // // a hander invoked after files are created
+        // // Event handler invoked after files are created
         // const fileDidCreateListener = async (event: vscode.FileCreateEvent) => {
         //     const filesInWorkspaces = await findFilesInWorkspaces();
         //     const newUriStringSet = new Set<string>();
@@ -188,7 +191,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
         //     }
         // };
 
-        // a hander invoked after files are renamed
+        /** Event handler invoked after files are renamed. */
         const fileDidRenameListener = async (event: vscode.FileRenameEvent) => {
             const filesInWorkspaces = await findFilesInWorkspaces();
             let oldUriStringSet: Set<string> | undefined;
@@ -214,7 +217,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
             this.reflectFileOperationInCollections(oldUriStringSet, newUriStringSet);
         };
 
-        // a hander invoked before files are deleted
+        /** Event handler invoked before files are deleted. */
         const fileWillDeleteListener = async (event: vscode.FileWillDeleteEvent) => {
             for (const oldUri of event.files) {
                 const promise = vscode.workspace.fs.stat(oldUri).then(
@@ -233,46 +236,49 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
             }
         };
 
-        // a hander invoked when the configuration is changed
+        /** Event handler invoked when the configuration is changed. */
         const configurationDidChangeListener = (event: vscode.ConfigurationChangeEvent) => {
             if (event.affectsConfiguration('spec-command.workspace') || event.affectsConfiguration('files.associations') || event.affectsConfiguration('files.encoding') || event.affectsConfiguration('spec-command.experimental.problems.rules')) {
                 this.refreshCollections();
             }
         };
 
+        /** Event handler invoked when the workspace folders are changed. */
         const workspaceFoldersDidChangeListener = (event: vscode.WorkspaceFoldersChangeEvent) => {
             this.refreshCollections();
         };
 
+        // Register providers and event handlers.
         context.subscriptions.push(
-            // register command handlers
+            // Register command handlers.
             vscode.commands.registerCommand('spec-command.inspectSyntaxTree', inspectSyntaxTreeCommandHandler),
             vscode.commands.registerCommand('spec-command.execSelectionInTerminal', execSelectionInTerminalCommandCallback),
             vscode.commands.registerCommand('spec-command.execFileInTerminal', execFileInTerminalCommandCallback),
-            // register document-event listeners
+
+            // Register document-event listeners.
             vscode.workspace.onDidChangeTextDocument(textDocumentDidChangeListener),
             vscode.workspace.onDidOpenTextDocument(textDocumentDidOpenListener),
             vscode.workspace.onDidSaveTextDocument(textDocumentDidSaveListener),
             vscode.workspace.onDidCloseTextDocument(textDocumentDidCloseListener),
             // vscode.window.onDidChangeActiveTextEditor(activeTextEditorDidChangeListener),
 
-            // register file-event listeners
+            // Register file-event listeners.
             // vscode.workspace.onDidCreateFiles(fileDidCreateListener),
             vscode.workspace.onDidRenameFiles(fileDidRenameListener),
             vscode.workspace.onWillDeleteFiles(fileWillDeleteListener),
 
-            // register other event listeners
+            // Register other event listeners.
             vscode.workspace.onDidChangeConfiguration(configurationDidChangeListener),
             vscode.workspace.onDidChangeWorkspaceFolders(workspaceFoldersDidChangeListener),
 
-            // register providers
+            // Register providers.
             vscode.languages.registerDefinitionProvider(lang.SELECTOR, this),
             vscode.languages.registerDocumentSymbolProvider(lang.SELECTOR, this),
             vscode.languages.registerWorkspaceSymbolProvider(this),
             vscode.languages.registerDocumentDropEditProvider(lang.SELECTOR, this),
             vscode.workspace.registerTextDocumentContentProvider('spec-command', this),
 
-            // register diagnostic collection
+            // Register diagnostic collection.
             this.diagnosticCollection,
         );
 
@@ -402,7 +408,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
     }
 
     /**
-     * Required implementation of vscode.CompletionItemProvider, overriding the super class
+     * Required implementation of vscode.CompletionItemProvider, overriding the super class.
      */
     public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionList<lang.CompletionItem> | lang.CompletionItem[]> {
         if (token.isCancellationRequested) { return; }
@@ -417,7 +423,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
     }
 
     /**
-     * Required implementation of vscode.HoverProvider, overriding the super class
+     * Required implementation of vscode.HoverProvider, overriding the super class.
      */
     public provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.ProviderResult<vscode.Hover> {
         if (token.isCancellationRequested) { return; }
@@ -431,7 +437,7 @@ export class UserProvider extends Provider implements vscode.DefinitionProvider,
     }
 
     /**
-     * Required implementation of vscode.DefinitionProvider
+     * Required implementation of vscode.DefinitionProvider.
      */
     public provideDefinition(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.ProviderResult<vscode.Definition | vscode.DefinitionLink[]> {
         if (token.isCancellationRequested) { return; }

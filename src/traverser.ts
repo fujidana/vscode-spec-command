@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 // import * as estraverse from 'estraverse';
-import * as lang from './specCommand';
+import * as lang from './language';
 import type { LocationRange } from './parser';
 import type * as tree from './tree';
 

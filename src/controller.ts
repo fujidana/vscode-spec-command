@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as lang from './specCommand';
+import * as lang from './language';
 import { SemVer, satisfies } from 'semver';
 
 const suppressMessagesConfig = {
@@ -28,7 +28,7 @@ function getShortDescription(item: lang.ReferenceItem, category: lang.ReferenceC
         symbolLabel = 'counter/motor ' + symbolLabel;
     } else if (itemUriString === lang.ACTIVE_FILE_URI || itemUriString === documentUriString) {
         if (item.location) {
-            symbolLabel = `${symbolLabel} defined in l.${item.location.start.line} of this file `;
+            symbolLabel = `${symbolLabel} defined at l.${item.location.start.line} in this file `;
         } else {
             symbolLabel = symbolLabel + ' defined in this file';
         }
@@ -129,15 +129,14 @@ function parseSignatureInEditing(line: string, position: number) {
 }
 
 /**
- * Provider class
+ * Abstract class for a main controller.
  */
-export class Provider implements vscode.CompletionItemProvider<lang.CompletionItem>, vscode.HoverProvider, vscode.SignatureHelpProvider {
+export class Controller implements vscode.CompletionItemProvider<lang.CompletionItem>, vscode.HoverProvider, vscode.SignatureHelpProvider {
 
     // In JavaScript, equality comparison (`==` and `===`) of two different objects
-    // are `false` regardless of the equality of their values.
-    // Therefore, we use the string representation of the Uri object.
-    // string is a primitive type, so the equality comparision is based on the value
-    // (i.e., uriA.toString() === uriB.toString() but uriA !== uriB).
+    // is always `false`, regardless of the equality of their values.
+    // Therefore, the string representation of the Uri object is used in the extension.
+    // String is a primitive type and thus, the equality comparision is based on the value.
 
     protected readonly referenceCollection = new Map<string, lang.ReferenceBook>();
     protected readonly completionItemCollection = new Map<string, lang.CompletionItem[]>();
@@ -146,7 +145,7 @@ export class Provider implements vscode.CompletionItemProvider<lang.CompletionIt
     constructor(context: vscode.ExtensionContext) {
         this.specVersion = new SemVer(vscode.workspace.getConfiguration('spec-command').get<string>('specVersion', '6.13.4'));
 
-        const configurationChangeListener = (event: vscode.ConfigurationChangeEvent) => {
+        const configurationDidChangeListener = (event: vscode.ConfigurationChangeEvent) => {
             if (event.affectsConfiguration('spec-command.suggest.suppressMessages')) {
                 for (const uriString of this.referenceCollection.keys()) {
                     this.updateCompletionItemsForUriString(uriString);
@@ -160,12 +159,12 @@ export class Provider implements vscode.CompletionItemProvider<lang.CompletionIt
             }
         };
 
-        // register providers
+        // Register providers and event handlers.
         context.subscriptions.push(
             vscode.languages.registerCompletionItemProvider(lang.SELECTOR, this),
             vscode.languages.registerHoverProvider(lang.SELECTOR, this),
             vscode.languages.registerSignatureHelpProvider(lang.SELECTOR, this, '(', ')', ','),
-            vscode.workspace.onDidChangeConfiguration(configurationChangeListener),
+            vscode.workspace.onDidChangeConfiguration(configurationDidChangeListener),
         );
     }
 
@@ -203,7 +202,7 @@ export class Provider implements vscode.CompletionItemProvider<lang.CompletionIt
             for (const [category, refSheet] of Object.entries(refBook)) {
                 for (const [identifier, refItem] of refSheet.entries()) {
                     if (refItem.available && !satisfies(this.specVersion, refItem.available.range)) {
-                        // skip items that are not supported in the current spec version
+                        // Skip items unavailable in the specified spec version.
                         continue;
                     }
                     const detail = (!suppressDetail && refItem.signature.startsWith(identifier)) ? refItem.signature.substring(identifier.length) : undefined;
@@ -213,7 +212,7 @@ export class Provider implements vscode.CompletionItemProvider<lang.CompletionIt
                         completionItem.insertText = new vscode.SnippetString(refItem.snippet);
                     }
                     if (refItem.deprecated && satisfies(this.specVersion, refItem.deprecated.range)) {
-                        // add deprecated tag to the completion item.
+                        // Add "Deprecated" tag to the completion item.
                         completionItem.tags = [vscode.CompletionItemTag.Deprecated];
                     }
                     completionItems.push(completionItem);
@@ -228,7 +227,7 @@ export class Provider implements vscode.CompletionItemProvider<lang.CompletionIt
     }
 
     /**
-     * Required implementation of vscode.CompletionItemProvider
+     * Required implementation of vscode.CompletionItemProvider.
      */
     public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionList<lang.CompletionItem> | lang.CompletionItem[]> {
         if (token.isCancellationRequested) { return; }
@@ -243,7 +242,7 @@ export class Provider implements vscode.CompletionItemProvider<lang.CompletionIt
     }
 
     /**
-     * Optional implementation of vscode.CompletionItemProvider
+     * Optional implementation of vscode.CompletionItemProvider.
      */
     public resolveCompletionItem(completionItem: lang.CompletionItem, token: vscode.CancellationToken): vscode.ProviderResult<lang.CompletionItem> {
         if (token.isCancellationRequested) { return; }
@@ -290,7 +289,7 @@ export class Provider implements vscode.CompletionItemProvider<lang.CompletionIt
     }
 
     /**
-     * required implementation of vscode.HoverProvider
+     * Required implementation of vscode.HoverProvider.
      */
     public provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.ProviderResult<vscode.Hover> {
         if (token.isCancellationRequested) { return; }
@@ -339,7 +338,7 @@ export class Provider implements vscode.CompletionItemProvider<lang.CompletionIt
     }
 
     /**
-     * Required implementation of vscode.SignatureHelpProvider
+     * Required implementation of vscode.SignatureHelpProvider.
      */
     public provideSignatureHelp(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.SignatureHelpContext): vscode.ProviderResult<vscode.SignatureHelp> {
         if (token.isCancellationRequested) { return; }
