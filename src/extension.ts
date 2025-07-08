@@ -6,8 +6,8 @@ import { FileController } from './fileController';
 
 // this method is called when your extension is activated
 export function activate(context: vscode.ExtensionContext): void {
-    new BuiltinController(context);
-    new FileController(context);
+    const builtinController = new BuiltinController(context);
+    new FileController(context, builtinController);
 }
 
 // this method is called when your extension is deactivated

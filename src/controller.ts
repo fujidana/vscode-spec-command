@@ -138,7 +138,7 @@ export class Controller implements vscode.CompletionItemProvider<lang.Completion
     // Therefore, the string representation of the Uri object is used in the extension.
     // String is a primitive type and thus, the equality comparision is based on the value.
 
-    protected readonly referenceCollection = new Map<string, lang.ReferenceBook>();
+    public readonly referenceCollection = new Map<string, lang.ReferenceBook>();
     protected readonly completionItemCollection = new Map<string, lang.CompletionItem[]>();
     protected specVersion: SemVer;
 

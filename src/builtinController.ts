@@ -34,13 +34,14 @@ const SNIPPET_TEMPLATES: Record<string, string> = {
  */
 export class BuiltinController extends Controller implements vscode.TextDocumentContentProvider {
     private activeWorkspaceFolder: vscode.WorkspaceFolder | undefined;
+    public readonly promisedRefBook: PromiseLike<lang.ReferenceBook>;
 
     constructor(context: vscode.ExtensionContext) {
         super(context);
 
         // Load built-in reference database from the JSON file.
         const apiReferenceUri = vscode.Uri.joinPath(context.extensionUri, 'syntaxes', 'specCommand.apiReference.json');
-        const promisedRefBook = vscode.workspace.fs.readFile(apiReferenceUri).then(uint8Array => {
+        this.promisedRefBook = vscode.workspace.fs.readFile(apiReferenceUri).then(uint8Array => {
             return vscode.workspace.decode(uint8Array, { encoding: 'utf8' });
         }).then(decodedString => {
             // convert JSON-formatted file contents to a javascript object.
@@ -94,7 +95,7 @@ export class BuiltinController extends Controller implements vscode.TextDocument
 
         /** Command handler for opening the reference manual. */
         const openReferenceManualCommandHandler = async () => {
-            const refBook = await promisedRefBook;
+            const refBook = await this.promisedRefBook;
 
             const quickPickItems = [{ category: 'all', label: '$(references) all' }];
             for (const category of Object.keys(refBook)) {

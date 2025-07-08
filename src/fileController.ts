@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import * as lang from './language';
 import { Controller } from './controller';
-import { traversePartially, traverseWholly } from './traverser';
+import { BuiltinController } from './builtinController';
+import { traversePartially, traverseWholly, traverseForFurtherDiagnostics } from './traverser';
 import { SyntaxError, parse } from './parser';
 import type * as tree from './tree';
 
@@ -48,9 +49,11 @@ export class FileController extends Controller implements vscode.DefinitionProvi
     private readonly diagnosticCollection: vscode.DiagnosticCollection;
     private readonly treeCollection: Map<string, tree.Program>;
     private readonly symbolCollection: Map<string, vscode.DocumentSymbol[]>;
+    private readonly builtinController: BuiltinController;
 
-    constructor(context: vscode.ExtensionContext) {
+    constructor(context: vscode.ExtensionContext, builtinController: BuiltinController) {
         super(context);
+        this.builtinController = builtinController;
 
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('spec-command');
         this.treeCollection = new Map();
@@ -125,7 +128,7 @@ export class FileController extends Controller implements vscode.DefinitionProvi
         const textDocumentDidChangeListener = (event: vscode.TextDocumentChangeEvent) => {
             const document = event.document;
             if (vscode.languages.match(lang.SELECTOR, document) && document.uri.scheme !== 'git') {
-                this.parseDocumentContents(document.getText(), document.uri, true, true);
+                this.parseDocumentContents(document.getText(), document.uri, true, true, true);
             }
         };
 
@@ -135,14 +138,14 @@ export class FileController extends Controller implements vscode.DefinitionProvi
          */
         const textDocumentDidOpenListener = (document: vscode.TextDocument) => {
             if (vscode.languages.match(lang.SELECTOR, document) && document.uri.scheme !== 'git') {
-                this.parseDocumentContents(document.getText(), document.uri, true, true);
+                this.parseDocumentContents(document.getText(), document.uri, true, true, true);
             }
         };
 
         /** Event handler invoked when the document is saved. */
         const textDocumentDidSaveListener = (document: vscode.TextDocument) => {
             if (vscode.languages.match(lang.SELECTOR, document) && document.uri.scheme !== 'git') {
-                this.parseDocumentContents(document.getText(), document.uri, true, true);
+                this.parseDocumentContents(document.getText(), document.uri, true, true, true);
             }
         };
 
@@ -170,51 +173,38 @@ export class FileController extends Controller implements vscode.DefinitionProvi
                 } else {
                     // if file does not exist in a workspace folder, clear all.
                     this.referenceCollection.delete(documentUriString);
-                    this.diagnosticCollection.delete(document.uri);
                     this.completionItemCollection.delete(documentUriString);
+                    this.diagnosticCollection.delete(document.uri);
                 }
             }
         };
 
-        // const activeTextEditorDidChangeListener = (editor: vscode.TextEditor | undefined) => {
-        //     if (editor) {
-        //         const document = editor.document;
-        //         this.parseDocumentContents(document.getText(), document.uri, true, true);
-        //     }
-        // };
+        // const activeTextEditorDidChangeListener = (editor: vscode.TextEditor | undefined) => { };
 
-        // // Event handler invoked after files are created
-        // const fileDidCreateListener = async (event: vscode.FileCreateEvent) => {
-        //     const filesInWorkspaces = await findFilesInWorkspaces();
-        //     const newUriStringSet = new Set<string>();
-        //     for (const newUri of event.files) {
-        //     }
-        // };
+        // const fileDidCreateListener = async (event: vscode.FileCreateEvent) => { };
 
         /** Event handler invoked after files are renamed. */
         const fileDidRenameListener = async (event: vscode.FileRenameEvent) => {
             const filesInWorkspaces = await findFilesInWorkspaces();
-            let oldUriStringSet: Set<string> | undefined;
-            let newUriStringSet: Set<string> | undefined;
+            let oldUriStrings: Array<string> | undefined;
+            let newUriStrings: Array<string> | undefined;
 
             for (const { oldUri, newUri } of event.files) {
                 const stat = await vscode.workspace.fs.stat(newUri);
-
                 if (stat.type === vscode.FileType.File) {
-                    oldUriStringSet = new Set([oldUri.toString()]);
+                    oldUriStrings = [oldUri.toString()];
                     if (filesInWorkspaces.has(newUri.toString())) {
-                        newUriStringSet = new Set([newUri.toString()]);
+                        newUriStrings = [newUri.toString()];
                     }
                 } else if (stat.type === vscode.FileType.Directory) {
-                    const oldDirUriString = oldUri.toString() + '/';
-                    oldUriStringSet = new Set([...this.referenceCollection.keys()].filter(uriString => uriString.startsWith(oldDirUriString)));
-
-                    const newDirUriString = newUri.toString() + '/';
-                    newUriStringSet = new Set([...filesInWorkspaces].filter(uriString => uriString.startsWith(newDirUriString)));
+                    const oldDir = oldUri.toString() + '/';
+                    oldUriStrings = [...this.referenceCollection.keys()].filter(uriString => uriString.startsWith(oldDir));
+                    const newDir = newUri.toString() + '/';
+                    newUriStrings = [...filesInWorkspaces].filter(uriString => uriString.startsWith(newDir));
                 }
             }
 
-            this.reflectFileOperationInCollections(oldUriStringSet, newUriStringSet);
+            this.reflectFileOperationInCollections(oldUriStrings, newUriStrings);
         };
 
         /** Event handler invoked before files are deleted. */
@@ -222,14 +212,14 @@ export class FileController extends Controller implements vscode.DefinitionProvi
             for (const oldUri of event.files) {
                 const promise = vscode.workspace.fs.stat(oldUri).then(
                     stat => {
-                        let oldUriStringSet: Set<string> | undefined;
+                        let oldUriStrings: Array<string> | undefined;
                         if (stat.type === vscode.FileType.File) {
-                            oldUriStringSet = new Set([oldUri.toString()]);
+                            oldUriStrings = [oldUri.toString()];
                         } else if (stat.type === vscode.FileType.Directory) {
-                            const oldDirUriString = oldUri.toString() + '/';
-                            oldUriStringSet = new Set([...this.referenceCollection.keys()].filter(uriString => uriString.startsWith(oldDirUriString)));
+                            const oldDir = oldUri.toString() + '/';
+                            oldUriStrings = [...this.referenceCollection.keys()].filter(uriString => uriString.startsWith(oldDir));
                         }
-                        this.reflectFileOperationInCollections(oldUriStringSet);
+                        this.reflectFileOperationInCollections(oldUriStrings);
                     }
                 );
                 event.waitUntil(promise);
@@ -238,7 +228,7 @@ export class FileController extends Controller implements vscode.DefinitionProvi
 
         /** Event handler invoked when the configuration is changed. */
         const configurationDidChangeListener = (event: vscode.ConfigurationChangeEvent) => {
-            if (event.affectsConfiguration('spec-command.workspace') || event.affectsConfiguration('files.associations') || event.affectsConfiguration('files.encoding') || event.affectsConfiguration('spec-command.experimental.problems.rules')) {
+            if (event.affectsConfiguration('spec-command.workspace') || event.affectsConfiguration('files.associations') || event.affectsConfiguration('files.encoding') || event.affectsConfiguration('spec-command.problems.rules')) {
                 this.refreshCollections();
             }
         };
@@ -247,6 +237,9 @@ export class FileController extends Controller implements vscode.DefinitionProvi
         const workspaceFoldersDidChangeListener = (event: vscode.WorkspaceFoldersChangeEvent) => {
             this.refreshCollections();
         };
+
+        // asynchronously scan files and refresh the collection
+        this.refreshCollections();
 
         // Register providers and event handlers.
         context.subscriptions.push(
@@ -281,94 +274,29 @@ export class FileController extends Controller implements vscode.DefinitionProvi
             // Register diagnostic collection.
             this.diagnosticCollection,
         );
-
-        // asynchronously scan files and refresh the collection
-        this.refreshCollections();
     }
 
     /**
      * Update the database.
-     * @param oldUriStringSet a set of files of which metadata will be removed. Mismatched files are just ignored.
-     * @param newUriStringSet a set of files of which metadata will be created. The file paths should be filtered beforehand.
+     * @param oldUriStrings An iterable collection of file URIs of which metadata will be removed. Mismatched files are just ignored.
+     * @param newUriStrings An iterable collection of file URIs of which metadata will be created. The file paths should be filtered beforehand.
      */
-    private async reflectFileOperationInCollections(oldUriStringSet?: Set<string>, newUriStringSet?: Set<string>) {
-        // unregister metadata for old URIs.
-        if (oldUriStringSet) {
-            for (const oldUriString of oldUriStringSet) {
+    private reflectFileOperationInCollections(oldUriStrings?: Iterable<string>, newUriStrings?: Iterable<string>) {
+        // Clear cache for old URIs.
+        if (oldUriStrings) {
+            for (const oldUriString of oldUriStrings) {
                 this.referenceCollection.delete(oldUriString);
-                this.diagnosticCollection.delete(vscode.Uri.parse(oldUriString));
                 this.completionItemCollection.delete(oldUriString);
+                this.diagnosticCollection.delete(vscode.Uri.parse(oldUriString));
             }
         }
 
-        // register metadata for new URIs.
-        if (newUriStringSet) {
-            // make a list of opened documents.
-            // Do nothing for these files because they are handled by
-            // onDidOpenTextDocument and onDidCloseTextDocument events.
-            const documentUriStringSet = new Set(
-                vscode.workspace.textDocuments.filter(
-                    document => (vscode.languages.match(lang.SELECTOR, document) && document.uri.scheme !== 'git')
-                ).map(
-                    document => document.uri.toString()
-                )
-            );
-
-            for (const newUriString of newUriStringSet) {
-                if (!documentUriStringSet.has(newUriString)) {
-                    const newUri = vscode.Uri.parse(newUriString);
-                    // const encoding = vscode.workspace.getConfiguration('files', { languageId: 'spec-command', uri: newUri }).get<string>('encoding', 'utf8');
-                    // const contents = await vscode.workspace.decode(await vscode.workspace.fs.readFile(newUri), { encoding });
-                    const contents = await vscode.workspace.decode(await vscode.workspace.fs.readFile(newUri), { uri: newUri });
-                    const diagnoseInWorkspace = vscode.workspace.getConfiguration('spec-command.workspace', newUri).get<boolean>('diagnoseProblems', false);
-                    this.parseDocumentContents(contents, newUri, false, diagnoseInWorkspace);
-                }
-            }
+        // Parse files and store reference information for new URIs.
+        if (newUriStrings) {
+            // Do nothing for opened document files because they are handled by
+            // `onDidOpenTextDocument` and `onDidCloseTextDocument` events.
+            this.parseDocumentContentsOfUriStrings(newUriStrings, false);
         }
-    }
-
-    // 
-    private parseDocumentContents(contents: string, uri: vscode.Uri, isOpenDocument: boolean, diagnoseProblems: boolean) {
-        const uriString = uri.toString();
-
-        let tree: tree.Program;
-        try {
-            tree = parse(contents);
-        } catch (error) {
-            if (error instanceof SyntaxError) {
-                if (diagnoseProblems) {
-                    const diagnostic = new vscode.Diagnostic(lang.convertRange(error.location), error.message, vscode.DiagnosticSeverity.Error);
-                    this.diagnosticCollection.set(uri, [diagnostic]);
-                }
-            } else {
-                console.log('Unknown error in sytax parsing', error);
-                if (diagnoseProblems) {
-                    const diagnostic = new vscode.Diagnostic(new vscode.Range(0, 0, 0, 0), 'Unknown error in sytax parsing', vscode.DiagnosticSeverity.Error);
-                    this.diagnosticCollection.set(uri, [diagnostic]);
-                }
-            }
-            // update with an empty object.
-            this.referenceCollection.set(uriString, {});
-            // this.updateCompletionItemsForUriString(uriString);
-            return false;
-        }
-        const diagnosticRules = diagnoseProblems ? vscode.workspace.getConfiguration('spec-command.experimental.problems', uri).get('rules', lang.defaultDiagnosticRules) : undefined;
-        const [refBook, symbols, traverserDiagnostics] = traverseWholly(tree, diagnosticRules);
-
-        if (diagnoseProblems) {
-            const parseDiagnostics = tree.problems.map(problem => new vscode.Diagnostic(lang.convertRange(problem.loc), problem.message, problem.severity));
-            this.diagnosticCollection.set(uri, parseDiagnostics.concat(traverserDiagnostics));
-        }
-
-        if (isOpenDocument) {
-            this.treeCollection.set(uriString, tree);
-            this.symbolCollection.set(uriString, symbols);
-        }
-
-        this.referenceCollection.set(uriString, refBook);
-        this.updateCompletionItemsForUriString(uriString);
-
-        return true;
     }
 
     /**
@@ -376,41 +304,129 @@ export class FileController extends Controller implements vscode.DefinitionProvi
      * invoked manually when needed.
      */
     private async refreshCollections() {
-        // clear the caches
+        // Clear caches.
         this.referenceCollection.clear();
+        this.completionItemCollection.clear();
         this.diagnosticCollection.clear();
         this.treeCollection.clear();
         this.symbolCollection.clear();
-        this.completionItemCollection.clear();
 
-        // parse documents opened by editors
-        const documentUriStringSet = new Set<string>();
+        // Parse documents opened by editors.
+        this.parseDocumentContentsOfUriStrings(await findFilesInWorkspaces(), true);
+    }
+
+    /**
+     * Subroutine to parse the contents of files specified by URIs.
+     */
+    private async parseDocumentContentsOfUriStrings(targetUriStrings: Iterable<string>, parseEditorDocuments: boolean) {
+        // Collect URIs of documents in the editor and parse it if `parseEditorDocuments` is true.
+        const documentUriStrings: string[] = [];
+        const diagnosedUriStrings: string[] = [];
+
+        const parseResults = new Map<string, { tree?: tree.Program, diagnostics?: vscode.Diagnostic[] }>();
         for (const document of vscode.workspace.textDocuments) {
-            if (vscode.languages.match(lang.SELECTOR, document) && document.uri.scheme !== 'git') {
-                this.parseDocumentContents(document.getText(), document.uri, true, true);
-                documentUriStringSet.add(document.uri.toString());
+            const uriString = document.uri.toString();
+            if (vscode.languages.match(lang.SELECTOR, document) && document.uri.scheme !== 'git' && !documentUriStrings.includes(uriString)) {
+                if (parseEditorDocuments) {
+                    parseResults.set(uriString, this.parseDocumentContents(document.getText(), document.uri, true, true, false));
+                    diagnosedUriStrings.push(uriString);
+                }
+                documentUriStrings.push(uriString);
             }
         }
 
-        // parse the other files in workspace folders.
-        const filesInWorkspaces = await findFilesInWorkspaces();
-
-        for (const uriString of filesInWorkspaces) {
-            if (!documentUriStringSet.has(uriString)) {
-                const uri = vscode.Uri.parse(uriString);
-                // const encoding = vscode.workspace.getConfiguration('files', { languageId: 'spec-command', uri: uri }).get<string>('encoding', 'utf8');
-                // const contents = await vscode.workspace.decode(await vscode.workspace.fs.readFile(uri), { encoding });
-                const contents = await vscode.workspace.decode(await vscode.workspace.fs.readFile(uri), { uri });
-                const diagnoseInWorkspace = vscode.workspace.getConfiguration('spec-command.workspace', uri).get<boolean>('diagnoseProblems', false);
-                this.parseDocumentContents(contents, uri, false, diagnoseInWorkspace);
+        const nonDocumentUris: vscode.Uri[] = [];
+        for (const uriString of targetUriStrings) {
+            if (!documentUriStrings.includes(uriString)) {
+                nonDocumentUris.push(vscode.Uri.parse(uriString));
             }
         }
+
+        for (const uri of nonDocumentUris) {
+            // const encoding = vscode.workspace.getConfiguration('files', { languageId: 'spec-command', uri: newUri }).get<string>('encoding', 'utf8');
+            // const contents = await vscode.workspace.decode(await vscode.workspace.fs.readFile(newUri), { encoding });
+            const contents = await vscode.workspace.decode(await vscode.workspace.fs.readFile(uri), { uri });
+            const diagnoseInWorkspace = vscode.workspace.getConfiguration('spec-command.workspace', uri).get<boolean>('diagnoseProblems', false);
+            parseResults.set(uri.toString(), this.parseDocumentContents(contents, uri, false, diagnoseInWorkspace, false));
+            if (diagnoseInWorkspace) {
+                diagnosedUriStrings.push(uri.toString());
+            }
+        }
+
+        // Run additional analyses that use the whole database.
+        // First, wait for the builtin controller database is loaded.
+        await this.builtinController.promisedRefBook;
+        const mergedReferenceCollection = new Map([...this.referenceCollection.entries(), ...this.builtinController.referenceCollection.entries()]);
+        for (const uriString of diagnosedUriStrings) {
+            const uri = vscode.Uri.parse(uriString);
+            const diagnosticRules = vscode.workspace.getConfiguration('spec-command.problems', uri).get('rules', lang.defaultDiagnosticRules);
+            if (diagnosticRules['no-undeclared-variable']) {
+                const tree = parseResults.get(uriString)?.tree;
+                let diagnostics = parseResults.get(uriString)?.diagnostics ?? [];
+                if (tree) {
+                    this.diagnosticCollection.set(uri, diagnostics.concat(traverseForFurtherDiagnostics(tree, mergedReferenceCollection)));
+                }
+            }
+        }
+    }
+
+    // 
+    private parseDocumentContents(contents: string, uri: vscode.Uri, isOpenDocument: boolean, diagnoseProblems: boolean, isCollectionUpdated: boolean) {
+        const uriString = uri.toString();
+
+        let tree: tree.Program;
+        try {
+            tree = parse(contents);
+        } catch (error) {
+            let diagnostics: vscode.Diagnostic[] | undefined;
+            if (error instanceof SyntaxError) {
+                if (diagnoseProblems) {
+                    diagnostics = [new vscode.Diagnostic(lang.convertRange(error.location), error.message, vscode.DiagnosticSeverity.Error)];
+                    this.diagnosticCollection.set(uri, diagnostics);
+                }
+            } else {
+                console.log('Unknown error in sytax parsing', error);
+                if (diagnoseProblems) {
+                    diagnostics = [new vscode.Diagnostic(new vscode.Range(0, 0, 0, 0), 'Unknown error in sytax parsing', vscode.DiagnosticSeverity.Error)];
+                    this.diagnosticCollection.set(uri, diagnostics);
+                }
+            }
+            // update with an empty object.
+            this.referenceCollection.set(uriString, {});
+            // this.updateCompletionItemsForUriString(uriString);
+            return { tree: undefined, diagnostics, };
+        }
+        const diagnosticRules = diagnoseProblems ? vscode.workspace.getConfiguration('spec-command.problems', uri).get('rules', lang.defaultDiagnosticRules) : undefined;
+        const [refBook, symbols, traverserDiagnostics] = traverseWholly(tree, diagnosticRules);
+        let diagnostics: vscode.Diagnostic[] | undefined;
+
+        if (isOpenDocument) {
+            this.treeCollection.set(uriString, tree);
+            this.symbolCollection.set(uriString, symbols);
+        }
+        this.referenceCollection.set(uriString, refBook);
+        this.updateCompletionItemsForUriString(uriString);
+
+
+        if (diagnoseProblems) {
+            const parserDiagnostics = tree.problems.map(problem => new vscode.Diagnostic(lang.convertRange(problem.loc), problem.message, problem.severity));
+            diagnostics = parserDiagnostics.concat(traverserDiagnostics);
+
+            if (isCollectionUpdated && diagnosticRules && diagnosticRules['no-undeclared-variable'] === true) {
+                // This assumes the database of the builtin controller has been loaded.
+                const mergedReferenceCollection = new Map([...this.referenceCollection.entries(), ...this.builtinController.referenceCollection.entries()]);
+                diagnostics = diagnostics.concat(traverseForFurtherDiagnostics(tree, mergedReferenceCollection));
+            }
+            this.diagnosticCollection.set(uri, diagnostics);
+        }
+
+        return { tree, diagnostics, };
     }
 
     /**
      * Required implementation of vscode.CompletionItemProvider, overriding the super class.
      */
-    public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionList<lang.CompletionItem> | lang.CompletionItem[]> {
+    public override provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionList<lang.CompletionItem> | lang.CompletionItem[]> {
         if (token.isCancellationRequested) { return; }
 
         const tree = this.treeCollection.get(document.uri.toString());
@@ -425,7 +441,7 @@ export class FileController extends Controller implements vscode.DefinitionProvi
     /**
      * Required implementation of vscode.HoverProvider, overriding the super class.
      */
-    public provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.ProviderResult<vscode.Hover> {
+    public override provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.ProviderResult<vscode.Hover> {
         if (token.isCancellationRequested) { return; }
 
         const tree = this.treeCollection.get(document.uri.toString());

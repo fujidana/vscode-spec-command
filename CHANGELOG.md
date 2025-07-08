@@ -6,10 +6,14 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Added
 
-- Add `spec-command.specVersion` setting. It affects the scope of auto-completion (in short, hides unsupported APIs from the auto-completion list). issue [#23](https://github.com/fujidana/vscode-spec-command/issues/23).
+- Add `spec-command.specVersion` setting. This affects the scope of auto-completion (in short, hides unsupported APIs from the auto-completion list). issue [#23](https://github.com/fujidana/vscode-spec-command/issues/23).
+- Diagnose the following problems. Currently the features are experimental and by default disabled. A user can enable the respective diagnoses via `spec-command.problems.rules` setting.
+  - Report a problem if a undecleared symbol (typically, a variable, function, or macro) is used. issue [#5](https://github.com/fujidana/vscode-spec-command/issues/5).
+  - Report a problem if a local variable is declared outside a block (`{...}`). issue [#26](https://github.com/fujidana/vscode-spec-command/issues/26).
 
 ### Changed
 
+- Change the behavior of the parser slightly due to redesin of the parser code.
 - Migrate the bundler from `webpack` to `esbuild`.
 - Raise the minimum VS Code version to 1.100.0.
 
