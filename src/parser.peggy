@@ -755,7 +755,7 @@ DeleteStmt 'delete statement' =
       pushDiagnostic('Trailing comma not allowed.', exComma.loc);
     }
     if (args.length === 0) {
-      pushDiagnostic('Expected an associative array.', callee.id.loc ?? location());
+      pushDiagnostic('Expected an associative array.', callee.loc ?? location());
     }
     // TODO: check empty array acess. `delete arr[]`.
     return { type: 'MacroStatement', callee, arguments: args, builtin: true, loc: location(), };
@@ -779,7 +779,7 @@ MatchStmt =
           // if (!SYMBOL_MATCH_REGEXP.test(value)) {
           //   pushDiagnostic('Expected a symbol name.', location());
           // }
-          return { type: 'literal', value, raw: text(), loc: location()};
+          return { type: 'Literal', value, raw: text(), loc: location()};
         }
       )|1.., _1|
     )? {
