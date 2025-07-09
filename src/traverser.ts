@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 // import * as estraverse from 'estraverse';
-import * as lang from './specCommand';
+import * as lang from './language';
 import type { LocationRange } from './parser';
 import type * as tree from './tree';
 
@@ -182,7 +182,9 @@ export function traverseWholly(program: tree.Program, diagnosticRules: lang.Diag
                     // Diagnose problems.
                     if (diagnosticRules && diagnosticRules['no-local-outside-block']) {
                         if (node.kind === 'local' && blockStack.length === 0) {
-                            diagnostics.push(new vscode.Diagnostic(nodeRange, 'Local variable declaration outside a block.', vscode.DiagnosticSeverity.Warning));
+                            const diagnostic = new vscode.Diagnostic(nodeRange, 'Local variable declaration outside a block.', vscode.DiagnosticSeverity.Warning);
+                            diagnostic.code = 'no-local-outside-block';
+                            diagnostics.push(diagnostic);
                         }
                     }
                 } else if (node.type === 'BlockStatement') {
@@ -299,9 +301,96 @@ export function traversePartially(program: tree.Program, position: vscode.Positi
     return refBook;
 }
 
+export function traverseForFurtherDiagnostics(program: tree.Program, referenceCollection: Map<string, lang.ReferenceBook>): vscode.Diagnostic[] {
+    const diagnostics: vscode.Diagnostic[] = [];
+    const blockStack: tree.BlockStatement[] = [];
+    type RefBookKey = 'variable' | 'array' | 'constant';
+    type RefBook = {[K in RefBookKey]: Map<string, lang.ReferenceItem>};
+    let refBook: RefBook = { variable: new Map(), array: new Map(), constant: new Map() };
+    const refBookStack: RefBook[] = [refBook];
+    
+    // Traverse the syntax tree.
+    estraverse.traverse(program, {
+        enter: (node: tree.Node, parent: tree.Node | null) => {
+            if (node.type === 'BlockStatement') {
+                // If it is a block statement, push it to the stack.
+                refBook = { variable: new Map(), array: new Map(), constant: new Map() };
+                blockStack.push(node);
+                refBookStack.unshift(refBook);
+                if (parent?.type === 'FunctionDeclaration' && parent.params) {
+                    // Register parameters of function.
+                    parent.params.forEach(param => {
+                        refBook.variable.set(param.name, { signature: param.name });
+                    });
+                    // Register `arg0`, `arg1`, ..., `arg15`. 
+                    // The author do not know the upper limit. Currently `arg16` and is not defined.
+                    for (let index = 0; index < 16; index++) {
+                        refBook.variable.set(`arg${index}`, { signature: `arg${index}`});
+                    }
+                    // Register `prefix_CONPAR` and `prefix_ADDR`, which are available in functions for macro hardware.
+                    // See "mac_hdw" page in spec help.
+                    let matched: RegExpMatchArray | null;
+                    if ((matched = parent.id.name.match(/^([a-zA-Z_][a-zA-Z0-9_]*)_(config|cmd|par)$/)) !== null) {
+                        refBook.variable.set(`${matched[1]}_ADDR`, { signature: `${matched[1]}_ADDR` });
+                        refBook.variable.set(`${matched[1]}_CONPAR`, { signature: `${matched[1]}_CONPAR` });
+                    }
+                }
+            } else if (node.type === 'VariableDeclaration') {
+                for (const declarator of node.declarations) {
+                    if (declarator.id.type === 'Identifier') {
+                        if (node.dataarray) {
+                            refBook.array.set(declarator.id.name, { signature: declarator.id.name });
+                        } else if (node.kind === 'const') {
+                            refBook.constant.set(declarator.id.name, { signature: declarator.id.name });
+                        } else if (node.kind === 'local' || node.kind === 'global') {
+                            refBook.variable.set(declarator.id.name, { signature: declarator.id.name });
+                        }
+                    }
+                }
+            } else if (node.type === 'Identifier') {
+                if (parent?.type === 'FunctionDeclaration' || parent?.type === 'VariableDeclarator') {
+                    return;
+                } else if (node.params) {
+                    // Skip if the identifier contains macro parameters such as `$1`.
+                    return;
+                }
+                let flag = false;
+                for (const refBook2 of (refBookStack as lang.ReferenceBook[]).concat([...referenceCollection.values()])) {
+                    for (const key of Object.keys(refBook2)) {
+                        if (refBook2[key as keyof typeof refBook2]?.has(node.name)) {
+                            flag = true;
+                            break;
+                        }
+                    }
+                }
+                if (flag === false && node.loc) {
+                    // If the identifier is not found in the reference book, it may be a problem.
+                    const diagnostic = new vscode.Diagnostic(lang.convertRange(node.loc), `'${node.name}' is used without declaration.`, vscode.DiagnosticSeverity.Information);
+                    diagnostic.code = 'no-undeclared-variable';
+                    diagnostics.push(diagnostic);
+                }
+            }
+        },
+        leave: (node: tree.Node, parent: tree.Node | null) => {
+            // console.log('leave', node.type, parent?.type);
+            if (node.type === 'BlockStatement') {
+                const block = blockStack.pop();
+                const refBookShifted = refBookStack.shift();
+                if (block !== node || refBookShifted !== refBook) {
+                    console.log('Block stack mismatch. This may be a bug in the parser or the traverser.');
+                }
+                refBook = refBookStack[0];
+            }
+        },
+        keys: VISITOR_KEYS,
+    });
+
+    return diagnostics;
+}
+
 function makeReferenceItem(node: tree.Node, signature: string): lang.ReferenceItem {
     // Create a reference item from the node and signature string.
-    const refItem: lang.ReferenceItem = { signature, location: node.loc as LocationRange };
+    const refItem: lang.ReferenceItem = { signature, location: node.loc };
     if (node.leadingComments && node.leadingComments.length > 0) {
         refItem.description = node.leadingComments[node.leadingComments.length - 1].value;
     }
