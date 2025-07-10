@@ -126,6 +126,7 @@ export class CompletionItem extends vscode.CompletionItem {
 export const defaultDiagnosticRules = {
     'no-local-outside-block': false,
     'no-undeclared-variable': false,
+    'no-undeclared-macro-argument': false,
 };
 
 export type DiagnosticRules = typeof defaultDiagnosticRules;

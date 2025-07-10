@@ -115,6 +115,7 @@ export type Statement =
     | ContinueStatement
     | ReturnStatement
     | VariableDeclaration
+    | MacroStatement
     | ExpressionStatement
 
  // specific to spec, not included in ESTree
@@ -535,15 +536,14 @@ export interface SliceElement extends BaseNode {
 /** Node similar to `estree.ObjectExpression`. */
 export interface ObjectExpression extends BaseExpression {
     type: 'ObjectExpression';
-    properties: Expression[]; // Array<Property | SpreadElement>;
+    properties: (Property | Expression)[];
 }
 
-/** Node similar to `estree.Property`. */
+/** Node similar to `estree.Property`, having `keys` instead of `key`. */
 export interface Property extends BaseNode {
     type: 'Property';
-    key: Expression;
-    value: Expression | Pattern;
-    kind: 'init';
+    keys: Expression[];
+    value: Expression;
 }
 
 export interface UnclassifiedExpression extends BaseExpression {
