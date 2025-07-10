@@ -316,7 +316,7 @@ export class FileController extends Controller implements vscode.DefinitionProvi
     }
 
     /**
-     * Subroutine to parse the contents of files specified by URIs.
+     * Subroutine to parse the contents of multiple files specified by URIs.
      */
     private async parseDocumentContentsOfUriStrings(targetUriStrings: Iterable<string>, parseEditorDocuments: boolean) {
         // Collect URIs of documents in the editor and parse it if `parseEditorDocuments` is true.
@@ -354,17 +354,20 @@ export class FileController extends Controller implements vscode.DefinitionProvi
         }
 
         // Run additional analyses that use the whole database.
-        // First, wait for the builtin controller database is loaded.
+        // First, wait until the built-in controller's database is loaded.
         await this.builtinController.promisedRefBook;
         const mergedReferenceCollection = new Map([...this.referenceCollection.entries(), ...this.builtinController.referenceCollection.entries()]);
         for (const uriString of diagnosedUriStrings) {
             const uri = vscode.Uri.parse(uriString);
             const diagnosticRules = vscode.workspace.getConfiguration('spec-command.problems', uri).get('rules', lang.defaultDiagnosticRules);
-            if (diagnosticRules['no-undeclared-variable']) {
+            if (diagnosticRules['no-undeclared-variable'] === true || diagnosticRules['no-undeclared-macro-argument'] === true) {
                 const tree = parseResults.get(uriString)?.tree;
-                let diagnostics = parseResults.get(uriString)?.diagnostics ?? [];
+                let fundamentalDiagnostics = parseResults.get(uriString)?.diagnostics ?? [];
                 if (tree) {
-                    this.diagnosticCollection.set(uri, diagnostics.concat(traverseForFurtherDiagnostics(tree, mergedReferenceCollection)));
+                    const additionalDiagnostics = traverseForFurtherDiagnostics(tree, mergedReferenceCollection).filter(diagnostic => {
+                        return diagnostic.code && typeof diagnostic.code === 'string' && diagnostic.code in diagnosticRules && diagnosticRules[diagnostic.code as keyof typeof diagnosticRules] === true;
+                    });
+                    this.diagnosticCollection.set(uri, fundamentalDiagnostics.concat(additionalDiagnostics));
                 }
             }
         }
@@ -412,10 +415,13 @@ export class FileController extends Controller implements vscode.DefinitionProvi
             const parserDiagnostics = tree.problems.map(problem => new vscode.Diagnostic(lang.convertRange(problem.loc), problem.message, problem.severity));
             diagnostics = parserDiagnostics.concat(traverserDiagnostics);
 
-            if (isCollectionUpdated && diagnosticRules && diagnosticRules['no-undeclared-variable'] === true) {
+            if (isCollectionUpdated && diagnosticRules && (diagnosticRules['no-undeclared-variable'] === true || diagnosticRules['no-undeclared-macro-argument'] === true)) {
                 // This assumes the database of the builtin controller has been loaded.
                 const mergedReferenceCollection = new Map([...this.referenceCollection.entries(), ...this.builtinController.referenceCollection.entries()]);
-                diagnostics = diagnostics.concat(traverseForFurtherDiagnostics(tree, mergedReferenceCollection));
+                const additionalDiagnostics = traverseForFurtherDiagnostics(tree, mergedReferenceCollection).filter(diagnostic => {
+                    return diagnostic.code && typeof diagnostic.code === 'string' && diagnostic.code in diagnosticRules && diagnosticRules[diagnostic.code as keyof typeof diagnosticRules] === true;
+                });
+                diagnostics = diagnostics.concat(additionalDiagnostics);
             }
             this.diagnosticCollection.set(uri, diagnostics);
         }

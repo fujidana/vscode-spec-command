@@ -34,7 +34,7 @@ const VISITOR_KEYS = {
     CallExpression: ['callee', 'arguments'],
     MemberExpression: ['object', 'properties'], // ['object', 'property'],
     ObjectExpression: ['properties'],
-    Property: ['key', 'value'],
+    Property: ['keys', 'value'], // ['key', 'value'],
     Identifier: ['params'], //[],
     Literal: [],
     ArrayPattern: ['elements'],
@@ -349,6 +349,7 @@ export function traverseForFurtherDiagnostics(program: tree.Program, referenceCo
                 }
             } else if (node.type === 'Identifier') {
                 if (parent?.type === 'FunctionDeclaration' || parent?.type === 'VariableDeclarator') {
+                    // Skip if the identifier is used in a declaration.
                     return;
                 } else if (node.params) {
                     // Skip if the identifier contains macro parameters such as `$1`.
@@ -365,9 +366,15 @@ export function traverseForFurtherDiagnostics(program: tree.Program, referenceCo
                 }
                 if (flag === false && node.loc) {
                     // If the identifier is not found in the reference book, it may be a problem.
-                    const diagnostic = new vscode.Diagnostic(lang.convertRange(node.loc), `'${node.name}' is used without declaration.`, vscode.DiagnosticSeverity.Information);
-                    diagnostic.code = 'no-undeclared-variable';
-                    diagnostics.push(diagnostic);
+                    if (parent?.type === 'MacroStatement' && parent.builtin !== true && parent.arguments.includes(node)) {
+                        const diagnostic = new vscode.Diagnostic(lang.convertRange(node.loc), `'${node.name}' as macro argument is not declared.`, vscode.DiagnosticSeverity.Information);
+                        diagnostic.code = 'no-undeclared-macro-argument';
+                        diagnostics.push(diagnostic);
+                    } else {
+                        const diagnostic = new vscode.Diagnostic(lang.convertRange(node.loc), `'${node.name}' is used without declaration.`, vscode.DiagnosticSeverity.Information);
+                        diagnostic.code = 'no-undeclared-variable';
+                        diagnostics.push(diagnostic);
+                    }
                 }
             }
         },

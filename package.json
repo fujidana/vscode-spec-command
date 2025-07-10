@@ -331,6 +331,10 @@
 						"no-undeclared-variable": {
 							"type": "boolean",
 							"default": false
+						},
+						"no-undeclared-macro-argument": {
+							"type": "boolean",
+							"default": false
 						}
 					},
 					"additionalProperties": false
