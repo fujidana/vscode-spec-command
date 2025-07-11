@@ -329,6 +329,15 @@
 					"markdownDescription": "Specifies a glob pattern used to exclude files in a workspace from being parsed. See [VS Code API](https://code.visualstudio.com/api/references/vscode-api#GlobPattern) for the syntax.",
 					"markdownDeprecationMessage": "**Deprecated**: Please use the built-in `#files.exclude#` property, instead."
 				},
+				"spec-command.workspace.exclude": {
+					"type": "array",
+					"default": [],
+					"scope": "resource",
+					"markdownDescription": "Configures [glob patterns](https://code.visualstudio.com/docs/editor/glob-patterns) for files to be excluded from the target of symbol collections for IntelliSense features.",
+					"items": {
+						"type": "string"
+					}
+				},
 				"spec-command.workspace.diagnoseProblems": {
 					"type": "boolean",
 					"default": false,

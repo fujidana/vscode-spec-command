@@ -6,14 +6,17 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Added
 
-- Add `spec-command.specVersion` setting. This affects the scope of auto-completion (in short, hides unsupported APIs from the auto-completion list). issue [#23](https://github.com/fujidana/vscode-spec-command/issues/23).
-- Diagnose the following problems. Currently the features are experimental and by default disabled. A user can enable the respective diagnoses via `spec-command.problems.rules` setting.
-  - Report a problem if a undecleared symbol (typically, a variable, function, or macro) is used. issue [#5](https://github.com/fujidana/vscode-spec-command/issues/5).
-  - Report a problem if a local variable is declared outside a block (`{...}`). issue [#26](https://github.com/fujidana/vscode-spec-command/issues/26).
+- Add Diagnostics for the following problems. Currently the features are experimental and by default disabled. They can be enabled at `spec-command.problems.rules` setting.
+  - Report if a undecleared symbol (typically, a variable, function, or macro) is used. issues [#5](https://github.com/fujidana/vscode-spec-command/issues/5), [#29](https://github.com/fujidana/vscode-spec-command/issues/29).
+  - Report if a local variable is declared outside a block (`{...}`). issue [#26](https://github.com/fujidana/vscode-spec-command/issues/26).
+- The scope of auto-completion becomes sensitive to the target of __spec__ version specified at `spec-command.specVersion` setting (e.g., unsupported APIs are hidden in the auto-completion list). issue [#23](https://github.com/fujidana/vscode-spec-command/issues/23).
+- External library file in which symbols are defined can be loaded by specifying the path at `spec-command.suggest.sybmolFile`. issue [#31](https://github.com/fujidana/vscode-spec-command/issues/31).
+- Symbols in a workspace can be exported as a JSON file, which is then loadable via the setting above. issue [#31](https://github.com/fujidana/vscode-spec-command/issues/31).
+- Files exluded from IntelliSense features can be specified with `spec-command.workspace.exclude` setting. issue [#33](https://github.com/fujidana/vscode-spec-command/issues/33).
 
 ### Changed
 
-- Change the behavior of the parser slightly due to redesin of the parser code.
+- Change the behavior of the parser slightly due to revamp of the parser code.
 - Migrate the bundler from `webpack` to `esbuild`.
 - Raise the minimum VS Code version to 1.100.0.
 
