@@ -2,14 +2,6 @@ import * as vscode from 'vscode';
 import * as lang from "./language";
 import { Controller } from "./controller";
 
-interface APIReference {
-    constants: lang.ReferenceItem[];
-    variables: lang.ReferenceItem[];
-    functions: lang.ReferenceItem[];
-    macros: lang.ReferenceItem[];
-    keywords: lang.ReferenceItem[];
-}
-
 const SNIPPET_TEMPLATES: Record<string, string> = {
     mv: 'mv ${1%MOT} ${2:pos} # absolute-position motor move',
     mvr: 'mvr ${1%MOT} ${2:pos} # relative-position motor move',
@@ -34,31 +26,36 @@ const SNIPPET_TEMPLATES: Record<string, string> = {
  */
 export class BuiltinController extends Controller implements vscode.TextDocumentContentProvider {
     private activeWorkspaceFolder: vscode.WorkspaceFolder | undefined;
-    public readonly promisedRefBook: PromiseLike<lang.ReferenceBook>;
+    public readonly promisedBuiltInRefBook: PromiseLike<lang.ReferenceBook | undefined>;
+    public promisedExternalRefBook: PromiseLike<lang.ReferenceBook | undefined>;
 
     constructor(context: vscode.ExtensionContext) {
         super(context);
 
-        // Load built-in reference database from the JSON file.
-        const apiReferenceUri = vscode.Uri.joinPath(context.extensionUri, 'syntaxes', 'specCommand.apiReference.json');
-        this.promisedRefBook = vscode.workspace.fs.readFile(apiReferenceUri).then(uint8Array => {
-            return vscode.workspace.decode(uint8Array, { encoding: 'utf8' });
-        }).then(decodedString => {
-            // convert JSON-formatted file contents to a javascript object.
-            const apiReference: APIReference = JSON.parse(decodedString);
+        // Load built-in symbol database from the JSON file.
+        const builtInRefUri = vscode.Uri.joinPath(context.extensionUri, 'syntaxes', 'specCommand.apiReference.json');
+        this.promisedBuiltInRefBook = this.loadReferenceBook(builtInRefUri, lang.BUILTIN_URI);
 
-            // convert the object of each category to a Map object.
-            const refBook: lang.ReferenceBook = {
-                constant: new Map(Object.entries(apiReference.constants)),
-                variable: new Map(Object.entries(apiReference.variables)),
-                macro: new Map(Object.entries(apiReference.macros)),
-                function: new Map(Object.entries(apiReference.functions)),
-                keyword: new Map(Object.entries(apiReference.keywords)),
-            };
-            this.referenceCollection.set(lang.BUILTIN_URI, refBook);
-            this.updateCompletionItemsForUriString(lang.BUILTIN_URI);
-            return refBook;
-        });
+        // Load external symbol database from the JSON file.
+        const externalRefUri = getExternalRefBookUri();
+        if (externalRefUri) {
+            this.promisedExternalRefBook = this.loadReferenceBook(externalRefUri, lang.EXTERNAL_URI).then(
+                undefined, _reason => {
+                    vscode.window.showErrorMessage(`Failed to load external symbols: ${externalRefUri.toString()}`, 'OK', 'Open Settings').then(
+                        item => {
+                            // Do not return a value so that the return value (promise-like object) of the function
+                            // does not include waiting for an action against the dialog.
+                            if (item === 'Open Settings') {
+                                vscode.commands.executeCommand('workbench.action.openSettings', 'spec-command.suggest.sybmolFile');
+                            }
+                        }
+                    );
+                    return undefined;
+                }
+            );
+        } else {
+            this.promisedExternalRefBook = Promise.resolve(undefined);
+        }
 
         // Initialize reference database for motors, counters and snippets.
         const editor = vscode.window.activeTextEditor;
@@ -91,11 +88,25 @@ export class BuiltinController extends Controller implements vscode.TextDocument
             if (event.affectsConfiguration('spec-command.suggest.codeSnippets', this.activeWorkspaceFolder)) {
                 this.updateSnippetRefBook();
             }
+            if (event.affectsConfiguration('spec-command.suggest.sybmolFile')) {
+                const externalRefUri = getExternalRefBookUri();
+                if (externalRefUri) {
+                    this.promisedExternalRefBook = this.loadReferenceBook(externalRefUri, lang.EXTERNAL_URI).then(
+                        undefined, _reason => {
+                            vscode.window.showErrorMessage(`Failed to load external symbols: ${externalRefUri.toString()}`);
+                            return undefined;
+                        }
+                    );
+                }
+            } else {
+                this.promisedExternalRefBook = Promise.resolve(undefined);
+            }
         };
 
         /** Command handler for opening the reference manual. */
-        const openReferenceManualCommandHandler = async () => {
-            const refBook = await this.promisedRefBook;
+        const showBuiltInSymbolsCommandHandler = async () => {
+            const refBook = await this.promisedBuiltInRefBook;
+            if (refBook === undefined) { return; }
 
             const quickPickItems = [{ category: 'all', label: '$(references) all' }];
             for (const category of Object.keys(refBook)) {
@@ -105,8 +116,8 @@ export class BuiltinController extends Controller implements vscode.TextDocument
             const quickPickItem = await vscode.window.showQuickPick(quickPickItems);
             if (quickPickItem) {
                 const uri = vscode.Uri.parse(lang.BUILTIN_URI).with({ query: quickPickItem.category });
-                const editor = await vscode.window.showTextDocument(uri, { preview: false });
-                const flag = vscode.workspace.getConfiguration('spec-command').get<boolean>('showReferenceManualInPreview');
+                // const editor = await vscode.window.showTextDocument(uri, { preview: false });
+                const flag = vscode.workspace.getConfiguration('spec-command').get<boolean>('showSymbolsInPreview');
                 if (flag) {
                     await vscode.commands.executeCommand('markdown.showPreview');
                     // await vscode.window.showTextDocument(editor.document);
@@ -118,7 +129,7 @@ export class BuiltinController extends Controller implements vscode.TextDocument
         // Register command and event handlers.
         context.subscriptions.push(
             // register command handlers
-            vscode.commands.registerCommand('spec-command.openReferenceManual', openReferenceManualCommandHandler),
+            vscode.commands.registerCommand('spec-command.showBuiltInSymbols', showBuiltInSymbolsCommandHandler),
             // register providers
             vscode.workspace.registerTextDocumentContentProvider('spec-command', this),
             // register event handlers
@@ -127,6 +138,31 @@ export class BuiltinController extends Controller implements vscode.TextDocument
         );
     }
 
+    private loadReferenceBook(fileUri: vscode.Uri, key: string) {
+        type ReferenceBookLike = { [K in lang.ReferenceCategory]?: { [key: string]: lang.ReferenceItem } };
+        // type ReferenceBookLike = Partial<Record<lang.ReferenceCategory, Record<string, lang.ReferenceItem>>>;
+
+        return vscode.workspace.fs.readFile(fileUri).then(
+            uint8Array => {
+                return vscode.workspace.decode(uint8Array, { encoding: 'utf8' }).then(
+                    decodedString => {
+                        const refBookLike: ReferenceBookLike = JSON.parse(decodedString);
+                        const refBook: lang.ReferenceBook = {};
+
+                        // Convert the object of each category to a Map object.
+                        for (const [category, refSheetLike] of Object.entries(refBookLike)) {
+                            refBook[category as keyof typeof refBookLike] = new Map(Object.entries(refSheetLike));
+                        }
+
+                        // Reigster it in the database.
+                        this.referenceCollection.set(key, refBook);
+                        this.updateCompletionItemsForUriString(key);
+                        return refBook;
+                    }
+                );
+            }
+        );
+    }
     /**
      * Update the reference database for motor or counter mnemonic.
      * Invoked when initialization completed or configuration modified. 
@@ -234,5 +270,34 @@ export class BuiltinController extends Controller implements vscode.TextDocument
                 return mdText;
             }
         }
+    }
+}
+
+/**
+ * Get an URI object of the external symbol file whose path is specified in 
+ */
+function getExternalRefBookUri() {
+    const path = vscode.workspace.getConfiguration('spec-command.suggest').get<string>('sybmolFile', '');
+    if (path === "") {
+        return undefined;
+    } else if (path.startsWith('${workspaceFolder}/')) {
+        if (vscode.workspace.workspaceFile) {
+            return vscode.Uri.joinPath(vscode.workspace.workspaceFile, path.replace('${workspaceFolder}/', '../'));
+        } else if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+            return vscode.Uri.joinPath(vscode.workspace.workspaceFolders[0].uri, path.replace('${workspaceFolder}/', './'));
+        } else {
+            vscode.window.showErrorMessage('Failed to get the path to the external symbol file because a workspace folder does not exist.');
+            return undefined;
+        }
+    } else if (path.startsWith('${userHome}/')) {
+        const homedir = process.env.HOME || process.env.USERPROFILE; // || os.homedir();
+        if (homedir) {
+            return vscode.Uri.joinPath(vscode.Uri.file(homedir), path.replace('${userHome}/', './'));
+        } else {
+            vscode.window.showErrorMessage('Failed to get the path to the external symbol file. "${userHome}" is unavailable on the web extesion.');
+            return undefined;
+        }
+    } else {
+        return vscode.Uri.file(path);
     }
 }

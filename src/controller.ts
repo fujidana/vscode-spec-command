@@ -20,6 +20,8 @@ function getShortDescription(item: lang.ReferenceItem, category: lang.ReferenceC
 
     if (itemUriString === lang.BUILTIN_URI) {
         symbolLabel = 'built-in ' + symbolLabel;
+    } else if (itemUriString === lang.EXTERNAL_URI) {
+        symbolLabel = 'external ' + symbolLabel;
     } else if (itemUriString === lang.MOTOR_URI) {
         symbolLabel = 'motor mnemonic ' + symbolLabel;
     } else if (itemUriString === lang.COUNTER_URI) {
@@ -183,6 +185,8 @@ export class Controller implements vscode.CompletionItemProvider<lang.Completion
             if (!suppressDescription) {
                 if (uriString === lang.BUILTIN_URI) {
                     description = 'built-in';
+                } else if (uriString === lang.EXTERNAL_URI) {
+                    description = 'external';
                 } else if (uriString === lang.MOTOR_URI) {
                     description = 'motor';
                 } else if (uriString === lang.COUNTER_URI) {

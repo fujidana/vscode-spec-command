@@ -59,6 +59,27 @@ export class FileController extends Controller implements vscode.DefinitionProvi
         this.treeCollection = new Map();
         this.symbolCollection = new Map();
 
+        const showWorkspaceSymbolsJsonCommandHandler = async () => {
+            await this.refreshCollections();
+
+            const categories = ['variable', 'constant', 'array', 'macro', 'function'] as const;
+            const obj: Record<typeof categories[number], Record<string, lang.ReferenceItem>> = { variable: {}, constant: {}, array: {}, macro: {}, function: {}, };
+            for (const [uriString, refBook] of this.referenceCollection.entries()) {
+                // local variables are not exported.
+                if (uriString === lang.ACTIVE_FILE_URI) { continue; }
+
+                for (const [category, refSheet] of Object.entries(refBook)) {
+                    const category2 = category as keyof typeof refBook;
+                    if (category2 === 'variable' || category2 === 'constant' || category2 === 'array' || category2 === 'macro' || category2 === 'function') {
+                        obj[category2] = Object.assign(obj[category2], Object.fromEntries(refSheet));
+                    }
+                }
+            }
+            const content = JSON.stringify(obj, (key, value) => { return key === 'location' ? undefined : value; }, 2);
+            const document = await vscode.workspace.openTextDocument({ language: 'json', content: content });
+            vscode.window.showTextDocument(document, { preview: false });
+        };
+
         const inspectSyntaxTreeCommandHandler = () => {
             const editor = vscode.window.activeTextEditor;
             if (editor && editor.document.languageId === 'spec-command') {
@@ -244,6 +265,7 @@ export class FileController extends Controller implements vscode.DefinitionProvi
         // Register providers and event handlers.
         context.subscriptions.push(
             // Register command handlers.
+            vscode.commands.registerCommand('spec-command.showWorkspaceSymbolsJson', showWorkspaceSymbolsJsonCommandHandler),
             vscode.commands.registerCommand('spec-command.inspectSyntaxTree', inspectSyntaxTreeCommandHandler),
             vscode.commands.registerCommand('spec-command.execSelectionInTerminal', execSelectionInTerminalCommandCallback),
             vscode.commands.registerCommand('spec-command.execFileInTerminal', execFileInTerminalCommandCallback),
@@ -312,7 +334,7 @@ export class FileController extends Controller implements vscode.DefinitionProvi
         this.symbolCollection.clear();
 
         // Parse documents opened by editors.
-        this.parseDocumentContentsOfUriStrings(await findFilesInWorkspaces(), true);
+        return this.parseDocumentContentsOfUriStrings(await findFilesInWorkspaces(), true);
     }
 
     /**
@@ -354,9 +376,11 @@ export class FileController extends Controller implements vscode.DefinitionProvi
         }
 
         // Run additional analyses that use the whole database.
-        // First, wait until the built-in controller's database is loaded.
-        await this.builtinController.promisedRefBook;
+        // First, wait until the built-in and user-defined database files are loaded.
+        await Promise.all([this.builtinController.promisedBuiltInRefBook, this.builtinController.promisedExternalRefBook]);
+
         const mergedReferenceCollection = new Map([...this.referenceCollection.entries(), ...this.builtinController.referenceCollection.entries()]);
+
         for (const uriString of diagnosedUriStrings) {
             const uri = vscode.Uri.parse(uriString);
             const diagnosticRules = vscode.workspace.getConfiguration('spec-command.problems', uri).get('rules', lang.defaultDiagnosticRules);
@@ -585,7 +609,7 @@ export class FileController extends Controller implements vscode.DefinitionProvi
                     return JSON.stringify(tree, (key, value) => { return key === 'loc' ? undefined : value; }, 2);
                 } catch (error) {
                     if (error instanceof SyntaxError) {
-                        vscode.window.showErrorMessage('Failed in parsing the editor contents.');
+                        vscode.window.showErrorMessage('Failed to parse the editor contents.');
                     } else {
                         vscode.window.showErrorMessage('Unknown error.');
                     }

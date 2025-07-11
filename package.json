@@ -3,7 +3,7 @@
 	"name": "spec-command",
 	"displayName": "spec command",
 	"description": "spec command file support for VS Code",
-	"version": "1.8.10-alpha.1",
+	"version": "1.9.0-alpha.2",
 	"engines": {
 		"vscode": "^1.100.0"
 	},
@@ -62,10 +62,16 @@
 		],
 		"commands": [
 			{
-				"command": "spec-command.openReferenceManual",
-				"title": "Open Reference Manual",
+				"command": "spec-command.showBuiltInSymbols",
+				"title": "Show Built-in Symbols",
 				"category": "spec command",
 				"icon": "$(references)"
+			},
+			{
+				"command": "spec-command.showWorkspaceSymbolsJson",
+				"title": "Show Workspace Symbols (JSON)",
+				"category": "spec command",
+				"icon": "$(json)"
 			},
 			{
 				"command": "spec-command.inspectSyntaxTree",
@@ -89,7 +95,11 @@
 		"menus": {
 			"commandPalette": [
 				{
-					"command": "spec-command.openReferenceManual"
+					"command": "spec-command.showBuiltInSymbols"
+				},
+				{
+					"command": "spec-command.showWorkspaceSymbolsJson",
+					"when": "workspaceFolderCount > 0"
 				},
 				{
 					"command": "spec-command.inspectSyntaxTree",
@@ -142,10 +152,10 @@
 		"configuration": {
 			"title": "spec command",
 			"properties": {
-				"spec-command.showReferenceManualInPreview": {
+				"spec-command.showSymbolsInPreview": {
 					"type": "boolean",
 					"default": true,
-					"markdownDescription": "Shows a preview (Webview created by built-in Markdown extension) in addition to a markdown source after [Open Reference Manual](command:spec-command.openReferenceManual) command is invoked."
+					"markdownDescription": "Shows a preview (Webview created by built-in Markdown extension) in addition to a markdown source after [Show Built-in Symbols](command:spec-command.showBuiltInSymbols) command is invoked."
 				},
 				"spec-command.specVersion": {
 					"type": "string",
@@ -296,6 +306,15 @@
 					},
 					"additionalProperties": false
 				},
+				"spec-command.suggest.sybmolFile": {
+					"type": "string",
+					"default": "",
+					"scope": "window",
+					"markdownDescription": "Specifies the absolute path to a JSON file in which symbols are defined. The following predefined variables are supported for the path: `${userHome}`, `${workspaceFolder}`. See a JSON file created by [Show Workspace Symbols (JSON)](command:spec-command.showWorkspaceSymbolsJson) command for the file format.",
+					"tags": [
+						"experimental"
+					]
+				},
 				"spec-command.workspace.inclusiveFilePattern": {
 					"type": "string",
 					"default": "**/*.mac",
@@ -359,9 +378,10 @@
 		"virtualWorkspaces": true,
 		"untrustedWorkspaces": {
 			"supported": "limited",
-			"description": "The \"spec-command.terminal.filePathPrefix\" configuration property is disabled in untrusted workspaces in order to protect from code injection when the \"Run File in Active Terminal\" command is called.",
+			"description": "The \"spec-command.terminal.filePathPrefix\" `and \"spec-command.suggest.sybmolFile\" configuration properties are disabled in untrusted workspaces in order to protect from code injection.",
 			"restrictedConfigurations": [
-				"spec-command.terminal.filePathPrefix"
+				"spec-command.terminal.filePathPrefix",
+				"spec-command.suggest.sybmolFile"
 			]
 		}
 	},
