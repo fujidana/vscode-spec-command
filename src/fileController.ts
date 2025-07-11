@@ -36,6 +36,14 @@ async function findFilesInWorkspaces() {
                     }
                 }
             }
+            const excludePatterns = vscode.workspace.getConfiguration('spec-command.workspace', workspaceFolder).get<string[]>('exclude', []);
+            for (const excludePattern of excludePatterns) {
+                const excludeUris = await vscode.workspace.findFiles(new vscode.RelativePattern(workspaceFolder, excludePattern));
+                // It seems `Set.prototype.difference()` is not available at the moment.
+                for (const excludeUri of excludeUris) {
+                    uriStringSet.delete(excludeUri.toString());
+                }
+            }
         }
     }
     return uriStringSet;
@@ -249,7 +257,11 @@ export class FileController extends Controller implements vscode.DefinitionProvi
 
         /** Event handler invoked when the configuration is changed. */
         const configurationDidChangeListener = (event: vscode.ConfigurationChangeEvent) => {
-            if (event.affectsConfiguration('spec-command.workspace') || event.affectsConfiguration('files.associations') || event.affectsConfiguration('files.encoding') || event.affectsConfiguration('spec-command.problems.rules')) {
+            if (event.affectsConfiguration('spec-command.workspace') ||
+                event.affectsConfiguration('files.associations') ||
+                event.affectsConfiguration('files.encoding') ||
+                event.affectsConfiguration('spec-command.problems.rules')
+            ) {
                 this.refreshCollections();
             }
         };
