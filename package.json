@@ -405,7 +405,7 @@
 		"run-in-browser": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. .",
 		"js-yaml": "npm-run-all js-yaml:*",
 		"js-yaml:snippets": "js-yaml syntaxes/specCommand.snippets.yaml > syntaxes/specCommand.snippets.json",
-		"js-yaml:apiReference": "js-yaml syntaxes/specCommand.apiReference.yaml > syntaxes/specCommand.apiReference.json",
+		"js-yaml:builtIns": "js-yaml syntaxes/specCommand.builtIns.yaml > syntaxes/specCommand.builtIns.json",
 		"js-yaml:tmLanguage": "js-yaml syntaxes/specCommand.tmLanguage.yaml > syntaxes/specCommand.tmLanguage.json"
 	},
 	"dependencies": {

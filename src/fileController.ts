@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as lang from './language';
 import { Controller } from './controller';
-import { BuiltinController } from './builtinController';
+import { BuiltInController } from './builtInController';
 import { traversePartially, traverseWholly, traverseForFurtherDiagnostics } from './traverser';
 import { SyntaxError, parse } from './parser';
 import type * as tree from './tree';
@@ -49,11 +49,11 @@ export class FileController extends Controller implements vscode.DefinitionProvi
     private readonly diagnosticCollection: vscode.DiagnosticCollection;
     private readonly treeCollection: Map<string, tree.Program>;
     private readonly symbolCollection: Map<string, vscode.DocumentSymbol[]>;
-    private readonly builtinController: BuiltinController;
+    private readonly builtInController: BuiltInController;
 
-    constructor(context: vscode.ExtensionContext, builtinController: BuiltinController) {
+    constructor(context: vscode.ExtensionContext, builtInController: BuiltInController) {
         super(context);
-        this.builtinController = builtinController;
+        this.builtInController = builtInController;
 
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('spec-command');
         this.treeCollection = new Map();
@@ -377,9 +377,9 @@ export class FileController extends Controller implements vscode.DefinitionProvi
 
         // Run additional analyses that use the whole database.
         // First, wait until the built-in and user-defined database files are loaded.
-        await Promise.all([this.builtinController.promisedBuiltInRefBook, this.builtinController.promisedExternalRefBook]);
+        await Promise.all([this.builtInController.promisedBuiltInRefBook, this.builtInController.promisedExternalRefBook]);
 
-        const mergedReferenceCollection = new Map([...this.referenceCollection.entries(), ...this.builtinController.referenceCollection.entries()]);
+        const mergedReferenceCollection = new Map([...this.referenceCollection.entries(), ...this.builtInController.referenceCollection.entries()]);
 
         for (const uriString of diagnosedUriStrings) {
             const uri = vscode.Uri.parse(uriString);
@@ -441,7 +441,7 @@ export class FileController extends Controller implements vscode.DefinitionProvi
 
             if (isCollectionUpdated && diagnosticRules && (diagnosticRules['no-undeclared-variable'] === true || diagnosticRules['no-undeclared-macro-argument'] === true)) {
                 // This assumes the database of the builtin controller has been loaded.
-                const mergedReferenceCollection = new Map([...this.referenceCollection.entries(), ...this.builtinController.referenceCollection.entries()]);
+                const mergedReferenceCollection = new Map([...this.referenceCollection.entries(), ...this.builtInController.referenceCollection.entries()]);
                 const additionalDiagnostics = traverseForFurtherDiagnostics(tree, mergedReferenceCollection).filter(diagnostic => {
                     return diagnostic.code && typeof diagnostic.code === 'string' && diagnostic.code in diagnosticRules && diagnosticRules[diagnostic.code as keyof typeof diagnosticRules] === true;
                 });

@@ -24,7 +24,7 @@ const SNIPPET_TEMPLATES: Record<string, string> = {
 /**
  * A controller subclass that manages built-in symbols and motor mnemonics.
  */
-export class BuiltinController extends Controller implements vscode.TextDocumentContentProvider {
+export class BuiltInController extends Controller implements vscode.TextDocumentContentProvider {
     private activeWorkspaceFolder: vscode.WorkspaceFolder | undefined;
     public readonly promisedBuiltInRefBook: PromiseLike<lang.ReferenceBook | undefined>;
     public promisedExternalRefBook: PromiseLike<lang.ReferenceBook | undefined>;
@@ -33,7 +33,7 @@ export class BuiltinController extends Controller implements vscode.TextDocument
         super(context);
 
         // Load built-in symbol database from the JSON file.
-        const builtInRefUri = vscode.Uri.joinPath(context.extensionUri, 'syntaxes', 'specCommand.apiReference.json');
+        const builtInRefUri = vscode.Uri.joinPath(context.extensionUri, 'syntaxes', 'specCommand.builtIns.json');
         this.promisedBuiltInRefBook = this.loadReferenceBook(builtInRefUri, lang.BUILTIN_URI);
 
         // Load external symbol database from the JSON file.
@@ -116,7 +116,7 @@ export class BuiltinController extends Controller implements vscode.TextDocument
             const quickPickItem = await vscode.window.showQuickPick(quickPickItems);
             if (quickPickItem) {
                 const uri = vscode.Uri.parse(lang.BUILTIN_URI).with({ query: quickPickItem.category });
-                // const editor = await vscode.window.showTextDocument(uri, { preview: false });
+                const editor = await vscode.window.showTextDocument(uri, { preview: false });
                 const flag = vscode.workspace.getConfiguration('spec-command').get<boolean>('showSymbolsInPreview');
                 if (flag) {
                     await vscode.commands.executeCommand('markdown.showPreview');
