@@ -3,12 +3,13 @@ import type { LocationRange, Location } from './parser';
 
 export const SELECTOR = { language: 'spec-command' };
 // export const SELECTOR = [{ scheme: 'file', language: 'spec-command' }, { scheme: 'untitled', language: 'spec-command' }];
-export const BUILTIN_URI = 'spec-command://system/built-in.md';
-export const MOTOR_URI = 'spec-command://system/mnemonic-motor.md';
-export const COUNTER_URI = 'spec-command://system/mnemonic-counter.md';
-export const SNIPPET_URI = 'spec-command://system/code-snippet.md';
-export const ACTIVE_FILE_URI = 'spec-command://user/active-document.md';
-export const AST_URI = 'spec-command://user/ast.json';
+export const BUILTIN_URI = 'spec-command://built-in/built-in.md';
+export const EXTERNAL_URI = 'spec-command://built-in/external.md';
+export const MOTOR_URI = 'spec-command://built-in/mnemonic-motor.md';
+export const COUNTER_URI = 'spec-command://built-in/mnemonic-counter.md';
+export const SNIPPET_URI = 'spec-command://built-in/code-snippet.md';
+export const ACTIVE_FILE_URI = 'spec-command://file/active-document.md';
+export const AST_URI = 'spec-command://file/ast.json';
 
 export function convertPosition(position: Location): vscode.Position {
     return new vscode.Position(position.line - 1, position.column - 1);

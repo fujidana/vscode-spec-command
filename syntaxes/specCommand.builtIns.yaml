@@ -4,7 +4,7 @@
 
 ### Built-In Variables ###
 
-constants:
+constant:
   CCDS:
     signature: CCDS
     description: |-
@@ -154,7 +154,7 @@ constants:
     available:
       range: '>=6.13.3'
 
-variables:
+variable:
   A:
     signature: A[]
     description: |-
@@ -325,7 +325,7 @@ variables:
 
 # Built-In Functions and Commands
 
-functions:
+function:
 
   ## Utility Functions and Commands
 
@@ -1105,7 +1105,6 @@ functions:
     - signature: toupper(s)
     - signature: toupper(s, count)
     - signature: toupper(s, count, start)
-
 
   ### Regular Expression Functions
 
@@ -2161,7 +2160,6 @@ functions:
     - signature: mca_sput(sel, grp, elem)
     - signature: mca_sput(sel, array)
     
-
   ### Image (2D) Data Acquisition
 
   image_par:
@@ -3094,8 +3092,7 @@ functions:
     available:
       range: '>= 6.9.2'
 
-
-macros:
+macro:
 
   ## Utility Functions and Commands
 
@@ -3338,7 +3335,7 @@ macros:
 
   # Keywords
 
-keywords:
+keyword:
 
   ## Macros
 
