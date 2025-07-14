@@ -46,7 +46,7 @@ export class BuiltInController extends Controller implements vscode.TextDocument
                             // Do not return a value so that the return value (promise-like object) of the function
                             // does not include waiting for an action against the dialog.
                             if (item === 'Open Settings') {
-                                vscode.commands.executeCommand('workbench.action.openSettings', 'spec-command.suggest.sybmolFile');
+                                vscode.commands.executeCommand('workbench.action.openSettings', 'spec-command.suggest.symbolFile');
                             }
                         }
                     );
@@ -88,7 +88,7 @@ export class BuiltInController extends Controller implements vscode.TextDocument
             if (event.affectsConfiguration('spec-command.suggest.codeSnippets', this.activeWorkspaceFolder)) {
                 this.updateSnippetRefBook();
             }
-            if (event.affectsConfiguration('spec-command.suggest.sybmolFile')) {
+            if (event.affectsConfiguration('spec-command.suggest.symbolFile')) {
                 const externalRefUri = getExternalRefBookUri();
                 if (externalRefUri) {
                     this.promisedExternalRefBook = this.loadReferenceBook(externalRefUri, lang.EXTERNAL_URI).then(
@@ -271,7 +271,7 @@ export class BuiltInController extends Controller implements vscode.TextDocument
  * Get an URI object of the external symbol file whose path is specified in the settings.
  */
 function getExternalRefBookUri() {
-    const path = vscode.workspace.getConfiguration('spec-command.suggest').get<string>('sybmolFile', '');
+    const path = vscode.workspace.getConfiguration('spec-command.suggest').get<string>('symbolFile', '');
     if (path === "") {
         return undefined;
     } else if (path.startsWith('${workspaceFolder}/')) {

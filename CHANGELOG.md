@@ -9,10 +9,10 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 - Add Diagnostics for the following problems. Currently the features are experimental and by default disabled. They can be enabled at `spec-command.problems.rules` setting.
   - Report if a undecleared symbol (typically, a variable, function, or macro) is used. issues [#5](https://github.com/fujidana/vscode-spec-command/issues/5), [#29](https://github.com/fujidana/vscode-spec-command/issues/29).
   - Report if a local variable is declared outside a block (`{...}`). issue [#26](https://github.com/fujidana/vscode-spec-command/issues/26).
-- The scope of auto-completion becomes sensitive to the target of __spec__ version specified at `spec-command.specVersion` setting (e.g., unsupported APIs are hidden in the auto-completion list). issue [#23](https://github.com/fujidana/vscode-spec-command/issues/23).
-- External library file in which symbols are defined can be loaded by specifying the path at `spec-command.suggest.sybmolFile`. issue [#31](https://github.com/fujidana/vscode-spec-command/issues/31).
-- Symbols in a workspace can be exported as a JSON file, which is then loadable via the setting above. issue [#31](https://github.com/fujidana/vscode-spec-command/issues/31).
-- Files exluded from IntelliSense features can be specified with `spec-command.workspace.exclude` setting. issue [#33](https://github.com/fujidana/vscode-spec-command/issues/33).
+- Make IntelliSense features control the availability of symbols based on the target of __spec__ version specified at `spec-command.specVersion` setting (e.g., unsupported APIs at the version are hidden in the auto-completion list). issue [#23](https://github.com/fujidana/vscode-spec-command/issues/23).
+- Enable to load external library file in which symbols are defined by specifying the path at `spec-command.suggest.symbolFile` setting. issue [#31](https://github.com/fujidana/vscode-spec-command/issues/31).
+- Add `spec-command.showWorkspaceSymbolsJson` command action, with which symbols in a workspace are exported in a JSON format. This file is loadable via the setting above. issue [#31](https://github.com/fujidana/vscode-spec-command/issues/31).
+- Add `spec-command.workspace.exclude` setting, with which specified files can be exluded from IntelliSense features. issue [#33](https://github.com/fujidana/vscode-spec-command/issues/33).
 
 ### Changed
 

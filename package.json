@@ -306,7 +306,7 @@
 					},
 					"additionalProperties": false
 				},
-				"spec-command.suggest.sybmolFile": {
+				"spec-command.suggest.symbolFile": {
 					"type": "string",
 					"default": "",
 					"scope": "window",
@@ -387,10 +387,10 @@
 		"virtualWorkspaces": true,
 		"untrustedWorkspaces": {
 			"supported": "limited",
-			"description": "The \"spec-command.terminal.filePathPrefix\" `and \"spec-command.suggest.sybmolFile\" configuration properties are disabled in untrusted workspaces in order to protect from code injection.",
+			"description": "The \"spec-command.terminal.filePathPrefix\" `and \"spec-command.suggest.symbolFile\" configuration properties are disabled in untrusted workspaces in order to protect from code injection.",
 			"restrictedConfigurations": [
 				"spec-command.terminal.filePathPrefix",
-				"spec-command.suggest.sybmolFile"
+				"spec-command.suggest.symbolFile"
 			]
 		}
 	},
