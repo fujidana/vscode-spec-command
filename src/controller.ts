@@ -203,24 +203,22 @@ export class Controller implements vscode.CompletionItemProvider<lang.Completion
             }
 
             const completionItems: lang.CompletionItem[] = [];
-            for (const [category, refSheet] of Object.entries(refBook)) {
-                for (const [identifier, refItem] of refSheet.entries()) {
-                    if (refItem.available && !satisfies(this.specVersion, refItem.available.range)) {
-                        // Skip items unavailable in the specified spec version.
-                        continue;
-                    }
-                    const detail = (!suppressDetail && refItem.signature.startsWith(identifier)) ? refItem.signature.substring(identifier.length) : undefined;
-                    const label: vscode.CompletionItemLabel = { label: identifier, detail: detail, description: description };
-                    const completionItem = new lang.CompletionItem(label, uriString, category as keyof typeof refBook);
-                    if (refItem.snippet) {
-                        completionItem.insertText = new vscode.SnippetString(refItem.snippet);
-                    }
-                    if (refItem.deprecated && satisfies(this.specVersion, refItem.deprecated.range)) {
-                        // Add "Deprecated" tag to the completion item.
-                        completionItem.tags = [vscode.CompletionItemTag.Deprecated];
-                    }
-                    completionItems.push(completionItem);
+            for (const [identifier, refItem] of refBook.entries()) {
+                if (refItem.available && !satisfies(this.specVersion, refItem.available.range)) {
+                    // Skip items unavailable in the specified spec version.
+                    continue;
                 }
+                const detail = (!suppressDetail && refItem.signature.startsWith(identifier)) ? refItem.signature.substring(identifier.length) : undefined;
+                const label: vscode.CompletionItemLabel = { label: identifier, detail: detail, description: description };
+                const completionItem = new lang.CompletionItem(label, uriString, refItem.category);
+                if (refItem.snippet) {
+                    completionItem.insertText = new vscode.SnippetString(refItem.snippet);
+                }
+                if (refItem.deprecated && satisfies(this.specVersion, refItem.deprecated.range)) {
+                    // Add "Deprecated" tag to the completion item.
+                    completionItem.tags = [vscode.CompletionItemTag.Deprecated];
+                }
+                completionItems.push(completionItem);
             }
             this.completionItemCollection.set(uriString, completionItems);
             return completionItems;
@@ -262,7 +260,7 @@ export class Controller implements vscode.CompletionItemProvider<lang.Completion
 
         // find the symbol information about the symbol.
         const label = typeof completionItem.label === 'string' ? completionItem.label : completionItem.label.label;
-        const refItem = this.referenceCollection.get(refUriString)?.[category]?.get(label);
+        const refItem = this.referenceCollection.get(refUriString)?.get(label);
         if (refItem === undefined) { return; }
 
         // copy completion item.
@@ -311,29 +309,27 @@ export class Controller implements vscode.CompletionItemProvider<lang.Completion
         const contents: vscode.MarkdownString[] = [];
 
         for (const [uriString, refBook] of this.referenceCollection.entries()) {
-            for (const [category, refSheet] of Object.entries(refBook)) {
-                // find the symbol information about the symbol.
-                const refItem = refSheet.get(selectorName);
-                if (refItem) {
-                    let mainMarkdown = new vscode.MarkdownString(getShortDescription(refItem, category as keyof typeof refBook, uriString, document.uri.toString(), true));
+            // find the symbol information about the symbol.
+            const refItem = refBook.get(selectorName);
+            if (refItem) {
+                let mainMarkdown = new vscode.MarkdownString(getShortDescription(refItem, refItem.category, uriString, document.uri.toString(), true));
 
-                    // prepare the second line: the description (if it exists)
-                    const truncatedString = truncateString(truncationLevel, refItem);
-                    if (truncatedString) {
-                        mainMarkdown = mainMarkdown.appendMarkdown(truncatedString);
-                    }
-                    contents.push(mainMarkdown);
+                // prepare the second line: the description (if it exists)
+                const truncatedString = truncateString(truncationLevel, refItem);
+                if (truncatedString) {
+                    mainMarkdown = mainMarkdown.appendMarkdown(truncatedString);
+                }
+                contents.push(mainMarkdown);
 
-                    // for overloaded functions, prepare additional markdown blocks
-                    if (refItem.overloads) {
-                        for (const overload of refItem.overloads) {
-                            let overloadMarkdown = new vscode.MarkdownString().appendCodeblock(overload.signature);
-                            const truncatedString2 = truncateString(truncationLevel, overload);
-                            if (truncatedString2) {
-                                overloadMarkdown = overloadMarkdown.appendMarkdown(truncatedString2);
-                            }
-                            contents.push(overloadMarkdown);
+                // for overloaded functions, prepare additional markdown blocks
+                if (refItem.overloads) {
+                    for (const overload of refItem.overloads) {
+                        let overloadMarkdown = new vscode.MarkdownString().appendCodeblock(overload.signature);
+                        const truncatedString2 = truncateString(truncationLevel, overload);
+                        if (truncatedString2) {
+                            overloadMarkdown = overloadMarkdown.appendMarkdown(truncatedString2);
                         }
+                        contents.push(overloadMarkdown);
                     }
                 }
             }
@@ -354,9 +350,8 @@ export class Controller implements vscode.CompletionItemProvider<lang.Completion
         const truncationLevel = config['signatureHelp.signatures.documentation'] === true ? TruncationLevel.paragraph : TruncationLevel.full;
 
         for (const refBook of this.referenceCollection.values()) {
-            const refSheet = refBook['function'];
             let refItem: lang.ReferenceItem | undefined;
-            if ((refItem = refSheet?.get(signatureHint.signature)) !== undefined) {
+            if ((refItem = refBook.get(signatureHint.signature)) !== undefined && refItem.category === 'function') {
                 const signatureHelp = new vscode.SignatureHelp();
                 const overloads = refItem.overloads ?? [{ signature: refItem.signature, description: refItem.description }];
 

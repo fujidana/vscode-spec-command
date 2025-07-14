@@ -19,34 +19,43 @@ export function convertRange(range: LocationRange): vscode.Range {
     return new vscode.Range(convertPosition(range.start), convertPosition(range.end));
 }
 
+/**
+ * Map object consisting of pairs of a unique identifier and a reference item.
+ */
+export type ReferenceBook = Map<string, ReferenceItem>;
+
 // 'overloads' parameter is used only by built-in macros and functions.
 export type ReferenceItem = {
-    signature: string;
-    description?: string;
-    available?: VersionRange;
-    deprecated?: VersionRange;
-    snippet?: string;
-    location?: LocationRange;
-    overloads?: {
-        signature: string;
-        description?: string;
+    readonly signature: string;
+    readonly category: ReferenceCategory;
+    readonly description?: string;
+    readonly available?: VersionRange;
+    readonly deprecated?: VersionRange;
+    readonly snippet?: string;
+    readonly location?: LocationRange;
+    readonly overloads?: {
+        readonly signature: string;
+        readonly description?: string;
     }[];
 };
 
 export type VersionRange = {
-    range: string;
-    description?: string;
+    readonly range: string;
+    readonly description?: string;
 };
 
-export type ReferenceSheet = Map<string, ReferenceItem>;
+const referenceCategoryNames = ['undefined', 'constant', 'variable', 'array', 'macro', 'function', 'keyword', 'snippet', 'enum'] as const;
 
-const ReferenceCategoryNames = ['undefined', 'constant', 'variable', 'array', 'macro', 'function', 'keyword', 'snippet', 'enum'] as const;
+export type ReferenceCategory = typeof referenceCategoryNames[number];
 
-export type ReferenceCategory = typeof ReferenceCategoryNames[number];
-export type ReferenceBook = { [K in ReferenceCategory]?: ReferenceSheet; };
-// export type ReferenceBook = Map<ReferenceCategory, ReferenceSheet>;
+export type ReferenceBookLike = { [K in ReferenceCategory]?: { [key: string]: Omit<ReferenceItem, 'category'> } };
 
-type ReferenceCategoryMetadata = { label: string, iconIdentifier: string, completionItemKind: vscode.CompletionItemKind | undefined, symbolKind: vscode.SymbolKind };
+type ReferenceCategoryMetadata = {
+    readonly label: string
+    readonly iconIdentifier: string,
+    readonly completionItemKind: vscode.CompletionItemKind | undefined,
+    readonly symbolKind: vscode.SymbolKind,
+};
 
 export function getVersionRangeDescription(versionRange: VersionRange, label: string) {
     let tmpStr = versionRange.range === '>=0.0.0' ? `[${label} at some time]` : `[${label}: \`${versionRange.range}\`]`;
@@ -56,7 +65,7 @@ export function getVersionRangeDescription(versionRange: VersionRange, label: st
     return tmpStr;
 }
 
-export const referenceCategoryMetadata: { [K in ReferenceCategory]: ReferenceCategoryMetadata } = {
+export const referenceCategoryMetadata: { readonly [K in ReferenceCategory]: ReferenceCategoryMetadata } = {
     constant: {
         label: 'constant',
         iconIdentifier: 'symbol-constant',
@@ -131,3 +140,47 @@ export const defaultDiagnosticRules = {
 };
 
 export type DiagnosticRules = typeof defaultDiagnosticRules;
+
+/**
+ * Convert a flattened map object to a structured database made of a plain object.
+ * @param refBook Map object directly containing reference items.
+ * @returns Object having categories as childrens and reference items as grandchildren.
+ */
+export function categorizeRefBook(refBook: ReferenceBook, categories: readonly ReferenceCategory[] = referenceCategoryNames) {
+    const refBookLike: ReferenceBookLike = {};
+    for (const category of categories) {
+        refBookLike[category] = {};
+    }
+
+    for (const [identifier, refItem] of refBook.entries()) {
+        if (categories.includes(refItem.category)) {
+            const refBookCategory = refBookLike[refItem.category];
+            if (refBookCategory) {
+                // simply point (not copy) without deleting "category" property.
+                // refBookCategory[identifier] = refItem;
+                // Copy a new object with "category" property removed. 
+                refBookCategory[identifier] = (({category, ...rest}) => rest)(refItem);
+            }
+        }
+    }
+    return refBookLike;
+}
+
+/**
+ * Convert a structured database made of a plain object to flattened map object.
+ * @param refBookLike Object having categories as childrens and reference items as grandchildren.
+ * @param categories Categories to be converted.
+ * @returns Map object directly containing reference items.
+ */
+export function flattenRefBook(refBookLike: ReferenceBookLike, categories: readonly ReferenceCategory[] = referenceCategoryNames): ReferenceBook {
+    const refBook: ReferenceBook = new Map();
+    for (const [category, refSheetLike] of Object.entries(refBookLike)) {
+        if (categories.includes(category as keyof typeof refBookLike)) {
+            for (const [key, refItemLike] of Object.entries(refSheetLike)) {
+                const refItem: ReferenceItem = Object.assign(refItemLike, { category: category as keyof typeof refBookLike });
+                refBook.set(key, refItem);
+            }
+        }
+    }
+    return refBook;
+}

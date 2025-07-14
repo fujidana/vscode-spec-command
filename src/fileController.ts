@@ -70,20 +70,23 @@ export class FileController extends Controller implements vscode.DefinitionProvi
         const showWorkspaceSymbolsJsonCommandHandler = async () => {
             await this.refreshCollections();
 
-            const categories = ['variable', 'constant', 'array', 'macro', 'function'] as const;
-            const obj: Record<typeof categories[number], Record<string, lang.ReferenceItem>> = { variable: {}, constant: {}, array: {}, macro: {}, function: {}, };
+            const categories = ['constant', 'variable', 'array', 'macro', 'function'] as const;
+            type Category = typeof categories[number];
+            const obj: { [K in Category]: Required<lang.ReferenceBookLike>[K] } = { variable: {}, constant: {}, array: {}, macro: {}, function: {}, };;
+            // const obj: Record<Category, Record<string, lang.ReferenceItem>> = { variable: {}, constant: {}, array: {}, macro: {}, function: {}, };
             for (const [uriString, refBook] of this.referenceCollection.entries()) {
                 // local variables are not exported.
                 if (uriString === lang.ACTIVE_FILE_URI) { continue; }
 
-                for (const [category, refSheet] of Object.entries(refBook)) {
-                    const category2 = category as keyof typeof refBook;
-                    if (category2 === 'variable' || category2 === 'constant' || category2 === 'array' || category2 === 'macro' || category2 === 'function') {
-                        obj[category2] = Object.assign(obj[category2], Object.fromEntries(refSheet));
+                const refBookLike = lang.categorizeRefBook(refBook, categories);
+                for (const [category, refSheet] of Object.entries(refBookLike)) {
+                    const category2 = category as keyof typeof refBookLike;
+                    if (category2 === 'constant' || category2 === 'variable' || category2 === 'array' || category2 === 'macro' || category2 === 'function') {
+                        obj[category2] = Object.assign(obj[category2], refSheet);
                     }
                 }
             }
-            const content = JSON.stringify(obj, (key, value) => { return key === 'location' ? undefined : value; }, 2);
+            const content = JSON.stringify(obj, (key, value) => key === 'location' || key === 'category' ? undefined : value, 2);
             const document = await vscode.workspace.openTextDocument({ language: 'json', content: content });
             vscode.window.showTextDocument(document, { preview: false });
         };
@@ -431,7 +434,7 @@ export class FileController extends Controller implements vscode.DefinitionProvi
                 }
             }
             // update with an empty object.
-            this.referenceCollection.set(uriString, {});
+            this.referenceCollection.set(uriString, new Map());
             // this.updateCompletionItemsForUriString(uriString);
             return { tree: undefined, diagnostics, };
         }
@@ -519,11 +522,9 @@ export class FileController extends Controller implements vscode.DefinitionProvi
             const uri = (uriString === lang.ACTIVE_FILE_URI) ? document.uri : vscode.Uri.parse(uriString);
 
             // scan all types of symbols in the database of the respective files.
-            for (const refSheet of Object.values(refBook)) {
-                const refItem = refSheet.get(selectorName);
-                if (refItem && refItem.location) {
-                    locations.push(new vscode.Location(uri, lang.convertRange(refItem.location)));
-                }
+            const refItem = refBook.get(selectorName);
+            if (refItem && refItem.location) {
+                locations.push(new vscode.Location(uri, lang.convertRange(refItem.location)));
             }
         }
         return locations;
@@ -563,14 +564,12 @@ export class FileController extends Controller implements vscode.DefinitionProvi
             const uri = vscode.Uri.parse(uriString);
 
             // find all items from each storage.
-            for (const [category, refSheet] of Object.entries(refBook)) {
-                const symbolKind = lang.referenceCategoryMetadata[category as keyof typeof refBook].symbolKind;
-                for (const [identifier, refItem] of refSheet.entries()) {
-                    if ((query.length === 0 || regExp.test(identifier)) && refItem.location) {
-                        const name = (category === 'function') ? identifier + '()' : identifier;
-                        const location = new vscode.Location(uri, lang.convertRange(refItem.location));
-                        symbols.push(new vscode.SymbolInformation(name, symbolKind, '', location));
-                    }
+            for (const [identifier, refItem] of refBook.entries()) {
+                if ((query.length === 0 || regExp.test(identifier)) && refItem.location) {
+                    const name = (refItem.category === 'function') ? identifier + '()' : identifier;
+                    const location = new vscode.Location(uri, lang.convertRange(refItem.location));
+                    const symbolKind = lang.referenceCategoryMetadata[refItem.category].symbolKind;
+                    symbols.push(new vscode.SymbolInformation(name, symbolKind, '', location));
                 }
             }
         }

@@ -52,13 +52,7 @@ const VISITOR_KEYS = {
 
 export function traverseWholly(program: tree.Program, diagnosticRules: lang.DiagnosticRules | undefined): [lang.ReferenceBook, vscode.DocumentSymbol[], vscode.Diagnostic[]] {
     // Create variables to store data.
-    const refBook = {
-        constant: new Map<string, lang.ReferenceItem>(),
-        variable: new Map<string, lang.ReferenceItem>(),
-        array: new Map<string, lang.ReferenceItem>(),
-        macro: new Map<string, lang.ReferenceItem>(),
-        function: new Map<string, lang.ReferenceItem>(),
-    };
+    const refBook: lang.ReferenceBook = new Map();
     const symbols: vscode.DocumentSymbol[] = [];
     const diagnostics: vscode.Diagnostic[] = [];
     const blockStack: tree.BlockStatement[] = [];
@@ -67,9 +61,8 @@ export function traverseWholly(program: tree.Program, diagnosticRules: lang.Diag
     estraverse.traverse(program, {
         enter: (node: tree.Node, parent: tree.Node | null) => {
             // console.log('enter', node.type, parent?.type);
-
             if (parent === null && node.type === 'Program') {
-                // if it is a top-level, dig in.
+                // If it is a top-level, dig in.
                 return;
             } else if (node.type.endsWith('Statement') || node.type.endsWith('Declaration')) {
                 if (!node.loc) {
@@ -123,10 +116,10 @@ export function traverseWholly(program: tree.Program, diagnosticRules: lang.Diag
                         if (node.params) {
                             // Register the id as a function if parameter is not null.
                             const signature = `${node.id.name}(${node.params.map(param => (param.type === 'Identifier') ? param.name : '').join(', ')})`;
-                            refBook.function.set(node.id.name, makeReferenceItem(node, signature));
+                            refBook.set(node.id.name, makeReferenceItem(node, signature, 'function'));
                         } else {
                             // Register the id as a traditional macro if parameter is null.
-                            refBook.macro.set(node.id.name, makeReferenceItem(node, node.id.name));
+                            refBook.set(node.id.name, makeReferenceItem(node, node.id.name, 'macro'));
                         }
                     }
 
@@ -165,13 +158,12 @@ export function traverseWholly(program: tree.Program, diagnosticRules: lang.Diag
                                     declarator.init?.type === 'Literal' ?
                                         `${declarator.id.name} = ${declarator.init.raw}` :
                                         declarator.id.name;
-                                const refItem = makeReferenceItem(node, signature);
                                 if (node.dataarray) {
-                                    refBook.array.set(declarator.id.name, refItem);
+                                    refBook.set(declarator.id.name, makeReferenceItem(node, signature, 'array'));
                                 } else if (node.kind === 'const') {
-                                    refBook.constant.set(declarator.id.name, refItem);
+                                    refBook.set(declarator.id.name, makeReferenceItem(node, signature, 'constant'));
                                 } else if (node.kind === 'local' || node.kind === 'global') {
-                                    refBook.variable.set(declarator.id.name, refItem);
+                                    refBook.set(declarator.id.name, makeReferenceItem(node, signature, 'variable'));
                                 } else {
                                     console.log(`Failed to categorize variable declaration for ${declarator.id.name}`);
                                 }
@@ -182,7 +174,7 @@ export function traverseWholly(program: tree.Program, diagnosticRules: lang.Diag
                     // Diagnose problems.
                     if (diagnosticRules && diagnosticRules['no-local-outside-block']) {
                         if (node.kind === 'local' && blockStack.length === 0) {
-                            const diagnostic = new vscode.Diagnostic(nodeRange, 'Local variable declaration outside a block.', vscode.DiagnosticSeverity.Warning);
+                            const diagnostic = new vscode.Diagnostic(nodeRange, 'Local variable is declared outside a block.', vscode.DiagnosticSeverity.Warning);
                             diagnostic.code = 'no-local-outside-block';
                             diagnostics.push(diagnostic);
                         }
@@ -213,13 +205,7 @@ export function traverseWholly(program: tree.Program, diagnosticRules: lang.Diag
 
 export function traversePartially(program: tree.Program, position: vscode.Position): lang.ReferenceBook {
     // Create variables to store data.
-    const refBook = {
-        constant: new Map<string, lang.ReferenceItem>(),
-        variable: new Map<string, lang.ReferenceItem>(),
-        array: new Map<string, lang.ReferenceItem>(),
-        macro: new Map<string, lang.ReferenceItem>(),
-        function: new Map<string, lang.ReferenceItem>(),
-    };
+    const refBook: lang.ReferenceBook = new Map();
 
     // Traverse the syntax tree.
     estraverse.traverse(program, {
@@ -252,8 +238,8 @@ export function traversePartially(program: tree.Program, position: vscode.Positi
                 // Register arguments of function as variables if the cursor is in the function block.
                 for (const param of node.params) {
                     if (param.type === 'Identifier') {
-                        const refItem = { signature: param.name, location: node.loc as LocationRange };
-                        refBook.variable.set(param.name, refItem);
+                        const refItem: lang.ReferenceItem = { signature: param.name, category: 'variable', location: node.loc as LocationRange };
+                        refBook.set(param.name, refItem);
                     }
                 }
             } else if (nodeRange.start.isAfter(position)) {
@@ -265,10 +251,10 @@ export function traversePartially(program: tree.Program, position: vscode.Positi
                     if (node.params) {
                         // register the id as a function if parameter is not null.
                         const signature = `${node.id.name}(${node.params.map(param => (param.type === 'Identifier') ? param.name : '').join(', ')})`;
-                        refBook.function.set(node.id.name, makeReferenceItem(node, signature));
+                        refBook.set(node.id.name, makeReferenceItem(node, signature, 'function'));
                     } else {
                         // register the id as a traditional macro if parameter is null.
-                        refBook.macro.set(node.id.name, makeReferenceItem(node, node.id.name));
+                        refBook.set(node.id.name, makeReferenceItem(node, node.id.name, 'macro'));
                     }
                 } else if (node.type === 'VariableDeclaration') {
                     for (const declarator of node.declarations) {
@@ -277,13 +263,12 @@ export function traversePartially(program: tree.Program, position: vscode.Positi
                                 declarator.init?.type === 'Literal' ?
                                     `${declarator.id.name} = ${declarator.init.raw}` :
                                     declarator.id.name;
-                            const refItem = makeReferenceItem(node, signature);
                             if (node.dataarray) {
-                                refBook.array.set(declarator.id.name, refItem);
+                                refBook.set(declarator.id.name, makeReferenceItem(node, signature, 'array'));
                             } else if (node.kind === 'const') {
-                                refBook.constant.set(declarator.id.name, refItem);
+                                refBook.set(declarator.id.name, makeReferenceItem(node, signature, 'constant'));
                             } else if (node.kind === 'local' || node.kind === 'global') {
-                                refBook.variable.set(declarator.id.name, refItem);
+                                refBook.set(declarator.id.name, makeReferenceItem(node, signature, 'variable'));
                             } else {
                                 console.log(`Failed to categorize variable declaration for ${declarator.id.name}`);
                             }
@@ -304,46 +289,45 @@ export function traversePartially(program: tree.Program, position: vscode.Positi
 export function traverseForFurtherDiagnostics(program: tree.Program, referenceCollection: Map<string, lang.ReferenceBook>): vscode.Diagnostic[] {
     const diagnostics: vscode.Diagnostic[] = [];
     const blockStack: tree.BlockStatement[] = [];
-    type RefBookKey = 'variable' | 'array' | 'constant';
-    type RefBook = {[K in RefBookKey]: Map<string, lang.ReferenceItem>};
-    let refBook: RefBook = { variable: new Map(), array: new Map(), constant: new Map() };
-    const refBookStack: RefBook[] = [refBook];
-    
+    // type RefBookKey = 'variable' | 'array' | 'constant';
+    let refBook: lang.ReferenceBook = new Map();
+    const refBookStack: typeof refBook[] = [refBook];
+
     // Traverse the syntax tree.
     estraverse.traverse(program, {
         enter: (node: tree.Node, parent: tree.Node | null) => {
             if (node.type === 'BlockStatement') {
                 // If it is a block statement, push it to the stack.
-                refBook = { variable: new Map(), array: new Map(), constant: new Map() };
+                refBook = new Map();
                 blockStack.push(node);
                 refBookStack.unshift(refBook);
                 if (parent?.type === 'FunctionDeclaration' && parent.params) {
                     // Register parameters of function.
                     parent.params.forEach(param => {
-                        refBook.variable.set(param.name, { signature: param.name });
+                        refBook.set(param.name, { signature: param.name, category: 'variable' });
                     });
                     // Register `arg0`, `arg1`, ..., `arg15`. 
                     // The author do not know the upper limit. Currently `arg16` and is not defined.
                     for (let index = 0; index < 16; index++) {
-                        refBook.variable.set(`arg${index}`, { signature: `arg${index}`});
+                        refBook.set(`arg${index}`, { signature: `arg${index}`, category: 'variable' });
                     }
                     // Register `prefix_CONPAR` and `prefix_ADDR`, which are available in functions for macro hardware.
                     // See "mac_hdw" page in spec help.
                     let matched: RegExpMatchArray | null;
                     if ((matched = parent.id.name.match(/^([a-zA-Z_][a-zA-Z0-9_]*)_(config|cmd|par)$/)) !== null) {
-                        refBook.variable.set(`${matched[1]}_ADDR`, { signature: `${matched[1]}_ADDR` });
-                        refBook.variable.set(`${matched[1]}_CONPAR`, { signature: `${matched[1]}_CONPAR` });
+                        refBook.set(`${matched[1]}_ADDR`, { signature: `${matched[1]}_ADDR`, category: 'variable' });
+                        refBook.set(`${matched[1]}_CONPAR`, { signature: `${matched[1]}_CONPAR`, category: 'variable' });
                     }
                 }
             } else if (node.type === 'VariableDeclaration') {
                 for (const declarator of node.declarations) {
                     if (declarator.id.type === 'Identifier') {
                         if (node.dataarray) {
-                            refBook.array.set(declarator.id.name, { signature: declarator.id.name });
+                            refBook.set(declarator.id.name, { signature: declarator.id.name, category: 'array' });
                         } else if (node.kind === 'const') {
-                            refBook.constant.set(declarator.id.name, { signature: declarator.id.name });
+                            refBook.set(declarator.id.name, { signature: declarator.id.name, category: 'constant' });
                         } else if (node.kind === 'local' || node.kind === 'global') {
-                            refBook.variable.set(declarator.id.name, { signature: declarator.id.name });
+                            refBook.set(declarator.id.name, { signature: declarator.id.name, category: 'variable' });
                         }
                     }
                 }
@@ -356,12 +340,10 @@ export function traverseForFurtherDiagnostics(program: tree.Program, referenceCo
                     return;
                 }
                 let flag = false;
-                for (const refBook2 of (refBookStack as lang.ReferenceBook[]).concat([...referenceCollection.values()])) {
-                    for (const key of Object.keys(refBook2)) {
-                        if (refBook2[key as keyof typeof refBook2]?.has(node.name)) {
-                            flag = true;
-                            break;
-                        }
+                for (const refBook2 of refBookStack.concat([...referenceCollection.values()])) {
+                    if (refBook2.has(node.name)) {
+                        flag = true;
+                        break;
                     }
                 }
                 if (flag === false && node.loc) {
@@ -395,11 +377,11 @@ export function traverseForFurtherDiagnostics(program: tree.Program, referenceCo
     return diagnostics;
 }
 
-function makeReferenceItem(node: tree.Node, signature: string): lang.ReferenceItem {
+function makeReferenceItem(node: tree.Node, signature: string, category: lang.ReferenceCategory): lang.ReferenceItem {
     // Create a reference item from the node and signature string.
-    const refItem: lang.ReferenceItem = { signature, location: node.loc };
+    let description: string | undefined;
     if (node.leadingComments && node.leadingComments.length > 0) {
-        refItem.description = node.leadingComments[node.leadingComments.length - 1].value;
+        description = node.leadingComments[node.leadingComments.length - 1].value;
     }
-    return refItem;
+    return { signature, category, description, location: node.loc };
 }
