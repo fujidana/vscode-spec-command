@@ -164,49 +164,6 @@
 					"pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
 					"patternErrorMessage": "The value must be in the Semantic Versioning 2.0.0 format. Set \"6.1.2\" for \"6.01.04\" since the format does not allow redundant zeros."
 				},
-				"spec-command.editor.hintVolume.hover": {
-					"type": "string",
-					"default": "full",
-					"description": "Controls the volume of explanatory text in hovers, which is shown when the mouse cursor is on a symbol.",
-					"markdownDeprecationMessage": "**Deprecated**: Please use `#spec-command.suggest.suppressMessages#` instead.",
-					"enum": [
-						"sentence",
-						"paragraph",
-						"full"
-					]
-				},
-				"spec-command.editor.hintVolume.completionItem": {
-					"type": "string",
-					"default": "sentence",
-					"description": "Controls the volume of explanatory text in auto completion, which is shown when the user types a symbol.",
-					"markdownDeprecationMessage": "**Deprecated**: Please use `#spec-command.suggest.suppressMessages#` instead.",
-					"enum": [
-						"sentence",
-						"paragraph",
-						"full"
-					]
-				},
-				"spec-command.editor.hintVolume.signatureHelp": {
-					"type": "string",
-					"default": "sentence",
-					"description": "Controls the volume of explanatory text in signature help, which is shown when the user edits function arguments.",
-					"markdownDeprecationMessage": "**Deprecated**: Please use `#spec-command.suggest.suppressMessages#` instead.",
-					"enum": [
-						"sentence",
-						"paragraph",
-						"full"
-					]
-				},
-				"spec-command.editor.codeSnippets": {
-					"type": "array",
-					"default": [],
-					"markdownDescription": "Lists code snippet templates that may include a placeholder of motor (`%MOT`) or counter (`%CNT`) mnemonics in TextMate snippet syntax. Read [Snippets in Visual Studio Code](https://code.visualstudio.com/docs/editor/userdefinedsnippets) for other information about the syntax. Example: `mv ${1%MOT} ${2:pos} # absolute move`.",
-					"markdownDeprecationMessage": "**Deprecated**: Please use `#spec-command.suggest.codeSnippets#` instead.",
-					"items": {
-						"type": "string",
-						"pattern": "^(([a-zA-Z_][a-zA-Z0-9_]*)\\s+[^#]+?)\\s*(#\\s*(.*))?$"
-					}
-				},
 				"spec-command.suggest.suppressMessages": {
 					"type": "object",
 					"markdownDescription": "Suppresses messages shown in code completion.",
@@ -245,28 +202,6 @@
 						}
 					},
 					"additionalProperties": false
-				},
-				"spec-command.mnemonic.motors": {
-					"type": "array",
-					"default": [],
-					"markdownDescription": "Lists motor mnemonics, which will be used by IntelliSense and code snippets. One can optionally add the description after `#` letter. Example: `tth # Detector's two-theta angle`.",
-					"markdownDeprecationMessage": "**Deprecated**: Please use `#spec-command.suggest.motors#` instead.",
-					"items": {
-						"type": "string",
-						"pattern": "^([a-zA-Z_][a-zA-Z0-9_]{0,6})\\s*(#\\s*(.*))?$"
-					}
-				},
-				"spec-command.mnemonic.counters": {
-					"type": "array",
-					"default": [
-						"sec # count time in second"
-					],
-					"markdownDescription": "Lists counter mnemonics, which will be used by IntelliSense and code snippets. One can optionally add the descriptions after `#` letter. Example: `sec # count time in second`.",
-					"markdownDeprecationMessage": "**Deprecated**: Please use `#spec-command.suggest.counters#` instead.",
-					"items": {
-						"type": "string",
-						"pattern": "^([a-zA-Z_][a-zA-Z0-9_]{0,6})\\s*(#\\s*(.*))?$"
-					}
 				},
 				"spec-command.suggest.codeSnippets": {
 					"type": "object",
@@ -315,20 +250,6 @@
 						"experimental"
 					]
 				},
-				"spec-command.workspace.inclusiveFilePattern": {
-					"type": "string",
-					"default": "**/*.mac",
-					"scope": "resource",
-					"markdownDescription": "Specifies a glob pattern used to find files in a workspace. Symbols in pattern-matched files becomes available in code navigation. See [VS Code API](https://code.visualstudio.com/api/references/vscode-api#GlobPattern) for the syntax.",
-					"markdownDeprecationMessage": "**Deprecated**: Please use the built-in `#files.associations#` property, instead."
-				},
-				"spec-command.workspace.exclusiveFilePattern": {
-					"type": "string",
-					"default": "",
-					"scope": "resource",
-					"markdownDescription": "Specifies a glob pattern used to exclude files in a workspace from being parsed. See [VS Code API](https://code.visualstudio.com/api/references/vscode-api#GlobPattern) for the syntax.",
-					"markdownDeprecationMessage": "**Deprecated**: Please use the built-in `#files.exclude#` property, instead."
-				},
 				"spec-command.workspace.exclude": {
 					"type": "array",
 					"default": [],
@@ -372,13 +293,6 @@
 					"default": "",
 					"scope": "resource",
 					"markdownDescription": "Specifies a file path prefix used in [Run File in Active Terminal](command:spec-command.execFileInTerminal) command. This option is useful for case in which the working directory of __spec__ running in a terminal view is different from the workspace folder."
-				},
-				"spec-command.command.filePathPrefixInTerminal": {
-					"type": "string",
-					"default": "",
-					"scope": "resource",
-					"markdownDescription": "Specifies a file path prefix used in [Run File in Active Terminal](command:spec-command.execFileInTerminal) command. This option is useful for case in which the working directory of __spec__ running in a terminal view is different from the workspace folder.",
-					"markdownDeprecationMessage": "**Deprecated**: Please use `#spec-command.terminal.filePathPrefix#` instead."
 				}
 			}
 		}
