@@ -78,18 +78,6 @@
 				"title": "Inspect Syntax Tree (Developer)",
 				"category": "spec command",
 				"icon": "$(json)"
-			},
-			{
-				"command": "spec-command.execSelectionInTerminal",
-				"title": "Run Selction/Line in Active Terminal",
-				"category": "spec command",
-				"icon": "$(play)"
-			},
-			{
-				"command": "spec-command.execFileInTerminal",
-				"title": "Run File in Active Terminal",
-				"category": "spec command",
-				"icon": "$(run-all)"
 			}
 		],
 		"menus": {
@@ -104,51 +92,9 @@
 				{
 					"command": "spec-command.inspectSyntaxTree",
 					"when": "editorLangId == spec-command"
-				},
-				{
-					"command": "spec-command.execSelectionInTerminal",
-					"when": "shellExecutionSupported && editorLangId == 'spec-command'"
-				},
-				{
-					"command": "spec-command.execFileInTerminal",
-					"when": "shellExecutionSupported && editorLangId == 'spec-command'"
-				}
-			],
-			"explorer/context": [
-				{
-					"command": "spec-command.execFileInTerminal",
-					"when": "shellExecutionSupported && resourceLangId == 'spec-command'",
-					"group": "9_speccommand"
-				}
-			],
-			"editor/title": [
-				{
-					"command": "spec-command.execSelectionInTerminal",
-					"alt": "spec-command.execFileInTerminal",
-					"when": "shellExecutionSupported && editorLangId == 'spec-command'",
-					"group": "navigation"
-				}
-			],
-			"editor/context": [
-				{
-					"command": "spec-command.execSelectionInTerminal",
-					"when": "shellExecutionSupported && editorTextFocus && editorLangId == 'spec-command'",
-					"group": "9_speccommand"
-				},
-				{
-					"command": "spec-command.execFileInTerminal",
-					"when": "shellExecutionSupported && editorTextFocus && editorLangId == 'spec-command'",
-					"group": "9_speccommand"
 				}
 			]
 		},
-		"keybindings": [
-			{
-				"command": "spec-command.execSelectionInTerminal",
-				"key": "shift+enter",
-				"when": "shellExecutionSupported && editorTextFocus && editorLangId == 'spec-command'"
-			}
-		],
 		"configuration": {
 			"title": "spec command",
 			"properties": {
@@ -292,7 +238,7 @@
 					"type": "string",
 					"default": "",
 					"scope": "resource",
-					"markdownDescription": "Specifies a file path prefix used in [Run File in Active Terminal](command:spec-command.execFileInTerminal) command. This option is useful for case in which the working directory of __spec__ running in a terminal view is different from the workspace folder."
+					"markdownDescription": "Specifies a file path prefix used when a file is dropped on the editor. This option is useful for case in which the working directory of __spec__ running in a terminal view is different from the workspace folder."
 				}
 			}
 		}

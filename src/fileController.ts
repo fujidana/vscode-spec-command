@@ -100,63 +100,6 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
             }
         };
 
-        // command to run selection in terminal
-        const execSelectionInTerminalCommandCallback = () => {
-            const terminal = vscode.window.activeTerminal;
-            if (!terminal) {
-                vscode.window.showErrorMessage('Terminal is not opened.');
-                return;
-            }
-            vscode.commands.executeCommand('workbench.action.terminal.runSelectedText');
-        };
-
-        // command to run file in terminal
-        const execFileInTerminalCommandCallback = (...args: unknown[]) => {
-            // if (!vscode.workspace.isTrusted) {
-            //     vscode.window.showErrorMessage('The command is prohibited in untrusted workspaces.');
-            //     return;
-            // }
-
-            // find active terminal.
-            const terminal = vscode.window.activeTerminal;
-            if (!terminal) {
-                vscode.window.showErrorMessage('Active terminal is not found.');
-                return;
-            }
-
-            // find a file uri.
-            // If uri is given as an argument, use it. Else, use uri of the active editor.
-            let uri: vscode.Uri;
-            if (args && args.length > 0 && args[0] instanceof vscode.Uri) {
-                uri = args[0];
-            } else {
-                const editor = vscode.window.activeTextEditor;
-                if (!editor) {
-                    vscode.window.showErrorMessage('Active editor is not found.');
-                    return;
-                }
-                uri = editor.document.uri;
-            }
-
-            // adjust path. Append prefix in the configuration for relative path.
-            const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
-            let path: string;
-            if (workspaceFolder) {
-                const prefix = vscode.workspace.getConfiguration('spec-command.terminal', workspaceFolder).get<string>('filePathPrefix', '');
-                path = prefix + vscode.workspace.asRelativePath(uri, false);
-            } else {
-                path = uri.path;
-            }
-
-            // Sanitization of a string surrounded by double quoataions in a POSIX shell
-            // ('\' -> '\\', '"' -> '\"')
-            path = path.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-
-            // send a command to the active terminal.
-            terminal.show(true);
-            terminal.sendText(`qdofile("${path}")`);
-        };
-
         /**  Event handler invoked when the document is changed. */
         const textDocumentDidChangeListener = (event: vscode.TextDocumentChangeEvent) => {
             const document = event.document;
@@ -284,8 +227,6 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
             // Register command handlers.
             vscode.commands.registerCommand('spec-command.showWorkspaceSymbolsJson', showWorkspaceSymbolsJsonCommandHandler),
             vscode.commands.registerCommand('spec-command.inspectSyntaxTree', inspectSyntaxTreeCommandHandler),
-            vscode.commands.registerCommand('spec-command.execSelectionInTerminal', execSelectionInTerminalCommandCallback),
-            vscode.commands.registerCommand('spec-command.execFileInTerminal', execFileInTerminalCommandCallback),
 
             // Register document-event listeners.
             vscode.workspace.onDidChangeTextDocument(textDocumentDidChangeListener),
