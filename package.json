@@ -238,7 +238,8 @@
 					"type": "string",
 					"default": "",
 					"scope": "resource",
-					"markdownDescription": "Specifies a file path prefix used when a file is dropped on the editor. This option is useful for case in which the working directory of __spec__ running in a terminal view is different from the workspace folder."
+					"markdownDescription": "Specifies a file path prefix used when a file is dropped on the editor. This option is useful for case in which the working directory of __spec__ running in a terminal view is different from the workspace folder.",
+					"markdownDeprecationMessage": "**Deprecated**: Not effective now."
 				}
 			}
 		}

@@ -542,7 +542,7 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
                     const path = vscode.Uri.parse(uriString).path;
                     let path2: string;
                     if (workspaceFolder && ((path2 = vscode.workspace.asRelativePath(path, false)) !== path)) {
-                        path2 = vscode.workspace.getConfiguration('spec-command.terminal', workspaceFolder).get<string>('filePathPrefix', '') + path2;
+                        // path2 = vscode.workspace.getConfiguration('spec-command.terminal', workspaceFolder).get<string>('filePathPrefix', '') + path2;
                     } else {
                         path2 = path;
                     }
