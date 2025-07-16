@@ -133,31 +133,22 @@ function parseSignatureInEditing(line: string, position: number) {
 /**
  * Abstract class for a main controller.
  */
-export class Controller implements vscode.CompletionItemProvider<lang.CompletionItem>, vscode.HoverProvider, vscode.SignatureHelpProvider {
+export class Controller<T extends lang.UpdateSession> implements vscode.CompletionItemProvider<lang.CompletionItem>, vscode.HoverProvider, vscode.SignatureHelpProvider {
 
     // In JavaScript, equality comparison (`==` and `===`) of two different objects
     // is always `false`, regardless of the equality of their values.
     // Therefore, the string representation of the Uri object is used in the extension.
     // String is a primitive type and thus, the equality comparision is based on the value.
 
-    public readonly referenceCollection = new Map<string, lang.ReferenceBook>();
-    protected readonly completionItemCollection = new Map<string, lang.CompletionItem[]>();
+    public readonly updateSessionMap: Map<string, T> = new Map();
     protected specVersion: SemVer;
 
     constructor(context: vscode.ExtensionContext) {
         this.specVersion = new SemVer(vscode.workspace.getConfiguration('spec-command').get<string>('specVersion', '6.13.4'));
 
         const configurationDidChangeListener = (event: vscode.ConfigurationChangeEvent) => {
-            if (event.affectsConfiguration('spec-command.suggest.suppressMessages')) {
-                for (const uriString of this.referenceCollection.keys()) {
-                    this.updateCompletionItemsForUriString(uriString);
-                }
-            }
             if (event.affectsConfiguration('spec-command.specVersion')) {
                 this.specVersion = new SemVer(vscode.workspace.getConfiguration('spec-command').get<string>('specVersion', '6.13.4'));
-                for (const uriString of this.referenceCollection.keys()) {
-                    this.updateCompletionItemsForUriString(uriString);
-                }
             }
         };
 
@@ -171,17 +162,30 @@ export class Controller implements vscode.CompletionItemProvider<lang.Completion
     }
 
     /**
-     * Generate completion items from the registered database and cache it in the map using `uri` as the key.
-     * Subclass must invoke it when the database contents are changed.
+     * Required implementation of vscode.CompletionItemProvider.
      */
-    protected updateCompletionItemsForUriString(uriString: string): lang.CompletionItem[] | undefined {
-        const refBook = this.referenceCollection.get(uriString);
-        if (refBook) {
-            const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages', suppressMessagesConfig);
-            const suppressDetail = config['completionItem.label.detail'] ?? false;
-            const suppressDescription = config['completionItem.label.description'] ?? false;
-            let description: string | undefined;
+    public async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): Promise<vscode.CompletionList<lang.CompletionItem> | lang.CompletionItem[] | undefined> {
+        if (token.isCancellationRequested) { return; }
 
+        const range = document.getWordRangeAtPosition(position);
+        if (range === undefined) { return; }
+
+        const selectorName = document.getText(range);
+        if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(selectorName)) { return; }
+
+        const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages', suppressMessagesConfig);
+        const suppressDetail = config['completionItem.label.detail'] ?? false;
+        const suppressDescription = config['completionItem.label.description'] ?? false;
+        const completionItems: lang.CompletionItem[] = [];
+
+        for (const [uriString, session] of this.updateSessionMap) {
+            const refBook = (await session.promise)?.refBook;
+
+            // Quit if cancelled and skip if symbol is not found in a file.
+            if (token.isCancellationRequested) { return; }
+            if (refBook === undefined) { continue; }
+
+            let description: string | undefined;
             if (!suppressDescription) {
                 if (uriString === lang.BUILTIN_URI) {
                     description = 'built-in';
@@ -202,76 +206,53 @@ export class Controller implements vscode.CompletionItemProvider<lang.Completion
                 }
             }
 
-            const completionItems: lang.CompletionItem[] = [];
             for (const [identifier, refItem] of refBook.entries()) {
+                // Skip items if unavailable.
                 if (refItem.available && !satisfies(this.specVersion, refItem.available.range)) {
-                    // Skip items unavailable in the specified spec version.
                     continue;
                 }
+
+                // Create completion item.
                 const detail = (!suppressDetail && refItem.signature.startsWith(identifier)) ? refItem.signature.substring(identifier.length) : undefined;
                 const label: vscode.CompletionItemLabel = { label: identifier, detail: detail, description: description };
                 const completionItem = new lang.CompletionItem(label, uriString, refItem.category);
                 if (refItem.snippet) {
                     completionItem.insertText = new vscode.SnippetString(refItem.snippet);
                 }
+                // Add "Deprecated" tag if deprecated.
                 if (refItem.deprecated && satisfies(this.specVersion, refItem.deprecated.range)) {
-                    // Add "Deprecated" tag to the completion item.
                     completionItem.tags = [vscode.CompletionItemTag.Deprecated];
                 }
                 completionItems.push(completionItem);
             }
-            this.completionItemCollection.set(uriString, completionItems);
-            return completionItems;
-        } else {
-            this.completionItemCollection.delete(uriString);
-            return undefined;
         }
-    }
-
-    /**
-     * Required implementation of vscode.CompletionItemProvider.
-     */
-    public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionList<lang.CompletionItem> | lang.CompletionItem[]> {
-        if (token.isCancellationRequested) { return; }
-
-        const range = document.getWordRangeAtPosition(position);
-        if (range === undefined) { return; }
-
-        const selectorName = document.getText(range);
-        if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(selectorName)) { return; }
-
-        return new Array<lang.CompletionItem>().concat(...this.completionItemCollection.values());
+        return completionItems;
     }
 
     /**
      * Optional implementation of vscode.CompletionItemProvider.
      */
-    public resolveCompletionItem(completionItem: lang.CompletionItem, token: vscode.CancellationToken): vscode.ProviderResult<lang.CompletionItem> {
+    public async resolveCompletionItem(completionItem: lang.CompletionItem, token: vscode.CancellationToken): Promise<lang.CompletionItem | undefined> {
         if (token.isCancellationRequested) { return; }
 
-        const category = completionItem.category;
         const refUriString = completionItem.uriString;
-
-        const activeEditor = vscode.window.activeTextEditor;
-        const documentUriString = activeEditor ? activeEditor.document.uri.toString() : '';
-
+        
         const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages', suppressMessagesConfig);
         const truncationlevel = config['completionItem.documentation'] === true ? TruncationLevel.line : TruncationLevel.paragraph;
 
-        // find the symbol information about the symbol.
+        // Find the symbol information about the symbol.
         const label = typeof completionItem.label === 'string' ? completionItem.label : completionItem.label.label;
-        const refItem = this.referenceCollection.get(refUriString)?.get(label);
+        const refItem = (await this.updateSessionMap.get(refUriString)?.promise)?.refBook.get(label);
+
+        // Quit if cancelled or symbol is not found in the file.
+        if (token.isCancellationRequested) { return; }
         if (refItem === undefined) { return; }
 
-        // copy completion item.
-        const newCompletionItem = Object.assign({}, completionItem);
-
-        // set the description of the completion item
-        // if the main description exists, append it.
-
+        // Set the description of the completion item
+        // If the main description exists, append it.
         const documentation = new vscode.MarkdownString(truncateString(truncationlevel, refItem));
 
-        // if overloaded signature exists, append them.
+        // If overloaded signature exists, append them.
         if (refItem.overloads) {
             for (const overload of refItem.overloads) {
                 // documentation.appendMarkdown('---');
@@ -283,7 +264,11 @@ export class Controller implements vscode.CompletionItemProvider<lang.Completion
             }
         }
 
-        // set the detail of the completion item
+        // Copy completion item and update its properties.
+        const newCompletionItem = Object.assign({}, completionItem);
+        const category = completionItem.category;
+        const activeEditor = vscode.window.activeTextEditor;
+        const documentUriString = activeEditor ? activeEditor.document.uri.toString() : '';
         newCompletionItem.detail = getShortDescription(refItem, category, refUriString, documentUriString, false);
         newCompletionItem.documentation = documentation;
 
@@ -293,7 +278,7 @@ export class Controller implements vscode.CompletionItemProvider<lang.Completion
     /**
      * Required implementation of vscode.HoverProvider.
      */
-    public provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.ProviderResult<vscode.Hover> {
+    public async provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): Promise<vscode.Hover | undefined> {
         if (token.isCancellationRequested) { return; }
 
         const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages', suppressMessagesConfig);
@@ -305,32 +290,34 @@ export class Controller implements vscode.CompletionItemProvider<lang.Completion
         const selectorName = document.getText(range);
         if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(selectorName)) { return; }
 
-        // start to seek if the selection is a proper identifier.
+        // Start to seek if the selection is a proper identifier.
         const contents: vscode.MarkdownString[] = [];
 
-        for (const [uriString, refBook] of this.referenceCollection.entries()) {
-            // find the symbol information about the symbol.
-            const refItem = refBook.get(selectorName);
-            if (refItem) {
-                let mainMarkdown = new vscode.MarkdownString(getShortDescription(refItem, refItem.category, uriString, document.uri.toString(), true));
+        for (const [uriString, session] of this.updateSessionMap.entries()) {
+            const refItem = (await session.promise)?.refBook.get(selectorName);
 
-                // prepare the second line: the description (if it exists)
-                const truncatedString = truncateString(truncationLevel, refItem);
-                if (truncatedString) {
-                    mainMarkdown = mainMarkdown.appendMarkdown(truncatedString);
-                }
-                contents.push(mainMarkdown);
+            // Quit if cancelled and skip if symbol is not found in a file.
+            if (token.isCancellationRequested) { return; }
+            if (refItem === undefined) { continue; }
 
-                // for overloaded functions, prepare additional markdown blocks
-                if (refItem.overloads) {
-                    for (const overload of refItem.overloads) {
-                        let overloadMarkdown = new vscode.MarkdownString().appendCodeblock(overload.signature);
-                        const truncatedString2 = truncateString(truncationLevel, overload);
-                        if (truncatedString2) {
-                            overloadMarkdown = overloadMarkdown.appendMarkdown(truncatedString2);
-                        }
-                        contents.push(overloadMarkdown);
+            // Create markdown text if symbol is found.
+            let mainMarkdown = new vscode.MarkdownString(getShortDescription(refItem, refItem.category, uriString, document.uri.toString(), true));
+
+            const truncatedString = truncateString(truncationLevel, refItem);
+            if (truncatedString) {
+                mainMarkdown = mainMarkdown.appendMarkdown(truncatedString);
+            }
+            contents.push(mainMarkdown);
+
+            // For overloaded functions, prepare additional markdown blocks.
+            if (refItem.overloads) {
+                for (const overload of refItem.overloads) {
+                    let overloadMarkdown = new vscode.MarkdownString().appendCodeblock(overload.signature);
+                    const truncatedString2 = truncateString(truncationLevel, overload);
+                    if (truncatedString2) {
+                        overloadMarkdown = overloadMarkdown.appendMarkdown(truncatedString2);
                     }
+                    contents.push(overloadMarkdown);
                 }
             }
         }
@@ -340,7 +327,7 @@ export class Controller implements vscode.CompletionItemProvider<lang.Completion
     /**
      * Required implementation of vscode.SignatureHelpProvider.
      */
-    public provideSignatureHelp(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.SignatureHelpContext): vscode.ProviderResult<vscode.SignatureHelp> {
+    public async provideSignatureHelp(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.SignatureHelpContext): Promise<vscode.SignatureHelp | undefined> {
         if (token.isCancellationRequested) { return; }
 
         const signatureHint = parseSignatureInEditing(document.lineAt(position.line).text, position.character);
@@ -349,39 +336,42 @@ export class Controller implements vscode.CompletionItemProvider<lang.Completion
         const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages', suppressMessagesConfig);
         const truncationLevel = config['signatureHelp.signatures.documentation'] === true ? TruncationLevel.paragraph : TruncationLevel.full;
 
-        for (const refBook of this.referenceCollection.values()) {
-            let refItem: lang.ReferenceItem | undefined;
-            if ((refItem = refBook.get(signatureHint.signature)) !== undefined && refItem.category === 'function') {
-                const signatureHelp = new vscode.SignatureHelp();
-                const overloads = refItem.overloads ?? [{ signature: refItem.signature, description: refItem.description }];
+        for (const session of this.updateSessionMap.values()) {
+            const refItem = (await session.promise)?.refBook.get(signatureHint.signature);
 
-                for (const overload of overloads) {
-                    // assume that usage.signature must exist.
-                    const signatureInformation = new vscode.SignatureInformation(overload.signature);
-                    const truncatedString = truncateString(truncationLevel, overload);
-                    if (truncatedString) {
-                        signatureInformation.documentation = new vscode.MarkdownString(truncatedString);
-                    }
-                    const parameters = getParameterInformation(overload.signature);
-                    if (parameters !== undefined) {
-                        signatureInformation.parameters = parameters;
-                    }
-                    signatureHelp.signatures.push(signatureInformation);
+            // Quit if cancelled and skip if symbol is not found in a file or symbol is not the one for function.
+            if (token.isCancellationRequested) { return; }
+            if (refItem === undefined || refItem.category !== 'function') { continue; }
+
+            const signatureHelp = new vscode.SignatureHelp();
+            const overloads = refItem.overloads ?? [{ signature: refItem.signature, description: refItem.description }];
+
+            for (const overload of overloads) {
+                // Assume that usage.signature must exist.
+                const signatureInformation = new vscode.SignatureInformation(overload.signature);
+                const truncatedString = truncateString(truncationLevel, overload);
+                if (truncatedString) {
+                    signatureInformation.documentation = new vscode.MarkdownString(truncatedString);
                 }
-
-                signatureHelp.activeParameter = signatureHint.argumentIndex;
-
-                if ((context.activeSignatureHelp !== undefined) && (context.activeSignatureHelp.signatures[0].label === signatureHelp.signatures[0].label)) {
-                    signatureHelp.activeSignature = context.activeSignatureHelp.activeSignature;
-                } else {
-                    signatureHelp.activeSignature = 0;
+                const parameters = getParameterInformation(overload.signature);
+                if (parameters !== undefined) {
+                    signatureInformation.parameters = parameters;
                 }
-
-                if (signatureHelp.activeSignature >= signatureHelp.signatures.length) {
-                    signatureHelp.activeSignature = signatureHelp.signatures.length;
-                }
-                return signatureHelp;
+                signatureHelp.signatures.push(signatureInformation);
             }
+
+            signatureHelp.activeParameter = signatureHint.argumentIndex;
+
+            if ((context.activeSignatureHelp !== undefined) && (context.activeSignatureHelp.signatures[0].label === signatureHelp.signatures[0].label)) {
+                signatureHelp.activeSignature = context.activeSignatureHelp.activeSignature;
+            } else {
+                signatureHelp.activeSignature = 0;
+            }
+
+            if (signatureHelp.activeSignature >= signatureHelp.signatures.length) {
+                signatureHelp.activeSignature = signatureHelp.signatures.length;
+            }
+            return signatureHelp;
         }
     }
 }

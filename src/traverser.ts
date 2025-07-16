@@ -286,7 +286,7 @@ export function traversePartially(program: tree.Program, position: vscode.Positi
     return refBook;
 }
 
-export function traverseForFurtherDiagnostics(program: tree.Program, referenceCollection: Map<string, lang.ReferenceBook>): vscode.Diagnostic[] {
+export function traverseForFurtherDiagnostics(program: tree.Program, referenceBooks: Iterable<lang.ReferenceBook>) {
     const diagnostics: vscode.Diagnostic[] = [];
     const blockStack: tree.BlockStatement[] = [];
     // type RefBookKey = 'variable' | 'array' | 'constant';
@@ -340,7 +340,7 @@ export function traverseForFurtherDiagnostics(program: tree.Program, referenceCo
                     return;
                 }
                 let flag = false;
-                for (const refBook2 of refBookStack.concat([...referenceCollection.values()])) {
+                for (const refBook2 of refBookStack.concat(...referenceBooks)) {
                     if (refBook2.has(node.name)) {
                         flag = true;
                         break;

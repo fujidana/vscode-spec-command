@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import type { LocationRange, Location } from './parser';
+import type * as tree from './tree';
 
 export const SELECTOR = { language: 'spec-command' };
 // export const SELECTOR = [{ scheme: 'file', language: 'spec-command' }, { scheme: 'untitled', language: 'spec-command' }];
@@ -18,6 +19,13 @@ export function convertPosition(position: Location): vscode.Position {
 export function convertRange(range: LocationRange): vscode.Range {
     return new vscode.Range(convertPosition(range.start), convertPosition(range.end));
 }
+
+export type ParsedData = { refBook: ReferenceBook };
+export type ParsedFileData = { refBook: ReferenceBook, tree?: tree.Program, symbols?: vscode.DocumentSymbol[], diagnostics?: vscode.Diagnostic[] };
+
+export type UpdateSession<T extends ParsedData = ParsedData> = { promise: Promise<T | undefined> };
+export type FileUpdateSession = { promise: Promise<ParsedFileData | undefined>, tokenSource?: vscode.CancellationTokenSource | undefined, tokenSource1?: vscode.CancellationTokenSource | undefined };
+
 
 /**
  * Map object consisting of pairs of a unique identifier and a reference item.
@@ -156,10 +164,10 @@ export function categorizeRefBook(refBook: ReferenceBook, categories: readonly R
         if (categories.includes(refItem.category)) {
             const refBookCategory = refBookLike[refItem.category];
             if (refBookCategory) {
-                // simply point (not copy) without deleting "category" property.
+                // // Simply point (not copy) without deleting "category" property.
                 // refBookCategory[identifier] = refItem;
                 // Copy a new object with "category" property removed. 
-                refBookCategory[identifier] = (({category, ...rest}) => rest)(refItem);
+                refBookCategory[identifier] = (({ category, ...rest }) => rest)(refItem);
             }
         }
     }
@@ -176,9 +184,12 @@ export function flattenRefBook(refBookLike: ReferenceBookLike, categories: reado
     const refBook: ReferenceBook = new Map();
     for (const [category, refSheetLike] of Object.entries(refBookLike)) {
         if (categories.includes(category as keyof typeof refBookLike)) {
-            for (const [key, refItemLike] of Object.entries(refSheetLike)) {
+            for (const [identifier, refItemLike] of Object.entries(refSheetLike)) {
+                // if (refBook.has(identifier)) {
+                //     console.log(`Identifiers are duplicated!: ${identifier}`);
+                // }
                 const refItem: ReferenceItem = Object.assign(refItemLike, { category: category as keyof typeof refBookLike });
-                refBook.set(key, refItem);
+                refBook.set(identifier, refItem);
             }
         }
     }
