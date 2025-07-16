@@ -24,27 +24,26 @@ const SNIPPET_TEMPLATES: Record<string, string> = {
 /**
  * A controller subclass that manages built-in symbols and motor mnemonics.
  */
-export class BuiltInController extends Controller implements vscode.TextDocumentContentProvider {
+export class BuiltInController extends Controller<lang.UpdateSession> implements vscode.TextDocumentContentProvider {
     private activeWorkspaceFolder: vscode.WorkspaceFolder | undefined;
-    public readonly promisedBuiltInRefBook: PromiseLike<lang.ReferenceBook | undefined>;
-    public promisedExternalRefBook: PromiseLike<lang.ReferenceBook | undefined>;
 
     constructor(context: vscode.ExtensionContext) {
         super(context);
 
         // Load built-in symbol database from the JSON file.
         const builtInRefFileUri = vscode.Uri.joinPath(context.extensionUri, 'syntaxes', 'specCommand.builtIns.json');
-        this.promisedBuiltInRefBook = this.loadReferenceBook(builtInRefFileUri, lang.BUILTIN_URI);
+        const promise = loadReferenceBook(builtInRefFileUri);
+        this.updateSessionMap.set(lang.BUILTIN_URI, { promise });
 
         // Load external symbol database from the JSON file.
         const externalRefFileUri = getExternalRefBookUri();
         if (externalRefFileUri) {
-            this.promisedExternalRefBook = this.loadReferenceBook(externalRefFileUri, lang.EXTERNAL_URI).then(
+            const promise = loadReferenceBook(externalRefFileUri).then(
                 undefined, _reason => {
                     vscode.window.showErrorMessage(`Failed to load external symbols: ${externalRefFileUri.toString()}`, 'OK', 'Open Settings').then(
                         item => {
                             // Do not return a value so that the return value (promise-like object) of the function
-                            // does not include waiting for an action against the dialog.
+                            // does not wait for an action against the dialog.
                             if (item === 'Open Settings') {
                                 vscode.commands.executeCommand('workbench.action.openSettings', 'spec-command.suggest.symbolFile');
                             }
@@ -53,8 +52,7 @@ export class BuiltInController extends Controller implements vscode.TextDocument
                     return undefined;
                 }
             );
-        } else {
-            this.promisedExternalRefBook = Promise.resolve(undefined);
+            this.updateSessionMap.set(lang.EXTERNAL_URI, { promise });
         }
 
         // Initialize reference database for motors, counters and snippets.
@@ -91,23 +89,25 @@ export class BuiltInController extends Controller implements vscode.TextDocument
             if (event.affectsConfiguration('spec-command.suggest.symbolFile')) {
                 const externalRefUri = getExternalRefBookUri();
                 if (externalRefUri) {
-                    this.promisedExternalRefBook = this.loadReferenceBook(externalRefUri, lang.EXTERNAL_URI).then(
+                    const promise = loadReferenceBook(externalRefUri).then(
                         undefined, _reason => {
                             vscode.window.showErrorMessage(`Failed to load external symbols: ${externalRefUri.toString()}`);
                             return undefined;
                         }
                     );
+                    this.updateSessionMap.set(lang.EXTERNAL_URI, { promise });
+                } else {
+                    this.updateSessionMap.delete(lang.EXTERNAL_URI);
                 }
-            } else {
-                this.promisedExternalRefBook = Promise.resolve(undefined);
             }
         };
 
-        /** Command handler fow showing built-in symbols as a virtual document. */
+        /** 
+         * Command handler fow showing built-in symbols as a virtual document.
+         * This function just asks the applicaiton to open a URI and `provideTextDocumentContent`
+         * method actually generates the content.
+        */
         const showBuiltInSymbolsCommandHandler = async () => {
-            const refBook = await this.promisedBuiltInRefBook;
-            if (refBook === undefined) { return; }
-
             const categories = ['constant', 'variable', 'macro', 'function', 'keyword'] as const;
             const quickPickItems = [{ category: 'all', label: '$(references) all' }];
             for (const category of categories) {
@@ -139,18 +139,6 @@ export class BuiltInController extends Controller implements vscode.TextDocument
         );
     }
 
-    private async loadReferenceBook(fileUri: vscode.Uri, keyUriString: string) {
-        const uint8Array = await vscode.workspace.fs.readFile(fileUri);
-        const decodedString = await vscode.workspace.decode(uint8Array, { encoding: 'utf8' });
-        const refBookLike: lang.ReferenceBookLike = JSON.parse(decodedString);
-
-        const refBook = lang.flattenRefBook(refBookLike);
-        // Register it in the database.
-        this.referenceCollection.set(keyUriString, refBook);
-        this.updateCompletionItemsForUriString(keyUriString);
-        return refBook;
-    }
-
     /**
      * Update the reference database for motor or counter mnemonic.
      * Invoked when initialization completed or configuration modified. 
@@ -162,28 +150,27 @@ export class BuiltInController extends Controller implements vscode.TextDocument
         const record = vscode.workspace.getConfiguration('spec-command.suggest', this.activeWorkspaceFolder).get<Record<string, string>>(kind);
         if (record) {
             const regExp = /^[a-zA-Z_][a-zA-Z0-9_]{0,6}$/;
-            for (const [key, value] of Object.entries(record)) {
-                if (regExp.test(key)) {
-                    refBook.set(key, { signature: key, description: value, category: 'enum' });
+            for (const [signature, description] of Object.entries(record)) {
+                if (regExp.test(signature)) {
+                    refBook.set(signature, { signature, description, category: 'enum' });
                 }
             }
         }
-        this.referenceCollection.set(uriString, refBook);
-        this.updateCompletionItemsForUriString(uriString);
+        this.updateSessionMap.set(uriString, { promise: Promise.resolve({ refBook }) });
     }
 
     /**
      * Update the reference database for snippets.
      * Invoked when initialization completed or configuration modified. 
      */
-    private updateSnippetRefBook() {
+    private async updateSnippetRefBook() {
         const refBook: lang.ReferenceBook = new Map();
 
         const userTemplates = vscode.workspace.getConfiguration('spec-command.suggest', this.activeWorkspaceFolder).get<Record<string, string>>('codeSnippets', {});
         const templates = Object.assign({}, SNIPPET_TEMPLATES, userTemplates);
 
-        const motorRefBook = this.referenceCollection.get(lang.MOTOR_URI);
-        const counterRefBook = this.referenceCollection.get(lang.COUNTER_URI);
+        const motorRefBook = (await this.updateSessionMap.get(lang.MOTOR_URI)?.promise)?.refBook;
+        const counterRefBook = (await this.updateSessionMap.get(lang.COUNTER_URI)?.promise)?.refBook;
         const motorChoiceString = (motorRefBook && motorRefBook.size > 0) ?
             '|' + [...motorRefBook.keys()].join(',') + '|' :
             ':motor$1';
@@ -207,14 +194,13 @@ export class BuiltInController extends Controller implements vscode.TextDocument
                 refBook.set(key, { signature, description, snippet, category: 'snippet' });
             }
         }
-        this.referenceCollection.set(lang.SNIPPET_URI, refBook);
-        this.updateCompletionItemsForUriString(lang.SNIPPET_URI);
+        this.updateSessionMap.set(lang.SNIPPET_URI, { promise: Promise.resolve({ refBook }) });
     }
 
     /**
      * Required implementation of vscode.TextDocumentContentProvider.
      */
-    public provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken): vscode.ProviderResult<string> {
+    public async provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken): Promise<string | undefined> {
         if (token.isCancellationRequested) { return; }
 
         const getFormattedStringForItem = (item: { signature: string, description?: string, deprecated?: lang.VersionRange, available?: lang.VersionRange }) => {
@@ -230,10 +216,11 @@ export class BuiltInController extends Controller implements vscode.TextDocument
         };
 
         if (lang.BUILTIN_URI === uri.with({ query: '' }).toString()) {
-            const refBook = this.referenceCollection.get(lang.BUILTIN_URI);
-            if (!refBook) {
-                return undefined;
-            };
+            const refBook = (await this.updateSessionMap.get(lang.BUILTIN_URI)?.promise)?.refBook;
+
+            // Quit if cancelled or symbol is not found in the file.
+            if (token.isCancellationRequested) { return; }
+            if (refBook === undefined) { return; }
 
             // Categorize reference items from a flattend map.
             const categories = ['constant', 'variable', 'macro', 'function', 'keyword'] as const;
@@ -268,9 +255,9 @@ export class BuiltInController extends Controller implements vscode.TextDocument
 }
 
 /**
- * Get an URI object of the external symbol file whose path is specified in the settings.
+ * Get an URI object of the external symbol file whose path is defined in the settings.
  */
-function getExternalRefBookUri() {
+function getExternalRefBookUri(): vscode.Uri | undefined {
     const path = vscode.workspace.getConfiguration('spec-command.suggest').get<string>('symbolFile', '');
     if (path === "") {
         return undefined;
@@ -294,4 +281,11 @@ function getExternalRefBookUri() {
     } else {
         return vscode.Uri.file(path);
     }
+}
+
+async function loadReferenceBook(fileUri: vscode.Uri): Promise<lang.ParsedData> {
+    const uint8Array = await vscode.workspace.fs.readFile(fileUri);
+    const decodedString = await vscode.workspace.decode(uint8Array, { encoding: 'utf8' });
+    const refBookLike: lang.ReferenceBookLike = JSON.parse(decodedString);
+    return { refBook: lang.flattenRefBook(refBookLike) };
 }
