@@ -25,7 +25,6 @@ const SNIPPET_TEMPLATES: Record<string, string> = {
  * A controller subclass that manages built-in symbols and motor mnemonics.
  */
 export class BuiltInController extends Controller<lang.UpdateSession> implements vscode.TextDocumentContentProvider {
-    private activeWorkspaceFolder: vscode.WorkspaceFolder | undefined;
 
     constructor(context: vscode.ExtensionContext) {
         super(context);
@@ -57,33 +56,21 @@ export class BuiltInController extends Controller<lang.UpdateSession> implements
 
         // Initialize reference database for motors, counters and snippets.
         const editor = vscode.window.activeTextEditor;
-        this.activeWorkspaceFolder = editor ? vscode.workspace.getWorkspaceFolder(editor.document.uri) : undefined;
         this.updateMnemonicRefBook('motors');
         this.updateMnemonicRefBook('counters');
         this.updateSnippetRefBook();
 
-        /** Event listener for active text editor changes. */
-        const activeTextEditorDidChangeListener = (event: vscode.TextEditor | undefined) => {
-            const newActiveWorkspaceFolder = event ? vscode.workspace.getWorkspaceFolder(event.document.uri) : undefined;
-            if (this.activeWorkspaceFolder !== newActiveWorkspaceFolder) {
-                this.activeWorkspaceFolder = newActiveWorkspaceFolder;
-                this.updateMnemonicRefBook('motors');
-                this.updateMnemonicRefBook('counters');
-                this.updateSnippetRefBook();
-            }
-        };
-
         /** Event listener for configuration changes. */
         const configurationDidChangeListener = (event: vscode.ConfigurationChangeEvent) => {
-            if (event.affectsConfiguration('spec-command.suggest.motors', this.activeWorkspaceFolder)) {
+            if (event.affectsConfiguration('spec-command.suggest.motors')) {
                 this.updateMnemonicRefBook('motors');
                 this.updateSnippetRefBook();
             }
-            if (event.affectsConfiguration('spec-command.suggest.counters', this.activeWorkspaceFolder)) {
+            if (event.affectsConfiguration('spec-command.suggest.counters')) {
                 this.updateMnemonicRefBook('counters');
                 this.updateSnippetRefBook();
             }
-            if (event.affectsConfiguration('spec-command.suggest.codeSnippets', this.activeWorkspaceFolder)) {
+            if (event.affectsConfiguration('spec-command.suggest.codeSnippets')) {
                 this.updateSnippetRefBook();
             }
             if (event.affectsConfiguration('spec-command.suggest.symbolFile')) {
@@ -134,7 +121,6 @@ export class BuiltInController extends Controller<lang.UpdateSession> implements
             // Register providers.
             vscode.workspace.registerTextDocumentContentProvider('spec-command', this),
             // register event handlers
-            vscode.window.onDidChangeActiveTextEditor(activeTextEditorDidChangeListener),
             vscode.workspace.onDidChangeConfiguration(configurationDidChangeListener),
         );
     }
@@ -147,7 +133,7 @@ export class BuiltInController extends Controller<lang.UpdateSession> implements
         const uriString = kind === 'motors' ? lang.MOTOR_URI : lang.COUNTER_URI;
         const refBook: lang.ReferenceBook = new Map();
 
-        const record = vscode.workspace.getConfiguration('spec-command.suggest', this.activeWorkspaceFolder).get<Record<string, string>>(kind);
+        const record = vscode.workspace.getConfiguration('spec-command.suggest').get<Record<string, string>>(kind);
         if (record) {
             const regExp = /^[a-zA-Z_][a-zA-Z0-9_]{0,6}$/;
             for (const [signature, description] of Object.entries(record)) {
@@ -166,7 +152,7 @@ export class BuiltInController extends Controller<lang.UpdateSession> implements
     private async updateSnippetRefBook() {
         const refBook: lang.ReferenceBook = new Map();
 
-        const userTemplates = vscode.workspace.getConfiguration('spec-command.suggest', this.activeWorkspaceFolder).get<Record<string, string>>('codeSnippets', {});
+        const userTemplates = vscode.workspace.getConfiguration('spec-command.suggest').get<Record<string, string>>('codeSnippets', {});
         const templates = Object.assign({}, SNIPPET_TEMPLATES, userTemplates);
 
         const motorRefBook = (await this.updateSessionMap.get(lang.MOTOR_URI)?.promise)?.refBook;

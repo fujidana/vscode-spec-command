@@ -270,7 +270,7 @@
 				},
 				"spec-command.suggest.codeSnippets": {
 					"type": "object",
-					"scope": "resource",
+					"scope": "window",
 					"markdownDescription": "Lists key-value pairs of code snippets for IntelliSense code suggestion. The key is a snippet name on which IntelliSense substring matching is performed and the value is a snippet template to be inserted into the editor. The template may contain special placeholders for motors (`%MOT`) and counters (`%CNT`), in addition to built-in tabstops, placeholders, choise and variables described in [Snippets in Visual Studio Code](https://code.visualstudio.com/docs/editor/userdefinedsnippets#_snippet-syntax). Descriptive text can follow after a hash sign (`#`). Example: \n\n```json\n{ \"mv2\": \"mv ${1%MOT1} ${2:pos1} ${3%MOT2} ${4:pos2} # 2-motor move\" }\n```",
 					"default": {},
 					"patternProperties": {
@@ -282,7 +282,7 @@
 				},
 				"spec-command.suggest.motors": {
 					"type": "object",
-					"scope": "resource",
+					"scope": "window",
 					"markdownDescription": "Lists key-value (mnemonic-explanatory text) pairs of motors for IntelliSense code suggestion.",
 					"default": {},
 					"patternProperties": {
@@ -294,7 +294,7 @@
 				},
 				"spec-command.suggest.counters": {
 					"type": "object",
-					"scope": "resource",
+					"scope": "window",
 					"markdownDescription": "Lists key-value (mnemonic-explanatory text) pairs of counters for IntelliSense code suggestion.",
 					"default": {
 						"sec": "count time in second"
