@@ -112,3 +112,11 @@ Read [Visual Studio Code User and Workspace Settings](https://code.visualstudio.
 * Statement continuation by putting a backslash at the end of the line is not fully supported in syntax highlighting.
 
 Also read [GitHub issues](https://github.com/fujidana/vscode-spec-cmmand/issues).
+
+## Release Notes
+
+See [CHANGELOG.md](CHANGELOG.md).
+
+## Contributing
+
+The extension is open to contributions. Create an issue in [GitHub Issues](https://github.com/fujidana/vscode-spec-command/issues) for a bug report or a feature request. If you want to contribute code, please read [CONTRIBUTING.md](CONTRIBUTING.md).
