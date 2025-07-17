@@ -4,19 +4,28 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+## [2.0.0] -- 2025-07-17
+
 ### Added
 
-- Add Diagnostics for the following problems. Currently the features are experimental and by default disabled. They can be enabled at `spec-command.problems.rules` setting.
-  - Report if a undecleared symbol (typically, a variable, function, or macro) is used. issues [#5](https://github.com/fujidana/vscode-spec-command/issues/5), [#29](https://github.com/fujidana/vscode-spec-command/issues/29).
-  - Report if a local variable is declared outside a block (`{...}`). issue [#26](https://github.com/fujidana/vscode-spec-command/issues/26).
-- Make IntelliSense features control the availability of symbols based on the target of __spec__ version specified at `spec-command.specVersion` setting (e.g., unsupported APIs at the version are hidden in the auto-completion list). issue [#23](https://github.com/fujidana/vscode-spec-command/issues/23).
-- Enable to load external library file in which symbols are defined by specifying the path at `spec-command.suggest.symbolFile` setting. issue [#31](https://github.com/fujidana/vscode-spec-command/issues/31).
-- Add `spec-command.showWorkspaceSymbolsJson` command action, with which symbols in a workspace are exported in a JSON format. This file is loadable via the setting above. issue [#31](https://github.com/fujidana/vscode-spec-command/issues/31).
-- Add `spec-command.workspace.exclude` setting, with which specified files can be exluded from IntelliSense features. issue [#33](https://github.com/fujidana/vscode-spec-command/issues/33).
+- Add diagnostics for the following problems. Currently the features are experimental and by default disabled. They can be enabled at [spec-command.problems.rules](vscode://settings/spec-command.problems.rules) setting.
+  - Report if a undecleared symbol (e.g., a variable, function, or macro) is used. Issues [#5](https://github.com/fujidana/vscode-spec-command/issues/5), [#29](https://github.com/fujidana/vscode-spec-command/issues/29).
+  - Report if a local variable is declared outside a block (`{...}`). Issue [#26](https://github.com/fujidana/vscode-spec-command/issues/26).
+- Make IntelliSense features refer to the availability of symbols based on the target of __spec__ version specified at [spec-command.specVersion](vscode://settings/spec-command.specVersion) setting (e.g., unsupported APIs at the version are hidden in the auto-completion list). Issue [#23](https://github.com/fujidana/vscode-spec-command/issues/23).
+- Enable to load an external library file in which symbols are defined by specifying the path at [spec-command.suggest.symbolFile](vscode://settings/spec-command.suggest.symbolFile) setting. Issue [#31](https://github.com/fujidana/vscode-spec-command/issues/31).
+- Add `spec-command.showWorkspaceSymbolsJson` command action, with which symbols in a workspace are exported in a JSON format. This file is loadable via the setting above. Issue [#31](https://github.com/fujidana/vscode-spec-command/issues/31).
+- Add [spec-command.workspace.exclude](vscode://settings/spec-command.workspace.exclude) setting, with which specified files are exluded from IntelliSense features. Issue [#33](https://github.com/fujidana/vscode-spec-command/issues/33).
 
 ### Changed
 
+- Make internal functions and methods for parsing documents and providing IntelliSense functionalities asynchronous. This change enhances the performance in many situations. Issue [#37](https://github.com/fujidana/vscode-spec-command/issues/37).
 - Change the behavior of the parser slightly due to revamp of the parser code.
+- Clean up code of features the author think rarely used:
+  - Remove several settings that was deprecated at previous versions.
+  - Change the name and scope of several actions and settings.
+    - "Open Reference Manual" -> "Show Built-in Symbols"
+  - Remove `spec-command.execSelectionInTerminal` and `spec-command.execFileInTerminal` commands.
+  - Deprecate [spec-command.terminal.filePathPrefix](vscode://settings/spec-command.terminal.filePathPrefix) setting.
 - Migrate the bundler from `webpack` to `esbuild`.
 - Raise the minimum VS Code version to 1.100.0.
 
@@ -24,13 +33,13 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Fixed
 
-- Fix a problem where syntax parser stops working when source code includes unclosed quotation (#19).
+- Fix a problem where syntax parser stops working when source code includes unclosed quotation. Issue [#19](https://github.com/fujidana/vscode-spec-command/issues/19).
 
 ### Changed
 
 - Eliminate the devDependency on `ts-pegjs` and bump the version of `peggy` from 3 to 5.
 - Raise the minimum VS Code version to 1.100.0.
-  - Replace `TextDecoder().decode()` with `vscode.workspace.decode()` (new API in v1.100), which may improve support of minor text encodings (#6).
+  - Replace `TextDecoder().decode()` with `vscode.workspace.decode()` (new API in v1.100), which may improve support of minor text encodings. Issue [#6](https://github.com/fujidana/vscode-spec-command/issues/6).
 
 ## [1.8.8] -- 2025-02-17
 
@@ -66,8 +75,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 - Update syntax parser and syntax highlighting rules.
   - Support the `[...]` pattern used in several built-in commands such as `lsdef`. This syntax was added in __spec__ release 6.07.
-  - Support optional parameters of built-in `syms` command such as `-v`. #11
-- Change the category of built-in imutable symbols from variable to constant. Previously `PI` was the only built-in constant and all the other built-in symbols were variables.
+  - Support optional parameters of built-in `syms` command such as `-v`. Issue [#11](https://github.com/fujidana/vscode-spec-command/issues/11).
+- Change the category of built-in immutable symbols from variable to constant. Previously `PI` was the only built-in constant and all the other built-in symbols were variables.
 
 ## [1.8.5] -- 2023-08-20
 
@@ -101,17 +110,17 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 ### Fixed
 
 - Overhaul syntax parser.
-  - Fix the handling of quotation mark in a comment line. See [Issue #9](https://github.com/fujidana/vscode-spec-command/issues/9#issue-1385913414)
+  - Fix the handling of quotation mark in a comment line. Issue [#9](https://github.com/fujidana/vscode-spec-command/issues/9).
 
 ## [1.8.1] -- 2022-08-30
 
 ### Added
 
-- `--` in a comment-line breadcrumb item is treated as a separator between the main and subsiriary text. Check how a line `# MARK: main text -- explanatory text` is displayed in the breadcrumb bar.
+- `--` in a comment-line breadcrumb item is treated as a separator between the main and subsidiary text. Check how a line `# MARK: main text -- explanatory text` is displayed in the breadcrumb bar.
 
 ### Fixed
 
-- a bug where icons of fucntions and macros in breadcrumb navigation were mistakenly the same. The bug was introduced in 1.8.0.
+- a bug where icons of functions and macros in breadcrumb navigation were mistakenly the same. The bug was introduced in 1.8.0.
 - failure in parsing a file in a workspace folder but not opened by editors when KOI8-U (Cyrillic) is the preferred text encoding.
 
 ## [1.8.0] -- 2022-08-16
@@ -149,13 +158,13 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 ### Changed
 
 - Make the following settings configurable in Folder Settings window in a multi-root workspace:
-  - `spec-command.suggest.codeSnippets`
-  - `spec-command.suggest.motors`
-  - `spec-command.suggest.counters`
+  - [spec-command.suggest.codeSnippets](vscode://settings/spec-command.suggest.codeSnippets)
+  - [spec-command.suggest.motors](vscode://settings/spec-command.suggest.motors)
+  - [spec-command.suggest.counters](vscode://settings/spec-command.suggest.counters)
 
 ### Fixed
 
-- `files.encoding` value in Folder Settings not being reffered to in a multi-root workspace
+- [files.encoding](vscode://settings/files.encoding) value in Folder Settings not being referred to in a multi-root workspace
 
 ## [1.7.1] -- 2021-09-14
 
@@ -174,31 +183,31 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Added
 
-- Show more information (function arguments and file paths) in a list of auto completion items. This can be disabled by the `spec-command.suggest.suppressMessages` configuration property in the Settings editor.
+- Show more information (function arguments and file paths) in a list of auto completion items. This can be disabled by the [spec-command.suggest.suppressMessages](vscode://settings/spec-command.suggest.suppressMessages) setting in the Settings editor.
 
 ### Changed
 
-- Refer to `files.encoding` configuraition property for the file encoding used in workspace file scan. Previously it was fixed to `"utf-8"`.
+- Refer to [files.encoding](vscode://settings/files.encoding) configuraition property for the file encoding used in workspace file scan. Previously it was fixed to `"utf-8"`.
 - Redesign the configuration properties, leveraging recent updates on the Settings editor of VS Code.
   - Deprecate the following properties and instead refer to the built-in VS Code properties to filter files in current workspaces:
-    - ~~`spec-command.workspace.inclusiveFilePattern`~~ -> `files.associations`
-    - ~~`spec-command.workspace.exclusiveFilePattern`~~ -> `files.exclude`
-  - Bundle the following three properties that controls the hint volume into a single property, `spec-command.suggest.suppressMessages`:
-    - ~~`spec-command.editor.hintVolume.completionItem`~~
-    - ~~`spec-command.editor.hintVolume.signatureHelp`~~
-    - ~~`spec-command.editor.hintVolume.hover`~~
+    - ~~spec-command.workspace.inclusiveFilePattern~~ -> [files.associations](vscode://settings/files.associations)
+    - ~~spec-command.workspace.exclusiveFilePattern~~ -> [files.exclude](vscode://settings/files.exclude)
+  - Bundle the following three properties that controls the hint volume into a single property, [spec-command.suggest.suppressMessages](vscode://settings/spec-command.suggest.suppressMessages):
+    - ~~spec-command.editor.hintVolume.completionItem~~
+    - ~~spec-command.editor.hintVolume.signatureHelp~~
+    - ~~spec-command.editor.hintVolume.hover~~
   - Rename the following three properties and use key-value pairs instead of strings:
-    - ~~`spec-command.editor.codeSnippets`~~ -> `spec-command.suggest.codeSnippets`
-    - ~~`spec-command.mnemonic.motors`~~ -> `spec-command.suggest.motors`
-    - ~~`spec-command.mnemonic.counters`~~ -> `spec-command.suggest.counters`
+    - ~~spec-command.editor.codeSnippets~~ -> [spec-command.suggest.codeSnippets](vscode://settings/spec-command.suggest.codeSnippets)
+    - ~~spec-command.mnemonic.motors~~ -> [spec-command.suggest.motors](vscode://settings/spec-command.suggest.motors)
+    - ~~spec-command.mnemonic.counters~~ -> [spec-command.suggest.counters](vscode://settings/spec-command.suggest.counters)
   - Rename the following property:
-    - ~~`spec-command.command.filePathPrefixInTerminal`~~ -> `spec-command.terminal.filePathPrefix`
+    - ~~spec-command.command.filePathPrefixInTerminal~~ -> [spec-command.terminal.filePathPrefix](vscode://settings/spec-command.terminal.filePathPrefix)
 
 ## [1.5.1] - 2021-08-19
 
 ### Security
 
-- Fix a typo in untrusted workspace settings. Contrary to the expectation, previosuly the `spec-command.command.filePathPrefixInTerminal` option was not disabled in unstrusted workspaces.
+- Fix a typo in untrusted workspace settings. Contrary to the expectation, previosuly the _spec-command.command.filePathPrefixInTerminal_ setting was not disabled in unstrusted workspaces.
 
 ## [1.5.0] - 2021-07-01
 
@@ -214,11 +223,11 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 - Make "Open Reference Manual" command callable whether __spec__ command file is selected or not.
 - Use references to built-in icons instead of SVG files bundled with the extension for editor toolbar.
 - Remove the following deprecated contriution properties:
-  - `vscode-spec.mnemonic.motor.descriptions`
-  - `vscode-spec.mnemonic.motor.labels`
-  - `vscode-spec.mnemonic.motor.descriptions`
-  - `vscode-spec.mnemonic.counter.labels`
-  - `vscode-spec.mnemonic.motor.descriptions`
+  - _vscode-spec.mnemonic.motor.descriptions_
+  - _vscode-spec.mnemonic.motor.labels_
+  - _vscode-spec.mnemonic.motor.descriptions_
+  - _vscode-spec.mnemonic.counter.labels_
+  - _vscode-spec.mnemonic.motor.descriptions_
 
 ### Fixed
 
@@ -228,7 +237,7 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 - Sanitize a file path used in the "Run File in Active Terminal" command in order to protect from code injection.
 - Support _Workspace Trust_.
-  - The `spec-command.command.filePathPrefixInTerminal` option is disabled in unstrusted workspaces.
+  - The _spec-command.command.filePathPrefixInTerminal_ option is disabled in unstrusted workspaces.
   - The other features are not prohibited in an unstusted workspace.
 
 ## [1.4.0] - 2021-06-10
@@ -277,21 +286,21 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Added
 
-- a setting for user-defined code snippets that may include a placeholder for a motor or counter mnemonic (configuration parameter: `vscode-spec.editor.codeSnippets`)
+- a setting for user-defined code snippets that may include a placeholder for a motor or counter mnemonic (configuration parameter: _vscode-spec.editor.codeSnippets_)
 - built-in functions documented only in [CSS - spec help pages](https://certif.com/spec_help/index.html) (not in spec_manA4.pdf) into IntelliSense database: hdf5, taco (esrf), tango, epics, etc. into IntelliSense database.
 
 ### Changed
 
 - Redesign the configuration properties for motor/counter mnemonics.
   - Added:
-    - `vscode-spec.mnemonic.motors`
-    - `vscode-spec.mnemonic.conters`
+    - _vscode-spec.mnemonic.motors_
+    - _vscode-spec.mnemonic.counters_
   - Deprecated:
-    - `vscode-spec.mnemonic.motor.descriptions`
-    - `vscode-spec.mnemonic.motor.labels`
-    - `vscode-spec.mnemonic.motor.descriptions`
-    - `vscode-spec.mnemonic.counter.labels`
-    - `vscode-spec.mnemonic.motor.descriptions`
+    - _vscode-spec.mnemonic.motor.descriptions_
+    - _vscode-spec.mnemonic.motor.labels_
+    - _vscode-spec.mnemonic.motor.descriptions_
+    - _vscode-spec.mnemonic.counter.labels_
+    - _vscode-spec.mnemonic.motor.descriptions_
 
 ## [1.1.4] - 2020-10-05
 
@@ -450,7 +459,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
   - syntax highlighting
   - code snippets
 
-[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.9...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.9...v2.0.0
 [1.8.9]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.8...v1.8.9
 [1.8.8]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.7...v1.8.8
 [1.8.7]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.6...v1.8.7

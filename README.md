@@ -1,7 +1,7 @@
 # __spec__ Command File Extension for Visual Studio Code
 
-The extension enhances user experiences in editing __spec__ command files with Visual Studio Code.
-The __spec__ command file referred to here is also called __spec__ macro file or __spec__ script file; it is typically loaded by `qdo` standard macro or `qdofile()` built-in function after a user writes user-defined macros and functions in it.
+The extension is designed to assist editing __spec__ command files with Visual Studio Code.
+__spec__ command files referred to here are also called __spec__ macro files and __spec__ script files; they are typically loaded by `qdo` or `qdofile()` after a user writes macros and functions in them.
 
 While `qdo` or `qdofile()` does not care about the filename extension, most command files installed with __spec__ are named `*.mac` (e.g., `SPECD/standard.mac`).
 Therefore, this VS Code extension treats `.mac` as the file extension of __spec__ command files (language identifier: `spec-command`).
@@ -20,7 +20,7 @@ Use [GitHub issues](https://github.com/fujidana/vscode-spec-command/issues) for 
 
 ## Notice for previous version users
 
-The keys of most configuration properties were changed in v1.6.0.
+Some of configuration properties were renamed at v1.6.0 and the older name were removed at v2.0.0.
 If you have customized the extension behavior, migrate your setting values via the Settings editor or direct access to JSON files.
 See [CHANGELOG.md](CHANGELOG.md) for details.
 Sorry for inconvenence.
@@ -35,12 +35,12 @@ Sorry for inconvenence.
     * __Code snippets__ - templates that make it easier to enter repeating code patterns, such as loops and conditional-statements
   * __Help with function signatures__ - help that appears during a user types an argument in a function call
 * __Code navigation__
-  * __Symbol navigation in a document__ - available from _Go to Symbol in Editor_ (Ctrl+Shift+O) menubar item and the navigation bar at the top the editor pane (aka breadcrumbs)
-  * __Symbol navigation in workspaces__ - available from _Go to Symbol in Workspace_ (Ctrl+T) menubar item
-  * __Show definitions of a symbol__ - symbol definitions in open files, used in: _Go to Definition_ (F12) and _Peek Definition_ (Alt+F12) in right-click menu
+  * __Symbol navigation in a document__ - available at _Go to Symbol in Editor_ (Ctrl+Shift+O) menubar item and the navigation bar at the top the editor pane (aka breadcrumbs)
+  * __Symbol navigation in workspaces__ - available at _Go to Symbol in Workspace_ (Ctrl+T) menubar item
+  * __Show definitions of a symbol__ - jump to where the symbol is defined, available at _Go to Definition_ (F12) and _Peek Definition_ (Alt+F12) in right-click menu
 * __Commands__ - the following commands can be invoked from the command pallate (Ctrl+Shit+P):
-  * "Run Seclection/Line in Terminal" and "Run File in Terminal" commands. These commands assume __spec__ interactive shell has been ready in the active terminal view.
-  * "Open Reference Manual" command.
+  * "Show Built-in Symbols"
+  * "Show Workspace Symbols (JSON)": exported file can be used for importing the symbols in another workspace, with [spec-command.suggest.symbolFile](vscode://settings/spec-command.suggest.symbolFile) setting.
 
 This extension treats user-defined symbols declared at the top level (i.e., not in a code block, curly brackets) as global and those in code blocks as local.
 Global symbols are visible beyond a file where the symbol is defined; local symbols are visible only when the cursor is in the same block.
@@ -92,19 +92,17 @@ but the extension shows an alert on the first line because it expects explicit q
 
 ## Extension Settings
 
-This extension contributes the follwing settings, which are configurable from the _Settings_ windw (`Ctrl+,`):
+This extension contributes configuration options, configurable in the _Settings_ editor (Win/Linux: `Ctrl+,`, Mac: `Cmd+,`).
+Read [Visual Studio Code User and Workspace Settings](https://code.visualstudio.com/docs/getstarted/settings) for the basic functionality of _Settings_.
 
-* `spec-command.suggest.suppressMessages` - controls whether the explanatory text shown by IntelliSense features is suppressed or not.
-* `spec-command.suggest.codeSnippets` - provides a place to add code snippet templates that can include special placeholders for motor (`%MOT`) and counter (`%CNT`) mnemonics. Optionally, descriptive text can be appended after a hash sign (`#`). Example: `{ "mv2": "mv ${1%MOT1} ${2:pos1} ${3%MOT2} ${4:pos2} # 2-motor move" }`. For detailed syntax including other placeholders and choices, read [Snippets in Visual Studio Code](https://code.visualstudio.com/docs/editor/userdefinedsnippets). Snippets for `mv`, `mvr`, `umv`, `umvr`, `ascan`, `dscan`, `a2scan`, `d2scan`, `a3scan`, `d3scan`, `a4scan`, `d4scan`,  `a5scan`, `d5scan`, `mesh`, and `dmesh` are defined by the extension and thus, a user does not need to add them manually, except when he/she wants to override default snippet templates.
-* `spec-command.suggest.motors`, `spec-command.suggest.counters` - registers motor/counter mnemonics and their explanatory texts as the keys and the values. They are used by IntelliSense features including code snippets above.
-* `spec-command.workspace.diagnoseProblems` - controls whther problems of files in workspaces are reported.
-* `spec-command.terminal.filePathPrefix` - specifies file path prefix used in "Run File in Active Terminal" command.
+Explanations of the respective settings are available in the _Settings_ editor. Below is additional information for several settings that do not have enough space in a limited space of the setting editor.
 
-The extension also refers to the following built-in setting:
+* [spec-command.suggest.codeSnippets](vscode://settings/spec-command.suggest.codeSnippets) - provides a place to add code snippet templates that can include special placeholders for motor (`%MOT`) and counter (`%CNT`) mnemonics. Optionally, descriptive text can be appended after a hash sign (`#`). Example: `{ "mv2": "mv ${1%MOT1} ${2:pos1} ${3%MOT2} ${4:pos2} # 2-motor move" }`. For detailed syntax including other placeholders and choices, read [Snippets in Visual Studio Code](https://code.visualstudio.com/docs/editor/userdefinedsnippets). Snippets for `mv`, `mvr`, `umv`, `umvr`, `ascan`, `dscan`, `a2scan`, `d2scan`, `a3scan`, `d3scan`, `a4scan`, `d4scan`,  `a5scan`, `d5scan`, `mesh`, and `dmesh` are defined by the extension and thus, a user does not need to add them manually.
+* [spec-command.suggest.motors](vscode://settings/spec-command.suggest.motors), [spec-command.suggest.counters](vscode://settings/spec-command.suggest.counters) - registers motor/counter mnemonics and their explanatory texts as the keys and the values. They are used by IntelliSense features including code snippets above.
 
-* `files.associations`, `files.exclude`: file patterns to filter target files for symbol search in workspaces
+The extension refers to the following built-in setting:
 
-Read [Visual Studio Code User and Workspace Settings](https://code.visualstudio.com/docs/getstarted/settings) for details about the _Settings_ window.
+* [files.associations](vscode://settings/files.associations), [files.exclude](vscode://settings/files.exclude): file patterns to filter target files for symbol search in workspaces
 
 ## Known Issues
 
