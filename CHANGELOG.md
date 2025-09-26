@@ -4,6 +4,10 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+### Changed
+
+- Raise the minimum VS Code version to 1.102.0.
+
 ## [2.0.0] -- 2025-07-17
 
 ### Added
