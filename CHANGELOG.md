@@ -6,6 +6,7 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Changed
 
+- Bump `semver` dependency to 7.7.4.
 - Raise the minimum VS Code version to 1.102.0.
 
 ## [2.0.0] -- 2025-07-17
