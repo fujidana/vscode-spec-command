@@ -1,0 +1,23 @@
+{
+	"command.spec-command.showBuiltInSymbols.title": "ビルトインのシンボルを表示",
+	"command.spec-command.showWorkspaceSymbols.title": "ワークスペースのシンボルを表示 (JSON)",
+	"command.spec-command.inspectSyntaxTree.title": "構文ツリーを検査 (開発)",
+	"configuration.spec-command.showSymbolsInPreview.description": "[ビルトインのシンボルを表示](command:spec-command.showBuiltInSymbols) コマンドが呼び出された時に、マークダウンのソーステキストに加えてプレビューを表示します。",
+	"configuration.spec-command.specVersion.description": "対象とする __spec__ ソフトウェアのバージョンを指定します。これはコード補完に影響します。",
+	"configuration.spec-command.specVersion.patternErrorMessage": "値は Semantic Versioning 2.0.0 形式である必要があります。この形式は余剰な先頭の0を許容しないので、\"6.00.02\" の場合には \"6.0.2\" を設定してください。",
+	"configuration.spec-command.suggest.suppressMessages.description": "コード補完のメッセージ量を抑制します。",
+	"configuration.spec-command.suggest.suppressMessages.completionItem.label.detail.description": "未選択の補完項目の詳細 (項目が関数の場合にはパラメータを表示) を隠します。",
+	"configuration.spec-command.suggest.suppressMessages.completionItem.label.description.description": "未選択の補完項目の説明 (項目を定義しているファイル名などを表示) を隠します。",
+	"configuration.spec-command.suggest.suppressMessages.completionItem.documentation.description": "選択した補完項目の説明文を一文に切り詰めます。",
+	"configuration.spec-command.suggest.suppressMessages.hover.contents.description": "マウスカーソルをシンボル上に置いたときに表示されるホバーの説明文を一段落に切り詰めます。",
+	"configuration.spec-command.suggest.suppressMessages.signatureHelp.signatures.documentation.description": "関数引数を編集したときに表示されるシグネチャヘルプの説明文を一段落に切り詰めます。",
+	"configuration.spec-command.suggest.codeSnippets.description": "コード補完のためのスニペットコードを定義します。この設定のキーはスニペットの名前で、ユーザーの入力に対する自動補完の候補の絞り込みに用いられます。この設定の値はスニペットが選択された時にエディターに挿入されるスニペットテンプレートです。スニペットテンプレートは [Snippets in Visual Studio Code](https://code.visualstudio.com/docs/editor/userdefinedsnippets#_snippet-syntax) で定義されているタブストップやプレースホルダー等に加えて、モーターとカウンターのための特別なプレースホルダー、 `%MOT` と `%CNT` を含むことができます。これらはエディター上では `#spec-command.suggest.motors#` や `#spec-command.suggest.counters#` の値に置換されてリストとして提案されます。また、補完時に表示される説明文を番号記号 `#` の後ろに記述できます。例: \n\n```json\n{ \"mv2\": \"mv ${1%MOT1} ${2:pos1} ${3%MOT2} ${4:pos2} # 2-motor move\" }\n```",
+	"configuration.spec-command.suggest.motors.description": "モーターをキーと値のペアで定義します。キーはニーモニックで、値は説明文です。コード補完がこの設定を参照します。",
+	"configuration.spec-command.suggest.counters.description": "カウンターをキーと値のペアで定義します。キーはニーモニックで、値は説明文です。コード補完がこの設定を参照します。",
+	"configuration.spec-command.suggest.symbolFile.description": "シンボルが定義されているJSONファイルへのパスを指定します。以下の事前定義された変数がパスに使用できます: `${userHome}`, `${workspaceFolder}`。ファイル形式については、[Show Workspace Symbols (JSON)](command:spec-command.showWorkspaceSymbolsJson) コマンドで作成されたJSONファイルを参照してください。",
+	"configuration.spec-command.workspace.exclude.description": "コードナビゲーションと補完のために行われるワークスペース内のスキャンから除外するファイルの [glob パターン](https://code.visualstudio.com/docs/editor/glob-patterns) を指定します。",
+	"configuration.spec-command.workspace.diagnoseProblems.description": "ワークスペース内の開いていないファイルの診断結果を「問題」ビューに表示するかを制御します。",
+	"configuration.spec-command.problems.rules.description": "構文チェックに追加のルールを適用します。",
+	"configuration.spec-command.terminal.filePathPrefix.description": "ファイルがエディターにドロップされたときに使用されるファイルパスのプレフィックスを指定します。このオプションは、「ターミナル」ビューで実行されている __spec__ の作業ディレクトリがワークスペースフォルダーとは異なる場合に役に立ちます。",
+	"capabilities.untrustedWorkspaces.description": "信頼されていないワークスペースでは \"spec-command.suggest.symbolFile\" 設定項目は安全上の理由から無効化されます。"
+}

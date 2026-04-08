@@ -1,0 +1,23 @@
+{
+	"command.spec-command.showBuiltInSymbols.title": "Show Built-in Symbols",
+	"command.spec-command.showWorkspaceSymbols.title": "Show Workspace Symbols (JSON)",
+	"command.spec-command.inspectSyntaxTree.title": "Inspect Syntax Tree (Dev)",
+	"configuration.spec-command.showSymbolsInPreview.description": "Shows a markdown preview in addition to the source text when [Show Built-in Symbols](command:spec-command.showBuiltInSymbols) command is invoked.",
+	"configuration.spec-command.specVersion.description": "Specifies the target version of __spec__ software. This affects code suggestion.",
+	"configuration.spec-command.specVersion.patternErrorMessage": "The value must be in the Semantic Versioning 2.0.0 format. Set \"6.0.2\" for \"6.00.02\" since the format does not allow leading zeros for padding.",
+	"configuration.spec-command.suggest.suppressMessages.description": "Suppresses the amount of messages for code suggestion.",
+	"configuration.spec-command.suggest.suppressMessages.completionItem.label.detail.description": "Hides the detail of unresolved completion items, where function parameters are shown in case the item is a function.",
+	"configuration.spec-command.suggest.suppressMessages.completionItem.label.description.description": "Hides the description of unresolved completion items, where the file defining the items are typically shown.",
+	"configuration.spec-command.suggest.suppressMessages.completionItem.documentation.description": "Truncates explanatory text of a resolved completion item to a sentence.",
+	"configuration.spec-command.suggest.suppressMessages.hover.contents.description": "Truncates explanatory text in a hover, which is shown when the mouse cursor is on a symbol, to a paragraph.",
+	"configuration.spec-command.suggest.suppressMessages.signatureHelp.signatures.documentation.description": "Truncates explanatory text in a signature help, which is shown when function arguments are being edited, to a paragraph.",
+	"configuration.spec-command.suggest.codeSnippets.description": "Defines snippet codes for code completion. The key of this setting is the snippet name, which is used to narrow down auto-completion suggestions based on user input. The value of this setting is the snippet template that is inserted into the editor when the snippet is selected. The snippet template can contain tabstops, placeholders, etc. as defined in [Snippets in Visual Studio Code](https://code.visualstudio.com/docs/editor/userdefinedsnippets#_snippet-syntax), as well as special placeholders for motors and counters, `%MOT` and `%CNT`. These are replaced with the values defined in`#spec-command.suggest.motors#` and `#spec-command.suggest.counters#` respectively and suggested as lists in the editor. A descriptive text displayed during completion can be written after the number sign `#`. Example:\n\n```json\n{ \"mv2\": \"mv ${1%MOT1} ${2:pos1} ${3%MOT2} ${4:pos2} # 2-motor move\" }\n```",
+	"configuration.spec-command.suggest.motors.description": "Defines motors as key-value pairs. The key is a mnemonic and the value is a description. Code suggestion refers to this setting.",
+	"configuration.spec-command.suggest.counters.description": "Defines counters as key-value pairs. The key is a mnemonic and the value is a description. Code suggestion refers to this setting.",
+	"configuration.spec-command.suggest.symbolFile.description": "Specifies the absolute path to a JSON file in which symbols are defined. The following predefined variables are supported for the path: `${userHome}`, `${workspaceFolder}`. See a JSON file created by [Show Workspace Symbols (JSON)](command:spec-command.showWorkspaceSymbolsJson) command for the file format.",
+	"configuration.spec-command.workspace.exclude.description": "Configures [glob patterns](https://code.visualstudio.com/docs/editor/glob-patterns) for files to be excluded from scanning in a workspace for code navigation and completion.",
+	"configuration.spec-command.workspace.diagnoseProblems.description": "Controls whether diagnostic results of unopened files in a workspace are listed in 'Problems' view.",
+	"configuration.spec-command.problems.rules.description": "Applies additional rules for syntax checking.",
+	"configuration.spec-command.terminal.filePathPrefix.description": "Specifies a file path prefix used when a file is dropped on the editor. This option is useful for case in which the working directory of __spec__ running in a 'Terminal' view is different from the workspace folder.",
+	"capabilities.untrustedWorkspaces.description": "The \"spec-command.suggest.symbolFile\" configuration setting is disabled in untrusted workspaces for safety reasons."
+}
