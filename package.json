@@ -33,6 +33,7 @@
 	],
 	"main": "./dist/node/extension.js",
 	"browser": "./dist/web/extension.js",
+	"l10n": "./l10n",
 	"contributes": {
 		"languages": [
 			{
@@ -63,19 +64,19 @@
 		"commands": [
 			{
 				"command": "spec-command.showBuiltInSymbols",
-				"title": "Show Built-in Symbols",
+				"title": "%command.spec-command.showBuiltInSymbols.title%",
 				"category": "spec command",
 				"icon": "$(references)"
 			},
 			{
 				"command": "spec-command.showWorkspaceSymbolsJson",
-				"title": "Show Workspace Symbols (JSON)",
+				"title": "%command.spec-command.showWorkspaceSymbols.title%",
 				"category": "spec command",
 				"icon": "$(json)"
 			},
 			{
 				"command": "spec-command.inspectSyntaxTree",
-				"title": "Inspect Syntax Tree (Developer)",
+				"title": "%command.spec-command.inspectSyntaxTree.title%",
 				"category": "spec command",
 				"icon": "$(json)"
 			}
@@ -101,18 +102,18 @@
 				"spec-command.showSymbolsInPreview": {
 					"type": "boolean",
 					"default": true,
-					"markdownDescription": "Shows a preview (Webview created by built-in Markdown extension) in addition to a markdown source after [Show Built-in Symbols](command:spec-command.showBuiltInSymbols) command is invoked."
+					"markdownDescription": "%configuration.spec-command.showSymbolsInPreview.description%"
 				},
 				"spec-command.specVersion": {
 					"type": "string",
 					"default": "6.13.4",
-					"markdownDescription": "Specifies the target version of __spec__ software. This affects code completion.",
+					"markdownDescription": "%configuration.spec-command.specVersion.description%",
 					"pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
-					"patternErrorMessage": "The value must be in the Semantic Versioning 2.0.0 format. Set \"6.1.2\" for \"6.01.04\" since the format does not allow redundant zeros."
+					"patternErrorMessage": "%configuration.spec-command.specVersion.patternErrorMessage%"
 				},
 				"spec-command.suggest.suppressMessages": {
 					"type": "object",
-					"markdownDescription": "Suppresses messages shown in code completion.",
+					"markdownDescription": "%configuration.spec-command.suggest.suppressMessages.description%",
 					"default": {
 						"completionItem.label.detail": false,
 						"completionItem.label.description": false,
@@ -124,27 +125,27 @@
 						"completionItem.label.detail": {
 							"type": "boolean",
 							"default": false,
-							"description": "Hides the detail of unresolved completion item labels, where parameters of functions are typically shown."
+							"description": "%configuration.spec-command.suggest.suppressMessages.completionItem.label.detail.description%"
 						},
 						"completionItem.label.description": {
 							"type": "boolean",
 							"default": false,
-							"description": "Hides the description of unresolved completion item labels, where file paths are typically shown."
+							"description": "%configuration.spec-command.suggest.suppressMessages.completionItem.label.description.description%"
 						},
 						"completionItem.documentation": {
 							"type": "boolean",
 							"default": false,
-							"description": "Truncates explanatory text of a selected item of auto completion suggestions to a sentence."
+							"description": "%configuration.spec-command.suggest.suppressMessages.completionItem.documentation.description%"
 						},
 						"hover.contents": {
 							"type": "boolean",
 							"default": false,
-							"description": "Truncates explanatory text in a hover, which is shown when the mouse cursor is on a symbol, to a paragraph."
+							"description": "%configuration.spec-command.suggest.suppressMessages.hover.contents.description%"
 						},
 						"signatureHelp.signatures.documentation": {
 							"type": "boolean",
 							"default": false,
-							"description": "Truncates explanatory text in a signature help, which is shown when the user edits function arguments, to a paragraph."
+							"description": "%configuration.spec-command.suggest.suppressMessages.signatureHelp.signatures.documentation.description%"
 						}
 					},
 					"additionalProperties": false
@@ -152,7 +153,7 @@
 				"spec-command.suggest.codeSnippets": {
 					"type": "object",
 					"scope": "window",
-					"markdownDescription": "Lists key-value pairs of code snippets for IntelliSense code suggestion. The key is a snippet name on which IntelliSense substring matching is performed and the value is a snippet template to be inserted into the editor. The template may contain special placeholders for motors (`%MOT`) and counters (`%CNT`), in addition to built-in tabstops, placeholders, choise and variables described in [Snippets in Visual Studio Code](https://code.visualstudio.com/docs/editor/userdefinedsnippets#_snippet-syntax). Descriptive text can follow after a hash sign (`#`). Example: \n\n```json\n{ \"mv2\": \"mv ${1%MOT1} ${2:pos1} ${3%MOT2} ${4:pos2} # 2-motor move\" }\n```",
+					"markdownDescription": "%configuration.spec-command.suggest.codeSnippets.description%",
 					"default": {},
 					"patternProperties": {
 						"^[a-zA-Z_][a-zA-Z0-9_\\-]*$": {
@@ -164,7 +165,7 @@
 				"spec-command.suggest.motors": {
 					"type": "object",
 					"scope": "window",
-					"markdownDescription": "Lists key-value (mnemonic-explanatory text) pairs of motors for IntelliSense code suggestion.",
+					"markdownDescription": "%configuration.spec-command.suggest.motors.description%",
 					"default": {},
 					"patternProperties": {
 						"^[a-zA-Z_][a-zA-Z0-9_]{0,6}$": {
@@ -176,7 +177,7 @@
 				"spec-command.suggest.counters": {
 					"type": "object",
 					"scope": "window",
-					"markdownDescription": "Lists key-value (mnemonic-explanatory text) pairs of counters for IntelliSense code suggestion.",
+					"markdownDescription": "%configuration.spec-command.suggest.counters.description%",
 					"default": {
 						"sec": "count time in second"
 					},
@@ -191,7 +192,7 @@
 					"type": "string",
 					"default": "",
 					"scope": "window",
-					"markdownDescription": "Specifies the absolute path to a JSON file in which symbols are defined. The following predefined variables are supported for the path: `${userHome}`, `${workspaceFolder}`. See a JSON file created by [Show Workspace Symbols (JSON)](command:spec-command.showWorkspaceSymbolsJson) command for the file format.",
+					"markdownDescription": "%configuration.spec-command.suggest.symbolFile.description%",
 					"tags": [
 						"experimental"
 					]
@@ -200,7 +201,7 @@
 					"type": "array",
 					"default": [],
 					"scope": "resource",
-					"markdownDescription": "Configures [glob patterns](https://code.visualstudio.com/docs/editor/glob-patterns) for files to be excluded from the target of symbol collections for IntelliSense features.",
+					"markdownDescription": "%configuration.spec-command.workspace.exclude.description%",
 					"items": {
 						"type": "string"
 					}
@@ -209,7 +210,7 @@
 					"type": "boolean",
 					"default": false,
 					"scope": "resource",
-					"description": "Controls whether diagnostic results of files in a workspace are listed in 'Problems' view. If disabled, only syntax problems of files opened by editors are listed."
+					"description": "%configuration.spec-command.workspace.diagnoseProblems.description%"
 				},
 				"spec-command.problems.rules": {
 					"type": "object",
@@ -217,7 +218,7 @@
 						"experimental"
 					],
 					"scope": "resource",
-					"markdownDescription": "Controls whether specific types of diagnostics are shown in the Problem view.",
+					"description": "%configuration.spec-command.problems.rules.description%",
 					"properties": {
 						"no-local-outside-block": {
 							"type": "boolean",
@@ -238,7 +239,7 @@
 					"type": "string",
 					"default": "",
 					"scope": "resource",
-					"markdownDescription": "Specifies a file path prefix used when a file is dropped on the editor. This option is useful for case in which the working directory of __spec__ running in a terminal view is different from the workspace folder.",
+					"markdownDescription": "%configuration.spec-command.terminal.filePathPrefix.description%",
 					"markdownDeprecationMessage": "**Deprecated**: Not effective now."
 				}
 			}
@@ -248,9 +249,8 @@
 		"virtualWorkspaces": true,
 		"untrustedWorkspaces": {
 			"supported": "limited",
-			"description": "The \"spec-command.terminal.filePathPrefix\" `and \"spec-command.suggest.symbolFile\" configuration properties are disabled in untrusted workspaces in order to protect from code injection.",
+			"description": "%capabilities.untrustedWorkspaces.description%",
 			"restrictedConfigurations": [
-				"spec-command.terminal.filePathPrefix",
 				"spec-command.suggest.symbolFile"
 			]
 		}
@@ -276,7 +276,8 @@
 		"js-yaml": "npm-run-all js-yaml:*",
 		"js-yaml:snippets": "js-yaml syntaxes/specCommand.snippets.yaml > syntaxes/specCommand.snippets.json",
 		"js-yaml:builtIns": "js-yaml syntaxes/specCommand.builtIns.yaml > syntaxes/specCommand.builtIns.json",
-		"js-yaml:tmLanguage": "js-yaml syntaxes/specCommand.tmLanguage.yaml > syntaxes/specCommand.tmLanguage.json"
+		"js-yaml:tmLanguage": "js-yaml syntaxes/specCommand.tmLanguage.yaml > syntaxes/specCommand.tmLanguage.json",
+		"l10n-export": "npx @vscode/l10n-dev export -o ./l10n ./src"
 	},
 	"dependencies": {
 		"estraverse": "^5.3.0",

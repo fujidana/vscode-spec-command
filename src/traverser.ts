@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 // import * as estraverse from 'estraverse';
 import * as lang from './language';
-import type { LocationRange } from './parser';
 import type * as tree from './tree';
 
 const estraverse = require('estraverse');
@@ -128,7 +127,7 @@ export function traverseWholly(program: tree.Program, diagnosticRules: lang.Diag
                     for (const declarator of node.declarations) {
                         if (declarator.id.type === 'Identifier' && declarator.id.loc) {
                             const idName = declarator.id.name;
-                            const idRange = lang.convertRange(declarator.id.loc as LocationRange);
+                            const idRange = lang.convertRange(declarator.id.loc);
                             const idDetail = '';
                             // const idDetail = (declarator.init && declarator.init.type === 'Literal' && declarator.init.raw) ? ' = ' + declarator.init.raw : '';
                             let symbolKind: vscode.SymbolKind;
@@ -174,7 +173,11 @@ export function traverseWholly(program: tree.Program, diagnosticRules: lang.Diag
                     // Diagnose problems.
                     if (diagnosticRules && diagnosticRules['no-local-outside-block']) {
                         if (node.kind === 'local' && blockStack.length === 0) {
-                            const diagnostic = new vscode.Diagnostic(nodeRange, 'Local variable is declared outside a block.', vscode.DiagnosticSeverity.Warning);
+                            const diagnostic = new vscode.Diagnostic(
+                                nodeRange,
+                                vscode.l10n.t('Local variable is declared outside a block.'),
+                                vscode.DiagnosticSeverity.Warning
+                            );
                             diagnostic.code = 'no-local-outside-block';
                             diagnostics.push(diagnostic);
                         }
@@ -238,7 +241,7 @@ export function traversePartially(program: tree.Program, position: vscode.Positi
                 // Register arguments of function as variables if the cursor is in the function block.
                 for (const param of node.params) {
                     if (param.type === 'Identifier') {
-                        const refItem: lang.ReferenceItem = { signature: param.name, category: 'variable', location: node.loc as LocationRange };
+                        const refItem: lang.ReferenceItem = { signature: param.name, category: 'variable', location: node.loc };
                         refBook.set(param.name, refItem);
                     }
                 }
@@ -349,11 +352,19 @@ export function traverseForFurtherDiagnostics(program: tree.Program, referenceBo
                 if (flag === false && node.loc) {
                     // If the identifier is not found in the reference book, it may be a problem.
                     if (parent?.type === 'MacroStatement' && parent.builtin !== true && parent.arguments.includes(node)) {
-                        const diagnostic = new vscode.Diagnostic(lang.convertRange(node.loc), `'${node.name}' as macro argument is not declared.`, vscode.DiagnosticSeverity.Information);
+                        const diagnostic = new vscode.Diagnostic(
+                            lang.convertRange(node.loc),
+                            vscode.l10n.t('"{0}" as macro argument is not declared.', node.name),
+                            vscode.DiagnosticSeverity.Information
+                        );
                         diagnostic.code = 'no-undeclared-macro-argument';
                         diagnostics.push(diagnostic);
                     } else {
-                        const diagnostic = new vscode.Diagnostic(lang.convertRange(node.loc), `'${node.name}' is used without declaration.`, vscode.DiagnosticSeverity.Information);
+                        const diagnostic = new vscode.Diagnostic(
+                            lang.convertRange(node.loc),
+                            vscode.l10n.t('"{0}" is used without declaration.', node.name),
+                            vscode.DiagnosticSeverity.Information
+                        );
                         diagnostic.code = 'no-undeclared-variable';
                         diagnostics.push(diagnostic);
                     }

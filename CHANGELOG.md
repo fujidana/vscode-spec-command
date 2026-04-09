@@ -4,6 +4,10 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+### Added
+
+- Restruct the code for multilingual support (i.e, internationalization) and add Japanese localization. Issue [#4](https://github.com/fujidana/vscode-spec-command/issues/4).
+
 ### Changed
 
 - Bump `semver` dependency to 7.7.4.

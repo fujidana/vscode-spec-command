@@ -62,8 +62,8 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
 
     constructor(context: vscode.ExtensionContext, builtInController: BuiltInController) {
         super(context);
-        this.builtInController = builtInController;
 
+        this.builtInController = builtInController;
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('spec-command');
 
         const showWorkspaceSymbolsJsonCommandHandler = async () => {
@@ -72,6 +72,7 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
             const categories = ['constant', 'variable', 'array', 'macro', 'function'] as const;
             const obj: { [K in typeof categories[number]]: Required<lang.ReferenceBookLike>[K] } = { variable: {}, constant: {}, array: {}, macro: {}, function: {}, };;
             // const obj: Record<typeof categories[number], Record<string, lang.ReferenceItem>> = { variable: {}, constant: {}, array: {}, macro: {}, function: {}, };
+
             for (const [uriString, session] of this.updateSessionMap.entries()) {
                 const refBook = (await session.promise)?.refBook;
                 if (refBook === undefined) { continue; }
@@ -98,7 +99,7 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
                 const uri = vscode.Uri.parse(lang.AST_URI).with({
                     query: editor.document.uri.toString(),
                     fragment: editor.document.version.toString(),
-                 });
+                });
                 vscode.window.showTextDocument(uri, { preview: false });
             }
         };
@@ -571,9 +572,11 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
                     return JSON.stringify(tree, (key, value) => { return key === 'loc' ? undefined : value; }, 2);
                 } catch (error) {
                     if (error instanceof SyntaxError) {
-                        vscode.window.showErrorMessage('Failed to parse the editor contents.');
+                        vscode.window.showErrorMessage(vscode.l10n.t('Syntax error in parsing: {0}', error.message));
+                    } else if (error instanceof Error) {
+                        vscode.window.showErrorMessage(vscode.l10n.t('Error in parsing: {0}', error.message));
                     } else {
-                        vscode.window.showErrorMessage('Unknown error.');
+                        vscode.window.showErrorMessage(vscode.l10n.t('Unknown error in parsing: {0}', String(error)));
                     }
                 }
             }
@@ -595,17 +598,16 @@ function analyzeDocumentContent(content: string, diagnosticRules: lang.Diagnosti
     try {
         tree = parse(content);
     } catch (error) {
-        if (error instanceof SyntaxError) {
-            if (diagnosticRules) {
-                diagnostics = [new vscode.Diagnostic(lang.convertRange(error.location), error.message, vscode.DiagnosticSeverity.Error)];
-            }
-        } else {
-            console.log('Unknown error in sytax parsing', error);
-            if (diagnosticRules) {
-                diagnostics = [new vscode.Diagnostic(new vscode.Range(0, 0, 0, 0), 'Unknown error in parsing', vscode.DiagnosticSeverity.Error)];
+        if (diagnosticRules) {
+            if (error instanceof SyntaxError) {
+                diagnostics = [new vscode.Diagnostic(lang.convertRange(error.location), vscode.l10n.t('Syntax error in parsing: {0}', error.message))];
+            } else if (error instanceof Error) {
+                diagnostics = [new vscode.Diagnostic(new vscode.Range(0, 0, 0, 0), vscode.l10n.t('Error in parsing: {0}', error.message))];
+            } else {
+                diagnostics = [new vscode.Diagnostic(new vscode.Range(0, 0, 0, 0), vscode.l10n.t('Unknown error in parsing: {0}', String(error)))];
             }
         }
-        return { refBook: new Map(), diagnostics: diagnostics };
+        return { refBook: new Map(), diagnostics };
     }
 
     if (token.isCancellationRequested) { return undefined; }

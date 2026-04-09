@@ -31,26 +31,13 @@ export class BuiltInController extends Controller<lang.UpdateSession> implements
 
         // Load built-in symbol database from the JSON file.
         const builtInRefFileUri = vscode.Uri.joinPath(context.extensionUri, 'syntaxes', 'specCommand.builtIns.json');
-        const promise = loadReferenceBook(builtInRefFileUri);
+        const promise = loadReferenceBook(builtInRefFileUri, 'builtin');
         this.updateSessionMap.set(lang.BUILTIN_URI, { promise });
 
         // Load external symbol database from the JSON file.
-        const externalRefFileUri = getExternalRefBookUri();
+        const externalRefFileUri = getExternalRefBookUri('external2');
         if (externalRefFileUri) {
-            const promise = loadReferenceBook(externalRefFileUri).then(
-                undefined, _reason => {
-                    vscode.window.showErrorMessage(`Failed to load external symbols: ${externalRefFileUri.toString()}`, 'OK', 'Open Settings').then(
-                        item => {
-                            // Do not return a value so that the return value (promise-like object) of the function
-                            // does not wait for an action against the dialog.
-                            if (item === 'Open Settings') {
-                                vscode.commands.executeCommand('workbench.action.openSettings', 'spec-command.suggest.symbolFile');
-                            }
-                        }
-                    );
-                    return undefined;
-                }
-            );
+            const promise = loadReferenceBook(externalRefFileUri, 'external2');
             this.updateSessionMap.set(lang.EXTERNAL_URI, { promise });
         }
 
@@ -74,14 +61,9 @@ export class BuiltInController extends Controller<lang.UpdateSession> implements
                 this.updateSnippetRefBook();
             }
             if (event.affectsConfiguration('spec-command.suggest.symbolFile')) {
-                const externalRefUri = getExternalRefBookUri();
+                const externalRefUri = getExternalRefBookUri('external');
                 if (externalRefUri) {
-                    const promise = loadReferenceBook(externalRefUri).then(
-                        undefined, _reason => {
-                            vscode.window.showErrorMessage(`Failed to load external symbols: ${externalRefUri.toString()}`);
-                            return undefined;
-                        }
-                    );
+                    const promise = loadReferenceBook(externalRefUri, 'external');
                     this.updateSessionMap.set(lang.EXTERNAL_URI, { promise });
                 } else {
                     this.updateSessionMap.delete(lang.EXTERNAL_URI);
@@ -243,9 +225,19 @@ export class BuiltInController extends Controller<lang.UpdateSession> implements
 /**
  * Get an URI object of the external symbol file whose path is defined in the settings.
  */
-function getExternalRefBookUri(): vscode.Uri | undefined {
+function getExternalRefBookUri(mode: 'external' | 'external2'): vscode.Uri | undefined {
     const path = vscode.workspace.getConfiguration('spec-command.suggest').get<string>('symbolFile', '');
-    if (path === "") {
+
+    const buttons = mode === 'external2' ?
+        [vscode.l10n.t('OK'), vscode.l10n.t('Open Settings')] :
+        [];
+    const action = (button: string | undefined) => {
+        if (button === vscode.l10n.t('Open Settings')) {
+            vscode.commands.executeCommand('workbench.action.openSettings', 'spec-command.suggest.symbolFile');
+        }
+    };
+
+    if (path === '') {
         return undefined;
     } else if (path.startsWith('${workspaceFolder}/')) {
         if (vscode.workspace.workspaceFile) {
@@ -253,7 +245,10 @@ function getExternalRefBookUri(): vscode.Uri | undefined {
         } else if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
             return vscode.Uri.joinPath(vscode.workspace.workspaceFolders[0].uri, path.replace('${workspaceFolder}/', './'));
         } else {
-            vscode.window.showErrorMessage('Failed to get the path to the external symbol file because a workspace folder does not exist.');
+            vscode.window.showErrorMessage(
+                vscode.l10n.t('Failed to get the path to the external symbol file because a workspace folder does not exist.'),
+                ...buttons
+            ).then(action);
             return undefined;
         }
     } else if (path.startsWith('${userHome}/')) {
@@ -261,7 +256,10 @@ function getExternalRefBookUri(): vscode.Uri | undefined {
         if (homedir) {
             return vscode.Uri.joinPath(vscode.Uri.file(homedir), path.replace('${userHome}/', './'));
         } else {
-            vscode.window.showErrorMessage('Failed to get the path to the external symbol file. "${userHome}" is unavailable on the web extesion.');
+            vscode.window.showErrorMessage(
+                vscode.l10n.t('Failed to get the path to the external symbol file because "{0}" is unavailable on the web extension.', '${userHome}'),
+                ...buttons
+            ).then(action);
             return undefined;
         }
     } else {
@@ -269,9 +267,36 @@ function getExternalRefBookUri(): vscode.Uri | undefined {
     }
 }
 
-async function loadReferenceBook(fileUri: vscode.Uri): Promise<lang.ParsedData> {
-    const uint8Array = await vscode.workspace.fs.readFile(fileUri);
-    const decodedString = await vscode.workspace.decode(uint8Array, { encoding: 'utf8' });
-    const refBookLike: lang.ReferenceBookLike = JSON.parse(decodedString);
-    return { refBook: lang.flattenRefBook(refBookLike) };
+async function loadReferenceBook(fileUri: vscode.Uri, mode: 'builtin' | 'external' | 'external2'): Promise<lang.ParsedData | undefined> {
+    try {
+        const uint8Array = await vscode.workspace.fs.readFile(fileUri);
+        const decodedString = await vscode.workspace.decode(uint8Array, { encoding: 'utf8' });
+        const refBookLike: lang.ReferenceBookLike = JSON.parse(decodedString);
+        return { refBook: lang.flattenRefBook(refBookLike) };
+    } catch (error) {
+        let errorMessage: string;
+        if (error instanceof Error) {
+            errorMessage = error.message;
+        } else {
+            errorMessage = String(error);
+        }
+        const message = mode === 'builtin' ?
+            vscode.l10n.t('Failed to load built-in symbols. {0}', errorMessage) :
+            vscode.l10n.t('Failed to load external symbols. {0}', errorMessage);
+        const buttons = mode === 'external2' ?
+            [vscode.l10n.t('OK'), vscode.l10n.t('Open Settings')] :
+            [];
+
+        // Do not return a thenable object chained to `showErrorMessage()` so 
+        // that the return value of the function is resolved before the user
+        // takes an action against the dialog.
+        vscode.window.showErrorMessage(message, ...buttons).then(
+            button => {
+                if (button === vscode.l10n.t('Open Settings')) {
+                    vscode.commands.executeCommand('workbench.action.openSettings', 'spec-command.suggest.symbolFile');
+                }
+            }
+        );
+        return undefined;
+    }
 }
