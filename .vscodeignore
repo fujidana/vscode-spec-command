@@ -15,7 +15,8 @@ vsc-extension-quickstart.md
 **/*.ts
 **/.vscode-test.*
 dist/**/test/**
-syntaxes/*.yaml
 pnpm-lock.yaml
 pnpm-workspace.yaml
+**/bundle.l10n.json
+syntaxes/*.yaml
 **/pegconfig.json
