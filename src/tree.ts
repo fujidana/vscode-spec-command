@@ -455,10 +455,10 @@ export type UpdateOperator = '++' | '--';
 export type Pattern = Identifier | IndirectPattern | MemberExpression;
 
 /** Identifier, similar to `estree.Identifier` .*/
-interface Identifier extends BaseExpression, BasePattern {
+export interface Identifier extends BaseExpression, BasePattern {
     type: 'Identifier';
     name: string;
-    params: MacroParameter[] | undefined;
+    params?: MacroParameter[] | undefined;
 }
 
 /** Node specific to __spec__, no counterpart in ESTree. */
