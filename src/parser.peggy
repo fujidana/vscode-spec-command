@@ -103,12 +103,12 @@ function getRangeFromLocation(source, baseLoc, len = 0, off = 0) {
  * @returns {Location} - The modified location.
  */
 function shiftLocationColumn(loc, shift) {
-  return { line: loc.line, column: loc.column + shift, offset: loc.offset + shift, };
+  return { line: loc.line, column: loc.column + shift, offset: loc.offset + shift };
 }
 }}
 
 {
-  /** @type { { message: string, loc: LocationRange, severity: DiagnosticSeverity, }[] } */
+  /** @type { { message: string, loc: LocationRange, severity: DiagnosticSeverity }[] } */
   const _problems = [];
   /** @type { string[] } */
   const _quoteStack = [];
@@ -127,10 +127,10 @@ function shiftLocationColumn(loc, shift) {
   /**
    * create a null literal.
    * @param {LocationRange} [loc=location()] - location range
-   * @returns { {type: 'Literal', value: null, loc: LocationRange, } }
+   * @returns {{ type: 'Literal', value: null, loc: LocationRange }}
    */
   function getNullLiteral(loc = location()) {
-    return { type: 'Literal', value: null, loc, };
+    return { type: 'Literal', value: null, loc };
   }
 
   /**
@@ -161,7 +161,7 @@ function shiftLocationColumn(loc, shift) {
     if (!obj) {
       const loc2 = loc ?? location();
       pushDiagnostic(l10n.t('Expected {0}.', label), loc2, severity);
-      return { type: 'Literal', value: null, loc: loc2, };
+      return { type: 'Literal', value: null, loc: loc2 };
     }
     return obj;
   }
@@ -182,7 +182,7 @@ function shiftLocationColumn(loc, shift) {
       const locOp = getRangeFromLocation(baseLoc.source, baseLoc.start, op.length, off);
       const locObj = getRangeFromLocation(baseLoc.source, baseLoc.start, 0, off + op.length);
       pushDiagnostic(l10n.t('Expected {0} following "{1}" operator.', label, op), locOp, severity);
-      return { type: 'Literal', value: null, loc: locObj, };
+      return { type: 'Literal', value: null, loc: locObj };
     }
     return obj;
   }
@@ -200,7 +200,7 @@ function shiftLocationColumn(loc, shift) {
     if (!obj) {
       const loc2 = loc ?? location();
       pushDiagnostic(l10n.t('Expected {0}.', label), loc2, severity);
-      return { type: 'EmptyStatement', loc: loc2, };
+      return { type: 'EmptyStatement', loc: loc2 };
     }
     return obj;
   }
@@ -243,7 +243,7 @@ function shiftLocationColumn(loc, shift) {
       return expressions[0];
     } else {
       diagnoseNullishElementInArray(expressions, EXPR_LABEL);
-      return { type: 'SequenceExpression', expressions, loc: location(), };
+      return { type: 'SequenceExpression', expressions, loc: location() };
     }
   }
 
@@ -257,7 +257,7 @@ function shiftLocationColumn(loc, shift) {
   function getBinaryExpression(head, tails) {
     return tails.reduce((accumulator, currentValue) => {
       const [operator, right] = currentValue;
-      return { type: 'BinaryExpression',  operator, left: accumulator, right, loc: location(), };
+      return { type: 'BinaryExpression',  operator, left: accumulator, right, loc: location() };
     }, head);
   }
 
@@ -271,7 +271,7 @@ function shiftLocationColumn(loc, shift) {
   function getLogicalExpression(head, tails) {
     return tails.reduce((accumulator, currentValue) => {
       const [operator, right] = currentValue;
-      return { type: 'LogicalExpression',  operator, left: accumulator, right, loc: location(), };
+      return { type: 'LogicalExpression',  operator, left: accumulator, right, loc: location() };
     }, head);
   }
 
@@ -326,7 +326,7 @@ function shiftLocationColumn(loc, shift) {
 
 Start =
   body:Stmt* {
-    return { type: 'Program', body, problems: _problems, };
+    return { type: 'Program', body, problems: _problems };
   }
 
 // # AUXILIARIES
@@ -344,7 +344,7 @@ LineComment 'line comment' =
         q:. !{ return _quoteStack.includes(q); }
       )
     )* {
-      return { type: 'Line', value: p, loc: location(), };
+      return { type: 'Line', value: p, loc: location() };
     }
   ) (_Eol / Eos0)
 
@@ -358,7 +358,7 @@ BlockComment 'block comment' =
   '"""' value:$(!'"""' .)* closer:'"""'? {
     const loc = location();
     diagnoseIfNotClosed(closer, DOCSTRING_LABEL, loc, 3);
-    return { type: 'Block', value, loc, };
+    return { type: 'Block', value, loc };
   }
 
 __ 'whitespace' =
@@ -377,7 +377,7 @@ _DelimComma =
   _0 ',' _0
 
 _DelimCommaWLoc =
-  _0 loc:(','  { return location(); }) _0 { return { loc, }; }
+  _0 loc:(','  { return location(); }) _0 { return { loc }; }
 
 _LooseDelim = 
   _DelimComma / _1
@@ -385,7 +385,7 @@ _LooseDelim =
 _LooseDelimComma = 
   _DelimComma
   /
-  _1 &_Word { pushDiagnostic(l10n.t('Separator must be a comma.'), location(), ); }
+  _1 &_Word { pushDiagnostic(l10n.t('Separator must be a comma.'), location()); }
 
 _LooseDelimSpace =
   l:_DelimCommaWLoc { pushDiagnostic(l10n.t('Separator must be a whitespace.'), l.loc); }
@@ -420,11 +420,11 @@ LeadingComment 'empty statement with comment' =
 EmptyStmt1 =
   Eos1 {
     const loc = location();
-    return { type: 'EmptyStatement', loc: getRangeFromLocation(loc.source, loc.start), };
+    return { type: 'EmptyStatement', loc: getRangeFromLocation(loc.source, loc.start) };
   }
 
 EmptyStmt0 =
-  Eos0 { return { type: 'EmptyStatement', loc: location(), }; }
+  Eos0 { return { type: 'EmptyStatement', loc: location() }; }
 
 /**
  * Nonempty statement.
@@ -453,7 +453,7 @@ BlockStmt 'block statement' =
     _0 closer:'}'? {
       const loc = location();
       diagnoseIfNotClosed(closer, BLOCK_STMT_LABEL, loc);
-      return { type: 'BlockStatement', body, loc, };
+      return { type: 'BlockStatement', body, loc };
     }
   ) tail:(_0 @Eos)? {
     if (tail) {
@@ -477,7 +477,7 @@ IfStmt 'if statement' =
         return diagnoseNullishExpression(expr, TEST_IN_IF_LABEL, loc);
       }
     /
-    kwd:('ifd' / 'ifp') !_Word { return { type: 'UnclassifiedExpression', raw: kwd, loc: location(),}; }
+    kwd:('ifd' / 'ifp') !_Word { return { type: 'UnclassifiedExpression', raw: kwd, loc: location() }; }
   ) _0 (_Eol / LineComment)? consequent:(
     stmt:(_0 @NonemptyStmt)? {
       return diagnoseNullishStatement(stmt, CONSEQUENT_IN_IF_LABEL);
@@ -489,7 +489,7 @@ IfStmt 'if statement' =
       }
     )
   )? {
-    return { type: 'IfStatement', test, consequent, alternate, loc: location(), };
+    return { type: 'IfStatement', test, consequent, alternate, loc: location() };
   }
 
 /**
@@ -507,7 +507,7 @@ WhileStmt 'while statement' =
       return diagnoseNullishStatement(stmt, BODY_IN_WHILE_LABEL);
     }
   ) {
-    return { type: 'WhileStatement', test, body, loc: location(), };
+    return { type: 'WhileStatement', test, body, loc: location() };
   }
   
 /**
@@ -520,7 +520,7 @@ ForStmt 'for statement' =
   'for' _0 stmt:(
     '(' _0 stmt2:(
       init:ExprSingleList? _0 ';' _0 test:ExprForceSingle? _0 ';' _0 update:ExprSingleList? {
-        return { type: 'ForStatement', init: makeSequenceExpression(init), test, update: makeSequenceExpression(update), };
+        return { type: 'ForStatement', init: makeSequenceExpression(init), test, update: makeSequenceExpression(update) };
       }
       /
       left:NotMemberPattern _0 'in' !_Word _0 right:LValue {
@@ -620,7 +620,7 @@ MacroDef 'macro declaration' =
     }
     /
     &{ return kwd === 'rdef'; } expression:ExprMulti {
-      return [{ type: 'ExpressionStatement', expression, loc: location(), }];
+      return [{ type: 'ExpressionStatement', expression, loc: location() }];
     }
     /
     stmt:Stmt? _0 Eos {
@@ -700,7 +700,7 @@ DArrayDeclarators =
         }
         return property;
       });
-      return { type: 'VariableDeclarator', id, sizes, init, loc: location(), };
+      return { type: 'VariableDeclarator', id, sizes, init, loc: location() };
     }
   )|.., _LooseDelimComma| exComma:_DelimCommaWLoc? {
     if (declarators.length === 0) {
@@ -716,7 +716,7 @@ DArrayDeclarators =
 
 ExternDArrayDeclarators =
   declarators:(opt:(@$_Word+ _0 ':' @(_0 @$[0-9]+ _0 ':' _0)?)? id:NotMemberPattern {
-    const declarator = { type: 'VariableDeclarator', id, extern: { raw: text(), }, loc: location(), };
+    const declarator = { type: 'VariableDeclarator', id, extern: { raw: text() }, loc: location() };
     if (opt) {
       declarator.extern.spec = opt[0];
       if (opt[1]) {
@@ -837,7 +837,7 @@ DeleteStmt 'delete statement' =
       pushDiagnostic(l10n.t('Expected {0}.', ASSOC_ARRAY_LABEL), callee.loc ?? location());
     }
     // TODO: check empty array acess. `delete arr[]`.
-    return { type: 'MacroStatement', callee, arguments: args, builtin: true, loc: location(), };
+    return { type: 'MacroStatement', callee, arguments: args, builtin: true, loc: location() };
   }
 
 /**
@@ -1080,7 +1080,7 @@ LooseIdValidated =
 
 // MacroSymbol =
 //   value:$('\\'? '$' ([*@#$] / [0-9]+)) {
-//     return { type: 'MacroSymbolPattern', value, loc: location(), };
+//     return { type: 'MacroSymbolPattern', value, loc: location() };
 //   }
 
 /*
@@ -1676,7 +1676,7 @@ ExprRule13 =
   )* {
     return tails.reduce((accumulator, currentValue) => {
       const [left, right]  = currentValue;
-      return { type: 'ConditionalExpression', test: accumulator, left, right, loc: location(), };
+      return { type: 'ConditionalExpression', test: accumulator, left, right, loc: location() };
     }, head);
   }
 
@@ -1711,7 +1711,7 @@ ExprRule14 =
         pushDiagnostic(l10n.t('Left-side value must be assignable.'), location());
       }
       const [operator, right] = tail;
-      return { type: 'AssignmentExpression', operator, left: head, right, loc: location(), };
+      return { type: 'AssignmentExpression', operator, left: head, right, loc: location() };
     }
   }
 
@@ -1726,7 +1726,7 @@ ExprRule14MA =
         pushDiagnostic(l10n.t('Left-side value must be assignable.'), location());
       }
       const [operator, right] = tail;
-      return { type: 'AssignmentExpression', operator, left: head, right, loc: location(), };
+      return { type: 'AssignmentExpression', operator, left: head, right, loc: location() };
     }
   }
 
