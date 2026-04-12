@@ -78,6 +78,33 @@ const BODY_IN_WHILE_LABEL = l10n.t('body in while-statement');
 const TEST_IN_FOR_LABEL = l10n.t('test expression in for-statement');
 const BODY_IN_FOR_LABEL = l10n.t('body in for-statement');
 const EXPR_IN_PAREN_LABEL = l10n.t('expression in the parenthesis');
+
+// There is a peggy.js's built-in `offset()` function.
+// For safety, `offset` is not used as a name of a function parameter or a variable.
+
+/**
+ * Return a new range object based on the range.
+ * @param {GrammarSource} source - The source of the grammar.
+ * @param {Location} baseLoc - The base location to be referenced.
+ * @param {number} [len=0] - The length of the range.
+ * @param {number} [off=0] - The offset to be added to the base location.
+ * @returns {LocationRange} - The modified location range.
+ */
+function getRangeFromLocation(source, baseLoc, len = 0, off = 0) {
+  const start = shiftLocationColumn(baseLoc, off);
+  const end = shiftLocationColumn(start, len);
+  return { source, start, end };
+}
+
+/**
+ * Return a new location object.
+ * @param {Location} loc - The base location to be referenced.
+ * @param {number} shift - how many columns to shift.
+ * @returns {Location} - The modified location.
+ */
+function shiftLocationColumn(loc, shift) {
+  return { line: loc.line, column: loc.column + shift, offset: loc.offset + shift, };
+}
 }}
 
 {
@@ -107,30 +134,6 @@ const EXPR_IN_PAREN_LABEL = l10n.t('expression in the parenthesis');
   }
 
   /**
-   * Return a new range object.
-   * @param {GrammarSource} source - The source of the grammar.
-   * @param {Location} baseLoc - The base location to be referenced.
-   * @param {number} [length=0] - The length of the range.
-   * @param {number} [offset=0] - The offset to be added to the base location.
-   * @returns {LocationRange} - The modified location range.
-   */
-  function getRange(source, baseLoc, length = 0, offset = 0) {
-    const start = shiftLocationColumn(baseLoc, offset);
-    const end = shiftLocationColumn(start, length);
-    return { source, start, end };
-  }
-
-  /**
-   * Return a new location object.
-   * @param {Location} loc - The base location to be referenced.
-   * @param {number} shift - how many columns to shift.
-   * @returns {Location} - The modified location.
-   */
-  function shiftLocationColumn(loc, shift) {
-    return { line: loc.line, column: loc.column + shift, offset: loc.offset + shift, };
-  }
-
-  /**
    * Report an error if closer does not exist.
    * @param {string | null | undefined} closer - closer string
    * @param {string} label - label of the error
@@ -141,7 +144,7 @@ const EXPR_IN_PAREN_LABEL = l10n.t('expression in the parenthesis');
    */
   function diagnoseIfNotClosed(closer, label, loc, openerLength = 1, severity = DiagnosticSeverity.Error) {
     if (!closer) {
-      pushDiagnostic(l10n.t('Unterminated {0}.', label), getRange(loc.source, loc.start, openerLength), severity);
+      pushDiagnostic(l10n.t('Unterminated {0}.', label), getRangeFromLocation(loc.source, loc.start, openerLength), severity);
     }
   }
 
@@ -159,6 +162,27 @@ const EXPR_IN_PAREN_LABEL = l10n.t('expression in the parenthesis');
       const loc2 = loc ?? location();
       pushDiagnostic(l10n.t('Expected {0}.', label), loc2, severity);
       return { type: 'Literal', value: null, loc: loc2, };
+    }
+    return obj;
+  }
+
+  /**
+   * Report an error if the object is empty.
+   * @template {Expression} T
+   * @param {T | null | undefined} obj - object to be checked
+   * @param {string} op - operator string
+   * @param {number} [off=0] - how many columns to shift the location of the error
+   * @param {LocationRange | undefined} [loc=undefined] - location range of the error
+   * @param {number} [severity=DiagnosticSeverity.Error] - error severity
+   * @returns {T | Literal} - the object itself if it is not empty, otherwise a 'Literal' object whose value is null.
+   */
+  function diagnoseNoOperatorFollower(obj, op, off = 0, loc = undefined, label = l10n.t('expression'), severity = DiagnosticSeverity.Error) {
+    if (!obj) {
+      const baseLoc = loc ?? location();
+      const locOp = getRangeFromLocation(baseLoc.source, baseLoc.start, op.length, off);
+      const locObj = getRangeFromLocation(baseLoc.source, baseLoc.start, 0, off + op.length);
+      pushDiagnostic(l10n.t('Expected {0} following "{1}" operator.', label, op), locOp, severity);
+      return { type: 'Literal', value: null, loc: locObj, };
     }
     return obj;
   }
@@ -396,7 +420,7 @@ LeadingComment 'empty statement with comment' =
 EmptyStmt1 =
   Eos1 {
     const loc = location();
-    return { type: 'EmptyStatement', loc: getRange(loc.source, loc.start), };
+    return { type: 'EmptyStatement', loc: getRangeFromLocation(loc.source, loc.start), };
   }
 
 EmptyStmt0 =
@@ -500,7 +524,7 @@ ForStmt 'for statement' =
       }
       /
       left:NotMemberPattern _0 'in' !_Word _0 right:LValue {
-        return { type: 'ForInStatement', left, right, };
+        return { type: 'ForInStatement', left, right };
       }
     ) _0 closer:')'? {
       const loc = location();
@@ -522,7 +546,7 @@ ForStmt 'for statement' =
  */
 BreakStmt 'break statement' =
   'break' _0 Eos {
-    return { type: 'BreakStatement', loc: location(), };
+    return { type: 'BreakStatement', loc: location() };
   }
 
 /**
@@ -530,7 +554,7 @@ BreakStmt 'break statement' =
  */
 ContinueStmt 'continue statement' =
   'continue' _0 Eos {
-    return { type: 'ContinueStatement', loc: location(), };
+    return { type: 'ContinueStatement', loc: location() };
   }
 
 /**
@@ -539,7 +563,7 @@ ContinueStmt 'continue statement' =
  */
 ReturnStmt 'return statement' =
   'return' !_Word _0 argument:ExprSingle? _0 Eos {
-    return { type: 'ReturnStatement', argument, loc: location(), };
+    return { type: 'ReturnStatement', argument, loc: location() };
   }
 
 /**
@@ -548,7 +572,7 @@ ReturnStmt 'return statement' =
  */
 ExitStmt 'exit statement' =
   'exit' _0 Eos {
-    return { type: 'ExitStatement', loc: location(), };
+    return { type: 'ExitStatement', loc: location() };
   }
 
 /**
@@ -558,7 +582,7 @@ QuitStmt 'quit statement' =
   'quit' _0 Eos {
     const loc = location();
     pushDiagnostic(l10n.t('"quit" command cannot be included in a macro.'), loc, DiagnosticSeverity.Warning);
-    return { type: 'QuitStatement', loc, };
+    return { type: 'QuitStatement', loc };
   }
 
 
@@ -604,7 +628,7 @@ MacroDef 'macro declaration' =
       return stmt ? [stmt] : [];
     }
   ) {
-    return { type: 'FunctionDeclaration', id, params, body, rdef: kwd === 'rdef', loc: location(), };
+    return { type: 'FunctionDeclaration', id, params, body, rdef: kwd === 'rdef', loc: location() };
   }
 
 /**
@@ -618,7 +642,7 @@ UndefStmt 'undef statement' =
     if (args.length === 0) {
       pushDiagnostic(l10n.t('Expected at least one identifier.'), location());
     }
-    return { type: 'MacroStatement', callee, arguments: args, builtin: true, loc: location(), };
+    return { type: 'MacroStatement', callee, arguments: args, builtin: true, loc: location() };
   }
 
 /**
@@ -643,22 +667,21 @@ UndefStmt 'undef statement' =
 
 DArrayDef 'data-array declaration' =
   kind:(@('local' / 'global' / 'shared') _1)? datatype:(@_DArrayDType _1)? 'array' _1 declarations:DArrayDeclarators _0 Eos {
-    return { type: 'VariableDeclaration', dataarray: true, kind, declarations, datatype, loc: location(),};
+    return { type: 'VariableDeclaration', dataarray: true, kind, declarations, datatype, loc: location() };
   }
   / kind:'extern' _1 'shared' _1 'array' _1 declarations:ExternDArrayDeclarators _0 Eos {
-    return { type: 'VariableDeclaration', dataarray: true, kind, declarations, loc: location(), };
+    return { type: 'VariableDeclaration', dataarray: true, kind, declarations, loc: location() };
   }
 
 _DArrayDType =
   'string' / 'float' / 'double'
-  / 'byte' / 'short' / $('long' '64'?)
-  / 'ubyte' / 'ushort' / $('ulong' '64'?)
+  / $('u'? ('byte' / 'short' / 'long' '64'?))
 
 DArrayDeclarators =
   declarators:(
     memberExpr:MemberExpr init:(
-      _0 op:'=' !'=' _0 term:ExprMulti? {
-        return diagnoseNullishExpression(term, l10n.t('expression following "{0}" operator', op));
+      space:_0 op:'=' !'=' _0 term:ExprMulti? {
+        return diagnoseNoOperatorFollower(term, op, space.length);
       }
     )? {
       const id = memberExpr.object;
@@ -728,7 +751,7 @@ VariableDef 'variable declaration' =
     } else if (declarations.length > 1 && declarations.some(d => !!d.init)) {
       pushDiagnostic(l10n.t('Only one declarator is allowed when value is assigned.'), location());
     }
-    return { type: 'VariableDeclaration', dataarray: false, declarations, kind, loc: location(), };
+    return { type: 'VariableDeclaration', dataarray: false, declarations, kind, loc: location() };
   }
 
 
@@ -742,7 +765,7 @@ ConstantDef 'constant declaration' =
       if (!init) {
         pushDiagnostic(l10n.t('Expected initial value for constant.'), location());
       }
-      const declarator = { type: 'VariableDeclarator', id, init, loc: location(), };
+      const declarator = { type: 'VariableDeclarator', id, init, loc: location() };
       return [declarator];
     }
     /
@@ -753,14 +776,14 @@ ConstantDef 'constant declaration' =
     } else if (declarations.length > 1) {
       pushDiagnostic(l10n.t('Only single constant can be declared per statement.'), location());
     }
-    return { type: 'VariableDeclaration', dataarray: false, declarations, kind: 'const', loc: location(), };
+    return { type: 'VariableDeclaration', dataarray: false, declarations, kind: 'const', loc: location() };
   }
 
 VariableDeclarators =
   declarators:(
     memberExpr:MemberExpr init:(
-      _0 op:'=' !'=' _0 term:ExprMulti? {
-        return diagnoseNullishExpression(term, l10n.t('expression following "{0}" operator', op));
+      space:_0 op:'=' !'=' _0 term:ExprMulti? {
+        return diagnoseNoOperatorFollower(term, op, space.length);
       }
     )? {
       const id = memberExpr.object;
@@ -780,7 +803,7 @@ VariableDeclarators =
           }
         });
       }
-      return { type: 'VariableDeclarator', id, init, assocarray, loc: location(), };
+      return { type: 'VariableDeclarator', id, init, assocarray, loc: location() };
     }
   )|.., _LooseDelim| exComma:_DelimCommaWLoc? {
     if (exComma) {
@@ -827,7 +850,7 @@ MatchStmt =
   &('syms' / 'lscmd' / 'lsdef' / 'prdef') callee:StrictId args:(
     flags:(_1 @(
       flag:[-+] value:$(!(__ / [-+] / Eos) .)+ {
-        return { type: 'Literal', value, raw: text(), flag, loc: location(), };
+        return { type: 'Literal', value, raw: text(), flag, loc: location() };
       }
     )|1.., _0|)? remains:(
       _1 @(
@@ -835,7 +858,7 @@ MatchStmt =
           // if (!SYMBOL_MATCH_REGEXP.test(value)) {
           //   pushDiagnostic(l10n.t('Expected a symbol name.'), location());
           // }
-          return { type: 'Literal', value, raw: text(), loc: location()};
+          return { type: 'Literal', value, raw: text(), loc: location() };
         }
       )|1.., _1|
     )? {
@@ -851,12 +874,20 @@ MatchStmt =
             if (arg.flag === '-') {
               const matches = arg.value.matchAll(/[^vBGLADNSICWM]+/g);
               for (const match of matches) {
-                pushDiagnostic(l10n.t('Unknown optional parameter.'), getRange(arg.loc.source, arg.loc.start, match[0].length, match.index + 1), DiagnosticSeverity.Warning);
+                pushDiagnostic(
+                  l10n.t('Unknown optional parameter.'),
+                  getRangeFromLocation(arg.loc.source, arg.loc.start, match[0].length, match.index + 1),
+                  DiagnosticSeverity.Warning,
+                );
               }
             } else if (arg.flag === '+') {
               const matches = arg.value.matchAll(/[^BGLADNSICWM]+/g);
               for (const match of matches) {
-                pushDiagnostic(l10n.t('Unknown optional parameter.'), getRange(arg.loc.source, arg.loc.start, match[0].length, match.index + 1), DiagnosticSeverity.Warning);
+                pushDiagnostic(
+                  l10n.t('Unknown optional parameter.'),
+                  getRangeFromLocation(arg.loc.source, arg.loc.start, match[0].length, match.index + 1),
+                  DiagnosticSeverity.Warning,
+                );
               }
             }
           } else {
@@ -869,7 +900,7 @@ MatchStmt =
         }
       }
     });
-    return { type: 'MacroStatement', callee, arguments: args, builtin: true, loc: location(), };
+    return { type: 'MacroStatement', callee, arguments: args, builtin: true, loc: location() };
   }
 
 /**
@@ -899,17 +930,17 @@ MatchStmt =
 MacroStmt =
   &('print' / 'eprint') callee:StrictId _1 args:ExprMultiList _0 Eos {
     diagnoseNullishElementInArray(args, ARGUMENT_LABEL);
-    return { type: 'MacroStatement', callee, arguments: args, builtin: true, loc: location(), };
+    return { type: 'MacroStatement', callee, arguments: args, builtin: true, loc: location() };
   }
   /
   &('memstat' / 'savstate' / 'reconfig' / 'getcounts' / 'move_all' / 'move_cnt' / 'sync' / 'history') callee:StrictId
   args:((_1 / &'"') @(StringLiteral / ExprMA)|.., _0|)?
   _0 Eos {
-    return { type: 'MacroStatement', callee, arguments: args ?? [], builtin: true, loc: location(), };
+    return { type: 'MacroStatement', callee, arguments: args ?? [], builtin: true, loc: location() };
   }
   /
   callee:StrictId args:((_1 / &'"') @(StringLiteral / ExprMA)|.., _0|)? _0 Eos {
-    return { type: 'MacroStatement', callee, arguments:args ?? [], loc: location(), };
+    return { type: 'MacroStatement', callee, arguments:args ?? [], loc: location() };
   }
 
 /**
@@ -918,7 +949,7 @@ MacroStmt =
 ExprStmt 'expression statement' =
   exprs:ExprMultiList _0 Eos {
     const expression = makeSequenceExpression(exprs);
-    return { type: 'ExpressionStatement', expression, loc: location(), };
+    return { type: 'ExpressionStatement', expression, loc: location() };
   }
 
 /*
@@ -981,10 +1012,10 @@ ExprRule2MA =
 NotMemberPattern =
   IdValidated
   /
-  '@' _0 expression:(IdValidated / ExprBlock)? {
+  op:'@' _0 expr:(IdValidated / ExprBlock)? {
     const loc = location();
-    expression = diagnoseNullishExpression(expression, l10n.t('expression following "{0}" operator', '@'), loc);
-    return { type: 'IndirectPattern', expression, loc, };
+    const expression = diagnoseNoOperatorFollower(expr, op, 0, loc);
+    return { type: 'IndirectPattern', expression, loc };
   }
 
 NotMemberPatternMA =
@@ -992,23 +1023,23 @@ NotMemberPatternMA =
   /
   '@' expression:(IdValidated / ExprBlockMA) {
     const loc = location();
-    return { type: 'IndirectPattern', expression, loc, };
+    return { type: 'IndirectPattern', expression, loc };
   }
 
 
 /** Identifier. */
 StrictId =
   name:$([a-zA-Z_][a-zA-Z0-9_]*) {
-    return { type: 'Identifier', name, loc: location(), };
+    return { type: 'Identifier', name, loc: location() };
   }
 
 /** Identifier with validation of not using reserved keywords. */
 IdValidated =
   items:(
     ![0-9] @(
-      char:$[a-zA-Z0-9_]+ { return [char, undefined, ]; }
+      char:$[a-zA-Z0-9_]+ { return [char, undefined]; }
       /
-      char:$('\\'? '$' ([*@#$] / [0-9]+)) { return [ char, { type: 'MacroParameter', name: char, loc: location(), } ]; }
+      char:$('\\'? '$' ([*@#$] / [0-9]+)) { return [char, { type: 'MacroParameter', name: char, loc: location() }]; }
     )+ 
   ) {
     let name = '';
@@ -1022,7 +1053,7 @@ IdValidated =
     });
 
     /** @type {Identifier} */
-    const node = { type: 'Identifier', name, loc: location(), };
+    const node = { type: 'Identifier', name, loc: location() };
     if (RESERVED_KEYWORD_REGEXP.test(name)) {
       pushDiagnostic(l10n.t('"{0}" is a reserved keyword.', name), node.loc);
     // } else if (name === 'const') {
@@ -1044,7 +1075,7 @@ LooseIdValidated =
   {
     const loc = location();
     pushDiagnostic(l10n.t('Invalid identifier.'), loc);
-    return { type: 'Identifier', name, loc, };
+    return { type: 'Identifier', name, loc };
   }
 
 // MacroSymbol =
@@ -1075,7 +1106,7 @@ MemberExpr =
     if (properties.length > 2) {
       pushDiagnostic(l10n.t('Array dimension must be 2 or less.'), location());
     }
-    return { type: 'MemberExpression', object, properties, loc: location(), };
+    return { type: 'MemberExpression', object, properties, loc: location() };
   }
 
 MemberExprMA =
@@ -1083,7 +1114,7 @@ MemberExprMA =
     if (properties.length > 2) {
       pushDiagnostic(l10n.t('Array dimension must be 2 or less.'), location());
     }
-    return { type: 'MemberExpression', object, properties, loc: location(), };
+    return { type: 'MemberExpression', object, properties, loc: location() };
   }
 
 
@@ -1096,7 +1127,7 @@ MemberAccessProp =
       pushDiagnostic(l10n.t('Trailing comma not allowed.'), exComma.loc);
     }
     diagnoseIfNotClosed(closer, BRACKET_LABEL, loc);
-    return { type: 'MemberAccessProperty', values, loc, };
+    return { type: 'MemberAccessProperty', values, loc };
   }
 
 MemberAccessPropMA =
@@ -1108,40 +1139,40 @@ MemberAccessPropMA =
       pushDiagnostic(l10n.t('Trailing comma not allowed.'), exComma.loc);
     }
     diagnoseIfNotClosed(closer, BRACKET_LABEL, loc);
-    return { type: 'MemberAccessProperty', values, loc, };
+    return { type: 'MemberAccessProperty', values, loc };
   }
 
 SliceElement =
   start:ExprMulti? _0 ':' _0 end:ExprMulti? {
-    return { type: 'SliceElement', start: start ?? getNullLiteral(), end: end ?? getNullLiteral(), loc: location(), };
+    return { type: 'SliceElement', start: start ?? getNullLiteral(), end: end ?? getNullLiteral(), loc: location() };
   }
 
 SliceElementMA =
   start:ExprMA? ':' end:ExprMA? {
-    return { type: 'SliceElement', start: start ?? getNullLiteral(), end: end ?? getNullLiteral(), loc: location(), };
+    return { type: 'SliceElement', start: start ?? getNullLiteral(), end: end ?? getNullLiteral(), loc: location() };
   }
 
 
 InvalidExpr =
   '{' Eos? _0 stmts:ExprMultiList? _0 '}'? Eos? {
     pushDiagnostic(l10n.t('Braces are to bundle statements. Use parentheses "()" for expressions.'), location());
-    return { type: 'UnclassifiedExpression', raw: text(), loc: location(), };
+    return { type: 'UnclassifiedExpression', raw: text(), loc: location() };
   }
   /
   value:$[^#,'"(){}[\];: \t\r\n\\]+ {
     pushDiagnostic(l10n.t('Invalid expression. It should be quoted if it is a string.'), location(), DiagnosticSeverity.Warning);
-    return { type: 'Literal', value: text(), raw: text(), loc: location(), };
+    return { type: 'Literal', value: text(), raw: text(), loc: location() };
   }
 
 InvalidExprMA =
   '{' stmts:ExprMultiList? '}'? {
     pushDiagnostic(l10n.t('Braces are to bundle statements. Use parentheses "()" for expressions.'), location());
-    return { type: 'UnclassifiedExpression', raw: text(), loc: location(), };
+    return { type: 'UnclassifiedExpression', raw: text(), loc: location() };
   }
   // /
   // value:$[^#,'"(){}[\];:\t\r\n\\]+ {
   //   pushDiagnostic(l10n.t('Invalid expression. It should be quoted if it is a string.'), location(), DiagnosticSeverity.Warning);
-  //   return { type: 'Literal', value: text(), raw: text(), loc: location(), };
+  //   return { type: 'Literal', value: text(), raw: text(), loc: location() };
   // }
 
 // +-*/%^&|=
@@ -1199,7 +1230,7 @@ StringLiteral 'string literal' =
   closer:_QuotMark? &{ return testIfQuoteEnds(opener, closer); } {
     const loc = location();
     diagnoseIfNotClosed(closer, STRING_LITERAL_LABEL, loc, opener.length);
-    return { type: 'Literal', value: chars.join(''), raw: text(), loc: location(), };
+    return { type: 'Literal', value: chars.join(''), raw: text(), loc: location() };
   }
 
 /** 
@@ -1210,22 +1241,22 @@ StringLiteral 'string literal' =
 NumericLiteral 'numeric literal' =
   // floating-point
   (([0-9]+ (Exponent / '.' [0-9]* Exponent?)) / '.' [0-9]+ Exponent?) {
-    return { type: 'Literal', value: parseFloat(text()), raw: text(), loc: location(), };
+    return { type: 'Literal', value: parseFloat(text()), raw: text(), loc: location() };
   }
   /
   // hexadecimal integer
   '0' [xX] body:$[0-9a-fA-F]+ {
-    return { type: 'Literal', value: parseInt(body, 16), raw: text(), loc: location(),};
+    return { type: 'Literal', value: parseInt(body, 16), raw: text(), loc: location() };
   }
   /
   // octal integer
   '0' body:$[0-7]+ {
-    return { type: 'Literal', value: parseInt(body, 8), raw: text(), loc: location(), };
+    return { type: 'Literal', value: parseInt(body, 8), raw: text(), loc: location() };
   }
   /
   // decimal integer
   [0-9]+ {
-    return { type: 'Literal', value: parseInt(text(), 10), raw: text(), loc: location(), };
+    return { type: 'Literal', value: parseInt(text(), 10), raw: text(), loc: location() };
   }
 
 // exponential part in floating-point digit, e.g., E+3 in 1.2E+3)
@@ -1261,7 +1292,7 @@ ArrayLiteral 'array literal' =
       properties = [];
     }
     diagnoseIfNotClosed(closer, BRACKET_LABEL, loc);
-    return { type: 'ObjectExpression', properties, loc, };
+    return { type: 'ObjectExpression', properties, loc };
   }
 
 ArrayLiteralMA 'array literal' =
@@ -1286,7 +1317,7 @@ ArrayLiteralMA 'array literal' =
       properties = [];
     }
     diagnoseIfNotClosed(closer, BRACKET_LABEL, loc);
-    return { type: 'ObjectExpression', properties, loc: location(),};
+    return { type: 'ObjectExpression', properties, loc: location() };
   }
 
 /**
@@ -1295,14 +1326,14 @@ ArrayLiteralMA 'array literal' =
  */
 ArrayItem =
   keys:(expr:ExprMulti? _0 ':' _0 { return expr ?? getNullLiteral(); })|1..2| value:(expr:ExprMulti? { return expr ?? getNullLiteral(); }) {
-    return { type: 'Property', keys, value, loc: location(), };
+    return { type: 'Property', keys, value, loc: location() };
   }
   /
   ExprMulti
 
 ArrayItemMA =
   keys:(expr:ExprMA? ':' { return expr ?? getNullLiteral(); })|1..2| value:(expr:ExprMA? { return expr ?? getNullLiteral(); }) {
-    return { type: 'Property', keys, value, loc: location(), };
+    return { type: 'Property', keys, value, loc: location() };
   }
   /
   ExprMA
@@ -1342,7 +1373,7 @@ FunctionCall 'function call' =
       return args;
     }
   ) {
-    return { type: 'CallExpression', callee: expr, arguments: args ?? [], loc: location(), };
+    return { type: 'CallExpression', callee: expr, arguments: args ?? [], loc: location() };
   }
 
 FunctionCallMA =
@@ -1356,7 +1387,7 @@ FunctionCallMA =
       return args;
     }
   ) {
-    return { type: 'CallExpression', callee: expr, arguments: args ?? [], loc: location(), };
+    return { type: 'CallExpression', callee: expr, arguments: args ?? [], loc: location() };
   }
 
 
@@ -1366,17 +1397,19 @@ FunctionCallMA =
  * <BNF> ! expression
  * <BNF> ~ expression
  */
+_UnaryOp = '+' / '-' / '!' / '~'
+
 UnaryExpr 'unary expression' =
-  operator:('+' / '-' / '!' / '~') _0 arg:ExprSingle? {
+  op:_UnaryOp _0 arg:ExprSingle? {
     const loc = location();
-    arg = diagnoseNullishExpression(arg, l10n.t('expression following "{0}" operator', operator), loc);
-    return { type: 'UnaryExpression', operator, argument: arg, prefix: true, loc, };
+    const arg2 = diagnoseNoOperatorFollower(arg, op, 0, loc);
+    return { type: 'UnaryExpression', operator: op, argument: arg2 , prefix: true, loc };
   }
 
 UnaryExprMA =
-  operator:('+' / '-' / '!' / '~') arg:ExprMA {
+  op:_UnaryOp arg:ExprMA {
     const loc = location();
-    return { type: 'UnaryExpression', operator, argument: arg, prefix: true, loc, };
+    return { type: 'UnaryExpression', operator: op, argument: arg, prefix: true, loc };
   }
 
 /**
@@ -1385,33 +1418,37 @@ UnaryExprMA =
  * <BNF> lvalue ++
  * <BNF> lvalue −−
  */
+_UpdateOp = '++' / '--'
+
 UpdateExpr 'update expression' =
-  operator:('++' / '--') _0 arg:LValue? {
+  op:_UpdateOp _0 arg:LValue? {
     const loc = location();
-    arg = diagnoseNullishExpression(arg, l10n.t('variable following "{0}" operator', operator), loc);
-    return { type: 'UpdateExpression', operator, argument: arg, prefix: true, loc, };
+    const arg2 = diagnoseNoOperatorFollower(arg, op, 0, loc, l10n.t('variable'));
+    return { type: 'UpdateExpression', operator: op, argument: arg2, prefix: true, loc };
   }
-  / arg:LValue _0 operator:('++' / '--') {
-    return { type: 'UpdateExpression', operator, argument: arg, prefix: false, loc: location(), };
+  / arg:LValue _0 op:_UpdateOp {
+    return { type: 'UpdateExpression', operator: op, argument: arg, prefix: false, loc: location() };
   }
 
 UpdateExprMA =
-  operator:('++' / '--') arg:LValueMA {
+  op:_UpdateOp arg:LValueMA {
     const loc = location();
-    return { type: 'UpdateExpression', operator, argument: arg, prefix: true, loc, };
+    return { type: 'UpdateExpression', operator: op, argument: arg, prefix: true, loc };
   }
-  / arg:LValueMA operator:('++' / '--') {
-    return { type: 'UpdateExpression', operator, argument: arg, prefix: false, loc: location(), };
+  / arg:LValueMA op:_UpdateOp {
+    return { type: 'UpdateExpression', operator: op , argument: arg, prefix: false, loc: location() };
   }
 
 /**
  * <BNF> expression binop expression
  * 3rd priority: * / %
  */
+_OpRule3 = @('*' / '/' / '%') !'='
+
 ExprRule3 =
   head:ExprRule2 tails:(
-    _0 op:$(('*' / '/' / '%') !'=') _0 term:ExprRule2? {
-      return [op, diagnoseNullishExpression(term, l10n.t('expression following "{0}" operator', op))];
+    space:_0 op:_OpRule3 _0 term:ExprRule2? {
+      return [op, diagnoseNoOperatorFollower(term, op, space.length)];
     }
   )* {
     return getBinaryExpression(head, tails);
@@ -1419,9 +1456,7 @@ ExprRule3 =
 
 ExprRule3MA =
   head:ExprRule2MA tails:(
-    op:$(('*' / '/' / '%') !'=') term:ExprRule2MA {
-      return [op, term];
-    }
+    @op:_OpRule3 @term:ExprRule2MA // { return [op, term]; }
   )* {
     return getBinaryExpression(head, tails);
   }
@@ -1430,10 +1465,12 @@ ExprRule3MA =
  * <BNF> expression binop expression
  * 4th priority: + -
  */
+_OpRule4 = @('+' / '-') !'='
+
 ExprRule4 =
   head:ExprRule3 tails:(
-    _0 op:$(('+' / '-') !'=') _0 term:ExprRule3? {
-      return [op, diagnoseNullishExpression(term, l10n.t('expression following "{0}" operator', op))];
+    space:_0 op:_OpRule4 _0 term:ExprRule3? {
+      return [op, diagnoseNoOperatorFollower(term, op, space.length)];
     }
   )* {
     return getBinaryExpression(head, tails);
@@ -1441,9 +1478,7 @@ ExprRule4 =
 
 ExprRule4MA =
   head:ExprRule3MA tails:(
-    op:$(('+' / '-') !'=') term:ExprRule3MA {
-      return [op, term];
-    }
+    @op:_OpRule4 @term:ExprRule3MA // { return [op, term]; }
   )* {
     return getBinaryExpression(head, tails);
   }
@@ -1452,10 +1487,12 @@ ExprRule4MA =
  * <BNF> expression binop expression
  * 5th priority: << >>
  */
+_OpRule5 = @('<<' / '>>') !'='
+
 ExprRule5 =
   head:ExprRule4 tails:(
-    _0 op:$(('<<' / '>>') !'=') _0 term:ExprRule4? {
-      return [op, diagnoseNullishExpression(term, l10n.t('expression following "{0}" operator', op))];
+    space:_0 op:_OpRule5 _0 term:ExprRule4? {
+      return [op, diagnoseNoOperatorFollower(term, op, space.length)];
     }
   )* {
     return getBinaryExpression(head, tails);
@@ -1463,9 +1500,7 @@ ExprRule5 =
 
 ExprRule5MA =
   head:ExprRule4MA tails:(
-    op:$(('<<' / '>>') !'=') term:ExprRule4MA {
-      return [op, term];
-    }
+    @op:_OpRule5 @term:ExprRule4MA // { return [op, term]; }
   )* {
     return getBinaryExpression(head, tails);
   }
@@ -1474,10 +1509,12 @@ ExprRule5MA =
  * <BNF> expression binop expression
  * 6th priority: < <= > >=
  */
+_OpRule6 = $('<' !'<' '='?) / $('>' !'>' '='?)
+
 ExprRule6 =
   head:ExprRule5 tails:(
-    _0 op:($('<' !'<' '='?) / $('>' !'>' '='?)) _0 term:ExprRule5? {
-      return [op, diagnoseNullishExpression(term, l10n.t('expression following "{0}" operator', op))];
+    space:_0 op:_OpRule6 _0 term:ExprRule5? {
+      return [op, diagnoseNoOperatorFollower(term, op, space.length)];
     }
   )* {
     return getBinaryExpression(head, tails);
@@ -1485,9 +1522,7 @@ ExprRule6 =
 
 ExprRule6MA =
   head:ExprRule5MA tails:(
-    op:($('<' !'<' '='?) / $('>' !'>' '='?)) term:ExprRule5MA {
-      return [op, term];
-    }
+    @op:_OpRule6 @term:ExprRule5MA // { return [op, term]; }
   )* {
     return getBinaryExpression(head, tails);
   }
@@ -1496,10 +1531,12 @@ ExprRule6MA =
  * <BNF> expression binop expression
  * 7th priority: == !=
  */
+_OpRule7 = '==' / '!='
+
 ExprRule7 =
   head:ExprRule6 tails:(
-    _0 op:('==' / '!=') _0 term:ExprRule6? {
-      return [op, diagnoseNullishExpression(term, l10n.t('expression following "{0}" operator', op))];
+    space:_0 op:_OpRule7 _0 term:ExprRule6? {
+      return [op, diagnoseNoOperatorFollower(term, op, space.length)];
     }
   )* {
     return getBinaryExpression(head, tails);
@@ -1507,9 +1544,7 @@ ExprRule7 =
 
 ExprRule7MA =
   head:ExprRule6MA tails:(
-    op:('==' / '!=') term:ExprRule6MA {
-      return [op, term];
-    }
+    @op:_OpRule7 @term:ExprRule6MA // { return [op, term]; }
   )* {
     return getBinaryExpression(head, tails);
   }
@@ -1518,10 +1553,12 @@ ExprRule7MA =
  * <BNF> expression binop expression
  * 8th priority: &
  */
+_OpRule8 = @'&' ![&=]
+
 ExprRule8 =
   head:ExprRule7 tails:(
-    _0 op:$('&' ![&=]) _0 term:ExprRule7? {
-      return [op, diagnoseNullishExpression(term, l10n.t('expression following "{0}" operator', op))];
+    space:_0 op:_OpRule8 _0 term:ExprRule7? {
+      return [op, diagnoseNoOperatorFollower(term, op, space.length)];
     }
   )* {
     return getBinaryExpression(head, tails);
@@ -1529,9 +1566,7 @@ ExprRule8 =
 
 ExprRule8MA =
   head:ExprRule7MA tails:(
-    op:$('&' ![&=]) term:ExprRule7MA {
-      return [op, term];
-    }
+    @op:_OpRule8 @term:ExprRule7MA // { return [op, term]; }
   )* {
     return getBinaryExpression(head, tails);
   }
@@ -1540,10 +1575,12 @@ ExprRule8MA =
  * <BNF> expression binop expression
  * 9th prioirity: ^
  */
+_OpRule9 = @'^' ![=]
+
 ExprRule9 =
   head:ExprRule8 tails:(
-    _0 op:$('^' !'=') _0 term:ExprRule8? {
-      return [op, diagnoseNullishExpression(term, l10n.t('expression following "{0}" operator', op))];
+    space:_0 op:_OpRule9 _0 term:ExprRule8? {
+      return [op, diagnoseNoOperatorFollower(term, op, space.length)];
     }
   )* {
     return getBinaryExpression(head, tails);
@@ -1551,9 +1588,7 @@ ExprRule9 =
 
 ExprRule9MA =
   head:ExprRule8MA tails:(
-    op:$('^' !'=') term:ExprRule8MA {
-      return [op, term];
-    }
+    @op:_OpRule9 @term:ExprRule8MA // { return [op, term]; }
   )* {
     return getBinaryExpression(head, tails);
   }
@@ -1562,10 +1597,12 @@ ExprRule9MA =
  * <BNF> expression binop expression
  * 10th prioirity: |
  */
+_OpRule10 = @'|' ![|=]
+
 ExprRule10 =
   head:ExprRule9 tails:(
-    _0 op:$('|' ![|=]) _0 term:ExprRule9? {
-      return [op, diagnoseNullishExpression(term, l10n.t('expression following "{0}" operator', op))];
+    space:_0 op:_OpRule10 _0 term:ExprRule9? {
+      return [op, diagnoseNoOperatorFollower(term, op, space.length)];
     }
   )* {
     return getBinaryExpression(head, tails);
@@ -1573,9 +1610,7 @@ ExprRule10 =
 
 ExprRule10MA =
   head:ExprRule9MA tails:(
-    op:$('|' ![|=]) term:ExprRule9MA {
-      return [op, term];
-    }
+    @op:_OpRule10 @term:ExprRule9MA // { return [op, term]; }
   )* {
     return getBinaryExpression(head, tails);
   }
@@ -1586,8 +1621,8 @@ ExprRule10MA =
  */
 ExprRule11 =
   head:ExprRule10 tails:(
-    _0 op:'&&' _0 term:ExprRule10? {
-      return [op, diagnoseNullishExpression(term, l10n.t('expression following "{0}" operator', op))];
+    space:_0 op:'&&' _0 term:ExprRule10? {
+      return [op, diagnoseNoOperatorFollower(term, op, space.length)];
     }
   )* {
     return getLogicalExpression(head, tails);
@@ -1595,9 +1630,7 @@ ExprRule11 =
 
 ExprRule11MA =
   head:ExprRule10MA tails:(
-    op:'&&' term:ExprRule10MA {
-      return [op, term];
-    }
+    @op:'&&' @term:ExprRule10MA // { return [op, term]; }
   )* {
     return getLogicalExpression(head, tails);
   }
@@ -1608,8 +1641,8 @@ ExprRule11MA =
  */
 ExprRule12 =
   head:ExprRule11 tails:(
-    _0 op:'||' _0 term:ExprRule11? {
-      return [op, diagnoseNullishExpression(term, l10n.t('expression following "{0}" operator', op))];
+    space:_0 op:'||' _0 term:ExprRule11? {
+      return [op, diagnoseNoOperatorFollower(term, op, space.length)];
     }
   )* {
     return getLogicalExpression(head, tails);
@@ -1617,22 +1650,27 @@ ExprRule12 =
 
 ExprRule12MA =
   head:ExprRule11MA tails:(
-    op:'||' term:ExprRule11MA {
-      return [op, term];
-    }
+    @op:'||' @term:ExprRule11MA // { return [op, term]; }
   )* {
     return getLogicalExpression(head, tails);
   }
 
+// TODO: Not checked whether the parsed structure of conditional expression is correct
+// when the expression includes multiple ternary operators. E.g., a ? b ? c : d : e
 /*
  * <BNF> expression ? expression : expression
  * 13th priority: ? :
  */
 ExprRule13 =
   head: ExprRule12 tails:(
-    _0 '?' _0 left:ExprRule12? _0 right:(':' _0 @ExprRule12?)? {
-      left = diagnoseNullishExpression(left, l10n.t('expression following "{0}" operator', '?'));
-      right = diagnoseNullishExpression(right, l10n.t('expression following "{0}" operator', ':'));
+    lSpace:_0 '?' _0 left1:ExprRule12? right1:(
+      rSpace:_0 ':' _0 right0:ExprRule12? {
+        return diagnoseNoOperatorFollower(right0, ':', rSpace.length);
+      }
+    )? {
+      const left = diagnoseNoOperatorFollower(left1, '?', lSpace.length);
+      const rightNotFoundLoc = getRangeFromLocation(left.loc.source, left.loc.end, 0, 0);
+      const right = diagnoseNullishExpression(right1, l10n.t('":" operator and following expression'), rightNotFoundLoc);
       return [left, right];
     }
   )* {
@@ -1644,13 +1682,11 @@ ExprRule13 =
 
 ExprRule13MA =
   head: ExprRule12MA tails:(
-    '?' left:ExprRule12MA right:(':' @ExprRule12MA) {
-      return [left, right];
-    }
+    '?' @left:ExprRule12MA @right:(':' @ExprRule12MA) // { return [left, right]; }
   )* {
     return tails.reduce((accumulator, currentValue) => {
       const [left, right]  = currentValue;
-      return { type: 'ConditionalExpression', test: accumulator, left, right, loc: location(), };
+      return { type: 'ConditionalExpression', test: accumulator, left, right, loc: location() };
     }, head);
   }
 
@@ -1658,10 +1694,14 @@ ExprRule13MA =
  * <BNF> lvalue asgnop expression
  * 14th priority: = += -= *= /= %= &= |= ^= <<= >>=
  */
+_AssignOp =
+  @'=' !'=' / '+=' / '-=' / '*=' / '/=' / '%='
+  / '<<=' / '>>=' / '&=' / '^=' / '|='
+
 ExprRule14 =
   head:ExprRule13 tail:(
-    _0 operator:AssignOp _0 right:ExprMulti? {
-      return [operator, diagnoseNullishExpression(right, l10n.t('expression following "{0}" operator', operator))];
+    space:_0 op:_AssignOp _0 right:ExprMulti? {
+      return [op, diagnoseNoOperatorFollower(right, op, space.length)];
     }
   )? {
     if (!tail) {
@@ -1677,9 +1717,7 @@ ExprRule14 =
 
 ExprRule14MA =
   head:ExprRule13MA tail:(
-    operator:AssignOp right:ExprMA {
-      return [operator, right];
-    }
+    @op:_AssignOp @right:ExprMA // { return [operator, right]; }
   )? {
     if (!tail) {
       return head;
@@ -1692,11 +1730,7 @@ ExprRule14MA =
     }
   }
 
-// assignment operator
-AssignOp =
-  $('=' !'=') / '+=' / '-=' / '*=' / '/=' / '%='
-  / '<<=' / '>>=' / '&=' / '^=' / '|='
-
+// TODO: Currently noOperationFollower error is not reached.
 /*
  * <15th priority> in
  * <BNF> expression in assoc-array
@@ -1707,8 +1741,8 @@ AssignOp =
  */
 ExprRule15 =
   head:ExprRule14 tails:(
-    _0 op:'in' !_Word _0 term:LValue? {
-      return [op, diagnoseNullishExpression(term, l10n.t('expression following "{0}" operator', op))];
+    space:_0 op:'in' !_Word _0 term:LValue? {
+      return [op, diagnoseNoOperatorFollower(term, op, space.length)];
     }
   )* {
     return getBinaryExpression(head, tails);
@@ -1725,8 +1759,8 @@ ExprRule15 =
  */
 ExprMulti =
   head:ExprSingle tails:(
-    spaces:_0 term:ExprSingle {
-      if (!spaces || spaces.length === 0) {
+    space:_0 term:ExprSingle {
+      if (!space || space.length === 0) {
         pushDiagnostic(l10n.t('Expressions should be separated with whitespace.'), location(), DiagnosticSeverity.Information);
       }
       return [' ', term];
