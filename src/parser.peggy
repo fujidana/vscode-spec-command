@@ -325,7 +325,7 @@ function shiftLocationColumn(loc, shift) {
 // # MAIN
 
 Start =
-  body:Stmt* {
+  body:TopLevelStmt* {
     return { type: 'Program', body, problems: _problems };
   }
 
@@ -407,6 +407,22 @@ Stmt 'statement' =
   }
   /
   _0 @(EmptyStmt1 / NonemptyStmt)
+  /
+  _1 @EmptyStmt0
+
+ /**
+  * BNF> statement
+  * Statement the same as `Stmt` except error handling for unclosed brackets.
+  */
+TopLevelStmt 'statement' =
+  comments:LeadingComment+ stmt:(_0 @(EmptyStmt1 / NonemptyStmt / LoneCloseBracketStmt / EmptyStmt0)) {
+    if (comments && comments.length > 0) {
+      stmt.leadingComments = comments;
+    }
+    return stmt;
+  }
+  /
+  _0 @(EmptyStmt1 / NonemptyStmt / LoneCloseBracketStmt)
   /
   _1 @EmptyStmt0
 
@@ -952,6 +968,23 @@ ExprStmt 'expression statement' =
     return { type: 'ExpressionStatement', expression, loc: location() };
   }
 
+LoneCloseBracketStmt 'lone-closing-bracket statement' =
+  stmt:(
+    value:('}' / ')' / ']') {
+      // Raise an error instead of pushing a diagnostic and continuing parsing, 
+      // because otherwise a lot of follow-up errors will be reported and it
+      // will be difficult for users to find the original error.
+      const loc = location();
+      // pushDiagnostic(l10n.t('Unpaired closing bracket "{0}".', value), loc);
+      // return { type: 'UnclassifiedStatement', raw: value, loc };
+      error(l10n.t('Unpaired closing bracket "{0}".', value), loc);
+  }) tail:(_0 @Eos)? {
+    if (tail) {
+      stmt.trailingComments = [tail];
+    }
+    return stmt;
+  }
+
 /*
  * EXPRESSION
  *
@@ -1255,7 +1288,7 @@ NumericLiteral 'numeric literal' =
   }
   /
   // decimal integer
-  [0-9]+ {
+  $[0-9]+ {
     return { type: 'Literal', value: parseInt(text(), 10), raw: text(), loc: location() };
   }
 

@@ -600,7 +600,8 @@ function analyzeDocumentContent(content: string, diagnosticRules: lang.Diagnosti
     } catch (error) {
         if (diagnosticRules) {
             if (error instanceof SyntaxError) {
-                diagnostics = [new vscode.Diagnostic(lang.convertRange(error.location), vscode.l10n.t('Syntax error in parsing: {0}', error.message))];
+                diagnostics = [new vscode.Diagnostic(lang.convertRange(error.location), error.message)];
+                diagnostics[0].code = 'syntax-error';
             } else if (error instanceof Error) {
                 diagnostics = [new vscode.Diagnostic(new vscode.Range(0, 0, 0, 0), vscode.l10n.t('Error in parsing: {0}', error.message))];
             } else {

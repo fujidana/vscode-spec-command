@@ -88,7 +88,7 @@ export interface Comment extends BaseNodeWithoutComments {
 // }
 
 /** Custom node for representing problems in the code. */
-export interface Problem extends BaseNode {
+export interface Problem {
     message: string;
     severity: DiagnosticSeverity;
     loc: LocationRange;
@@ -144,7 +144,7 @@ export interface BlockStatement extends BaseStatement {
 /** Custom node to catch unclassified statements. */
 export interface UnclassifiedStatement extends BaseStatement {
     type: 'UnclassifiedStatement';
-    value: string;
+    raw?: string | undefined;
 }
 
 /** Node having the same structure as `estree.IfStatement`. */

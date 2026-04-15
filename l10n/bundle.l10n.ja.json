@@ -59,6 +59,7 @@
   "Expression concatenation not allowed.": "式の連結は使用できません。",
   "Unterminated {0}.": "未終了の{0}です。",
   "Expected {0} following \"{1}\" operator.": "\"{1}\" 演算子に続く{0}が必要です。",
+  "Unpaired closing bracket \"{0}\".": "孤立した閉じ括弧 \"{0}\" です。",
   "Syntax error in parsing: {0}": "解析中の構文エラー: {0}",
   "Error in parsing: {0}": "解析中のエラー: {0}",
   "Unknown error in parsing: {0}": "解析中の不明なエラー: {0}",

@@ -47,6 +47,7 @@ const VISITOR_KEYS = {
     MemberAccessProperty: ['values'],
     SliceElement: ['start', 'end'],
     MacroParameter: [],
+    UnclassifiedExpression: [],
 };
 
 export function traverseWholly(program: tree.Program, diagnosticRules: lang.DiagnosticRules | undefined): [lang.ReferenceBook, vscode.DocumentSymbol[], vscode.Diagnostic[]] {
