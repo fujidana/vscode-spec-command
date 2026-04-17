@@ -96,6 +96,15 @@
 				}
 			]
 		},
+		"jsonValidation": [
+			{
+				"fileMatch": [
+					"scdict.json",
+					"*.scdict.json"
+				],
+				"url": "./schema/scdict.schema.json"
+			}
+		],
 		"configuration": {
 			"title": "spec command",
 			"properties": {

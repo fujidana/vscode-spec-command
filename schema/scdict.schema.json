@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/fujidana/vscode-spec-command/refs/heads/master/schema/scdict.schema.json",
+  "title": "spec-command dictionary",
+  "description": "Collection of symbols such as variables, constants, and functions, used by the VS Code spec-command extension for code completion and navigation",
+  "type": "object",
+  "required": [
+    "_name",
+    "_storage"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "_storage": {
+      "type": "string",
+      "enum": [
+        "extension",
+        "global",
+        "workspace"
+      ],
+      "description": "Location of the data store."
+    },
+    "constant": {
+      "$ref": "#/$defs/categorizedDictionary"
+    },
+    "variable": {
+      "$ref": "#/$defs/categorizedDictionary"
+    },
+    "array": {
+      "$ref": "#/$defs/categorizedDictionary"
+    },
+    "macro": {
+      "$ref": "#/$defs/categorizedDictionary"
+    },
+    "function": {
+      "$ref": "#/$defs/categorizedDictionary"
+    },
+    "keyword": {
+      "$ref": "#/$defs/categorizedDictionary"
+    },
+    "snippet": {
+      "$ref": "#/$defs/categorizedDictionary"
+    },
+    "enum": {
+      "$ref": "#/$defs/categorizedDictionary"
+    },
+    "undefined": {
+      "$ref": "#/$defs/categorizedDictionary"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "categorizedDictionary": {
+      "type": "object",
+      "patternProperties": {
+        "^[_a-zA-Z][_a-zA-Z0-9]*$": {
+          "$ref": "#/$defs/refItem"
+        }
+      },
+      "additionalProperties": false
+    },
+    "refItem": {
+      "type": "object",
+      "required": [
+        "signature"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "signature": {
+          "type": "string",
+          "description": "Signature."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description."
+        },
+        "available": {
+          "$ref": "#/$defs/versionRange",
+          "description": "Specifies the version range in which the item is available."
+        },
+        "deprecated": {
+          "$ref": "#/$defs/versionRange",
+          "description": "Specifies the version range in which the item is deprecated."
+        },
+        "snippet": {
+          "type": "string",
+          "description": "Code snippet to be inserted when the item is selected in code completion."
+        },
+        "overloads": {
+          "type": "array",
+          "description": "Overloads of the item, only used for functions.",
+          "items": {
+            "type": "object",
+            "required": [
+              "signature"
+            ],
+            "properties": {
+              "signature": {
+                "type": "string",
+                "description": "Signature of the overload."
+              },
+              "description": {
+                "type": "string",
+                "description": "Description of the overload."
+              }
+            }
+          }
+        }
+      }
+    },
+    "versionRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "range": {
+          "type": "string",
+          "description": "Version range in semver format."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the version range."
+        }
+      },
+      "required": [
+        "range"
+      ]
+    }
+  }
+}

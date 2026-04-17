@@ -1,5 +1,9 @@
 # Syntax Description #
 
+$schema: ../schema/scdict.schema.json
+_name: extension-dictionary
+_storage: extension
+
 ## Variables ##
 
 ### Built-In Variables ###
