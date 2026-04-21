@@ -30,7 +30,7 @@ export class BuiltInController extends Controller<lang.UpdateSession> implements
         super(context);
 
         // Load built-in symbol database from the JSON file.
-        const builtInRefFileUri = vscode.Uri.joinPath(context.extensionUri, 'syntaxes', 'specCommand.builtIns.json');
+        const builtInRefFileUri = vscode.Uri.joinPath(context.extensionUri, 'syntaxes', 'spec-command.scdict.json');
         const promise = loadReferenceBook(builtInRefFileUri, 'builtin');
         this.updateSessionMap.set(lang.BUILTIN_URI, { promise });
 
