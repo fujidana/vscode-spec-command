@@ -24,7 +24,7 @@ const SNIPPET_TEMPLATES: Record<string, string> = {
 /**
  * A controller subclass that manages built-in symbols and motor mnemonics.
  */
-export class BuiltInController extends Controller<lang.UpdateSession> implements vscode.TextDocumentContentProvider {
+export class BuiltInController extends Controller<lang.UpdateSession<lang.DictParserResult>> implements vscode.TextDocumentContentProvider {
 
     constructor(context: vscode.ExtensionContext) {
         super(context);
@@ -42,7 +42,6 @@ export class BuiltInController extends Controller<lang.UpdateSession> implements
         }
 
         // Initialize reference database for motors, counters and snippets.
-        const editor = vscode.window.activeTextEditor;
         this.updateMnemonicRefBook('motors');
         this.updateMnemonicRefBook('counters');
         this.updateSnippetRefBook();
@@ -124,7 +123,7 @@ export class BuiltInController extends Controller<lang.UpdateSession> implements
                 }
             }
         }
-        this.updateSessionMap.set(uriString, { promise: Promise.resolve({ refBook }) });
+        this.updateSessionMap.set(uriString, { promise: Promise.resolve({ identifier: kind, scope: 'extension', refBook }) });
     }
 
     /**
@@ -162,7 +161,7 @@ export class BuiltInController extends Controller<lang.UpdateSession> implements
                 refBook.set(key, { signature, description, snippet, category: 'snippet' });
             }
         }
-        this.updateSessionMap.set(lang.SNIPPET_URI, { promise: Promise.resolve({ refBook }) });
+        this.updateSessionMap.set(lang.SNIPPET_URI, { promise: Promise.resolve({ identifier: 'snippets', scope: 'extension', refBook }) });
     }
 
     /**
@@ -171,7 +170,7 @@ export class BuiltInController extends Controller<lang.UpdateSession> implements
     public async provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken): Promise<string | undefined> {
         if (token.isCancellationRequested) { return; }
 
-        const getFormattedStringForItem = (item: { signature: string, description?: string, deprecated?: lang.VersionRange, available?: lang.VersionRange }) => {
+        const getFormattedStringForItem = (item: Omit<lang.ReferenceItem, 'category'>) => {
             let mdText = `\`${item.signature}\``;
             mdText += item.description ? ` \u2014 ${item.description}\n\n` : '\n\n';
             if (item.available) {
@@ -180,41 +179,41 @@ export class BuiltInController extends Controller<lang.UpdateSession> implements
             if (item.deprecated) {
                 mdText += lang.getVersionRangeDescription(item.deprecated, 'deprecated') + '\n\n';
             }
+            if (item.overloads) {
+                for (const overload of item.overloads) {
+                    mdText += getFormattedStringForItem(overload);
+                }
+            }
             return mdText;
         };
 
         if (lang.BUILTIN_URI === uri.with({ query: '' }).toString()) {
-            const refBook = (await this.updateSessionMap.get(lang.BUILTIN_URI)?.promise)?.refBook;
+            const parserResult = await this.updateSessionMap.get(lang.BUILTIN_URI)?.promise;
 
             // Quit if cancelled or symbol is not found in the file.
             if (token.isCancellationRequested) { return; }
-            if (refBook === undefined) { return; }
+            if (parserResult === undefined) { return; }
 
             // Categorize reference items from a flattend map.
-            const categories = ['constant', 'variable', 'macro', 'function', 'keyword'] as const;
-            const refBookLike = lang.categorizeRefBook(refBook, categories);
+            const categoryFilters = ['constant', 'variable', 'macro', 'function', 'keyword'] as const;
+            const dictionary = lang.convertToCategorizedDictionary(parserResult, categoryFilters);
 
             let mdText = '# __spec__ Built-in Symbols\n\n';
             mdText += 'The contents of this page are cited from the _Reference Manual_ section in [PDF version](https://www.certif.com/downloads/css_docs/spec_man.pdf) of the _User manual and Tutorials_, written by [Certified Scientific Software](https://www.certif.com/), except where otherwise noted.\n\n';
 
-            for (const [category, refSheet] of Object.entries(refBookLike)) {
+            for (const [categoryName, entriesInCategory] of Object.entries(dictionary.categories)) {
                 // If 'query' is not 'all', skip maps other than the speficed query.
-                if (uri.query && uri.query !== 'all' && uri.query !== category) {
+                if (uri.query && uri.query !== 'all' && uri.query !== categoryName) {
                     continue;
                 }
 
                 // Add heading for each category.
-                mdText += `## ${lang.referenceCategoryMetadata[category as keyof typeof refBookLike].label}\n\n`;
+                mdText += `## ${lang.referenceCategoryMetadata[categoryName as keyof typeof dictionary.categories].label}\n\n`;
 
                 // Add each item.
-                for (const [identifier, refItemLike] of Object.entries(refSheet)) {
+                for (const [identifier, entry] of Object.entries(entriesInCategory)) {
                     mdText += `### ${identifier}\n\n`;
-                    mdText += getFormattedStringForItem(refItemLike);
-                    if (refItemLike.overloads) {
-                        for (const overload of refItemLike.overloads) {
-                            mdText += getFormattedStringForItem(overload);
-                        }
-                    }
+                    mdText += getFormattedStringForItem(entry);
                 }
             }
             return mdText;
@@ -267,12 +266,12 @@ function getExternalRefBookUri(mode: 'external' | 'external2'): vscode.Uri | und
     }
 }
 
-async function loadReferenceBook(fileUri: vscode.Uri, mode: 'builtin' | 'external' | 'external2'): Promise<lang.ParsedData | undefined> {
+async function loadReferenceBook(fileUri: vscode.Uri, mode: 'builtin' | 'external' | 'external2'): Promise<lang.DictParserResult | undefined> {
     try {
         const uint8Array = await vscode.workspace.fs.readFile(fileUri);
         const decodedString = await vscode.workspace.decode(uint8Array, { encoding: 'utf8' });
-        const refBookLike: lang.ReferenceBookLike = JSON.parse(decodedString);
-        return { refBook: lang.flattenRefBook(refBookLike) };
+        const dictionary: lang.CategorizedDictionary = JSON.parse(decodedString);
+        return lang.convertFromCategorizedDictionary(dictionary);
     } catch (error) {
         let errorMessage: string;
         if (error instanceof Error) {

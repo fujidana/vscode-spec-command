@@ -67,22 +67,27 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('spec-command');
 
         const showWorkspaceSymbolsJsonCommandHandler = async () => {
-            await this.refreshCollections();
+            // When the extension is activated by the command, `updateSessionMap`
+            // is empty at the moment. Wait for a while, and then promise objects
+            //  are added into `updateSessionMap`.
+            if (this.updateSessionMap.size === 0) {
+                await new Promise((resolve) => setTimeout(resolve, 200));
+            }
 
-            const categories = ['constant', 'variable', 'array', 'macro', 'function'] as const;
-            const obj: { [K in typeof categories[number]]: Required<lang.ReferenceBookLike>[K] } = { variable: {}, constant: {}, array: {}, macro: {}, function: {}, };;
-            // const obj: Record<typeof categories[number], Record<string, lang.ReferenceItem>> = { variable: {}, constant: {}, array: {}, macro: {}, function: {}, };
+            const categoryFilters = ['constant', 'variable', 'array', 'macro', 'function'] as const;
+            const obj: { [K in typeof categoryFilters[number]]: Required<lang.CategorizedDictionary['categories']>[K] } = { variable: {}, constant: {}, array: {}, macro: {}, function: {}, };
+            // const obj: Record<typeof ReferenceItem[number], Record<string, lang.ReferenceItem>> = { variable: {}, constant: {}, array: {}, macro: {}, function: {}, };
 
             for (const [uriString, session] of this.updateSessionMap.entries()) {
                 const refBook = (await session.promise)?.refBook;
                 if (refBook === undefined) { continue; }
 
-                // local variables are not exported.
+                // Local variables are not exported.
                 if (uriString === lang.ACTIVE_FILE_URI) { continue; }
-
-                const refBookLike = lang.categorizeRefBook(refBook, categories);
-                for (const [category, refSheet] of Object.entries(refBookLike)) {
-                    const category2 = category as keyof typeof refBookLike;
+                const parserResult: lang.DictParserResult = { identifier: 'untitled', scope: 'global', refBook };
+                const dictionary = lang.convertToCategorizedDictionary(parserResult, categoryFilters);
+                for (const [category, refSheet] of Object.entries(dictionary.categories)) {
+                    const category2 = category as keyof typeof dictionary['categories'];
                     if (category2 === 'constant' || category2 === 'variable' || category2 === 'array' || category2 === 'macro' || category2 === 'function') {
                         obj[category2] = Object.assign(obj[category2], refSheet);
                     }
@@ -141,10 +146,10 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
                 const filesInWorkspaces = await findFilesInWorkspaces();
                 if (filesInWorkspaces.has(uriString)) {
                     // If file also exists in a workspace folder, delete tree and symbols.
-                    const parsedData = await this.updateSessionMap.get(uriString)?.promise;
-                    if (parsedData) {
-                        parsedData.tree = undefined;
-                        parsedData.symbols = undefined;
+                    const parserResult = await this.updateSessionMap.get(uriString)?.promise;
+                    if (parserResult) {
+                        parserResult.tree = undefined;
+                        parserResult.symbols = undefined;
                     }
 
                     // Clear diagnostics if setting for workspace.diagnoseProblem is false. 
@@ -341,9 +346,9 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
 
         for (const [uriString, container] of updatedSessionMap) {
             const uri = vscode.Uri.parse(uriString);
-            const parsedData = await container.session.promise;
-            if (parsedData) {
-                const diagnostics = analyzeDocumentContent2(parsedData, container.diagnosticRules, referenceBooks, container.session.tokenSource?.token);
+            const parserResult = await container.session.promise;
+            if (parserResult) {
+                const diagnostics = analyzeDocumentContent2(parserResult, container.diagnosticRules, referenceBooks, container.session.tokenSource?.token);
                 this.diagnosticCollection.set(uri, diagnostics);
             } else {
                 this.diagnosticCollection.set(uri, []);
@@ -359,9 +364,8 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         const queries: (FileUpdateQuery | DocumentUpdateQuery)[] = [];
 
         for (const document of vscode.workspace.textDocuments) {
-            const uriString = document.uri.toString();
             if (vscode.languages.match(lang.SELECTOR, document) && document.uri.scheme !== 'git') {
-                const index = uriStringsNotInEditor.indexOf(uriString);
+                const index = uriStringsNotInEditor.indexOf(document.uri.toString());
                 if (index !== -1) {
                     if (includeFilesInEditor) {
                         queries.push({ type: 'Document', document });
@@ -392,9 +396,9 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         const session = this.updateSessionMap.get(document.uri.toString());
         if (session) {
             const promise = session.promise.then(
-                parsedData => {
-                    if (parsedData?.tree) {
-                        return { refBook: traversePartially(parsedData.tree, position) };
+                parserResult => {
+                    if (parserResult?.tree) {
+                        return { refBook: traversePartially(parserResult.tree, position) };
                     };
                 }
             );
@@ -468,7 +472,7 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         for (const [uriString, session] of this.updateSessionMap.entries()) {
             const uri = (uriString === lang.ACTIVE_FILE_URI) ? document.uri : vscode.Uri.parse(uriString);
 
-            // scan all types of symbols in the database of the respective files.
+            // Scan all types of symbols in the database of the respective files.
             const refItem = (await session.promise)?.refBook.get(selectorName);
             if (refItem && refItem.location) {
                 locations.push(new vscode.Location(uri, lang.convertRange(refItem.location)));
@@ -505,7 +509,7 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         // Collect symbols defined in workspaces.
         const symbols: vscode.SymbolInformation[] = [];
         for (const [uriString, session] of this.updateSessionMap.entries()) {
-            // Skip storage for local variables
+            // Skip storage for local variables.
             if (uriString === lang.ACTIVE_FILE_URI) { continue; }
 
             const uri = vscode.Uri.parse(uriString);
@@ -584,13 +588,13 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
     }
 }
 
-async function analyzeContentOfUri(uri: vscode.Uri, diagnosticRules: lang.DiagnosticRules | undefined, isInEditor: boolean, token: vscode.CancellationToken): Promise<lang.ParsedFileData | undefined> {
+async function analyzeContentOfUri(uri: vscode.Uri, diagnosticRules: lang.DiagnosticRules | undefined, isInEditor: boolean, token: vscode.CancellationToken): Promise<lang.FileParserResult | undefined> {
     const uint8Array = await vscode.workspace.fs.readFile(uri);
     const content = await vscode.workspace.decode(uint8Array, { uri });
     return analyzeDocumentContent(content, diagnosticRules, isInEditor, token);
 }
 
-function analyzeDocumentContent(content: string, diagnosticRules: lang.DiagnosticRules | undefined, isInEditor: boolean, token: vscode.CancellationToken): lang.ParsedFileData | undefined {
+function analyzeDocumentContent(content: string, diagnosticRules: lang.DiagnosticRules | undefined, isInEditor: boolean, token: vscode.CancellationToken): lang.FileParserResult | undefined {
     if (token.isCancellationRequested) { return undefined; }
 
     let tree: tree.Program;
@@ -627,14 +631,14 @@ function analyzeDocumentContent(content: string, diagnosticRules: lang.Diagnosti
     }
 }
 
-function analyzeDocumentContent2(parsedData: lang.ParsedFileData, diagnosticRules: lang.DiagnosticRules | undefined, rererenceBooks: readonly lang.ReferenceBook[], token: vscode.CancellationToken | undefined) {
+function analyzeDocumentContent2(parserResult: lang.FileParserResult, diagnosticRules: lang.DiagnosticRules | undefined, referenceBooks: readonly lang.ReferenceBook[], token: vscode.CancellationToken | undefined) {
     if (token && token.isCancellationRequested) { return undefined; }
 
-    if (parsedData.tree && diagnosticRules) {
-        const diagnostics = traverseForFurtherDiagnostics(parsedData.tree, rererenceBooks).filter(diagnostic => {
+    if (parserResult.tree && diagnosticRules) {
+        const diagnostics = traverseForFurtherDiagnostics(parserResult.tree, referenceBooks).filter(diagnostic => {
             return diagnostic.code && typeof diagnostic.code === 'string' && diagnostic.code in diagnosticRules && diagnosticRules[diagnostic.code as keyof typeof diagnosticRules] === true;
         });
-        parsedData.diagnostics = (parsedData.diagnostics ?? []).concat(diagnostics);
+        parserResult.diagnostics = (parserResult.diagnostics ?? []).concat(diagnostics);
     }
-    return parsedData.diagnostics;
+    return parserResult.diagnostics;
 }

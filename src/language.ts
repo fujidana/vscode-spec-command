@@ -20,11 +20,26 @@ export function convertRange(range: LocationRange): vscode.Range {
     return new vscode.Range(convertPosition(range.start), convertPosition(range.end));
 }
 
-export type ParsedData = { refBook: ReferenceBook };
-export type ParsedFileData = { refBook: ReferenceBook, tree?: tree.Program, symbols?: vscode.DocumentSymbol[], diagnostics?: vscode.Diagnostic[] };
+export interface ParserResult {
+    refBook: ReferenceBook
+}
 
-export type UpdateSession<T extends ParsedData = ParsedData> = { promise: Promise<T | undefined> };
-export type FileUpdateSession = { promise: Promise<ParsedFileData | undefined>, tokenSource?: vscode.CancellationTokenSource | undefined, tokenSource1?: vscode.CancellationTokenSource | undefined };
+export interface FileParserResult extends ParserResult {
+    tree?: tree.Program;
+    symbols?: vscode.DocumentSymbol[];
+    diagnostics?: vscode.Diagnostic[];
+}
+
+export interface DictParserResult extends ParserResult {
+    identifier: string;
+    scope: 'extension' | 'global' | 'workspace';
+    name?: string;
+    description?: string;
+}
+
+
+export type UpdateSession<T extends ParserResult = ParserResult> = { promise: Promise<T | undefined> };
+export type FileUpdateSession = { promise: Promise<FileParserResult | undefined>, tokenSource?: vscode.CancellationTokenSource | undefined, tokenSource1?: vscode.CancellationTokenSource | undefined };
 
 
 /**
@@ -56,7 +71,15 @@ const referenceCategoryNames = ['undefined', 'constant', 'variable', 'array', 'm
 
 export type ReferenceCategory = typeof referenceCategoryNames[number];
 
-export type ReferenceBookLike = { [K in ReferenceCategory]?: { [key: string]: Omit<ReferenceItem, 'category'> } };
+export type CategorizedDictionary = {
+    readonly identifier: string;
+    readonly scope: 'extension' | 'global' | 'workspace';
+    readonly name?: string;
+    readonly description?: string;
+    readonly categories: {
+        [K in ReferenceCategory]?: { [key: string]: Omit<ReferenceItem, 'category'> }
+    };
+};
 
 type ReferenceCategoryMetadata = {
     readonly label: string
@@ -150,48 +173,59 @@ export const defaultDiagnosticRules = {
 export type DiagnosticRules = typeof defaultDiagnosticRules;
 
 /**
- * Convert a flattened map object to a structured database made of a plain object.
- * @param refBook Map object directly containing reference items.
- * @returns Object having categories as childrens and reference items as grandchildren.
+ * Convert a `Map` object the extension internally uses to a plain object that can be exported after `JSON.stringify()`.
+ * @param parserResult Object containing a Map object and some other properties.
+ * @param categoryFilters Categories to be converted. Only listed categories will be included in the output object. If not specified, all categories will be included.
+ * @returns Stringifiable object that has the `categories` proprties. To access an entry of the dictionary (a leaf of the object tree), do like the following: `obj.categories.function.sock_par`.
  */
-export function categorizeRefBook(refBook: ReferenceBook, categories: readonly ReferenceCategory[] = referenceCategoryNames) {
-    const refBookLike: ReferenceBookLike = {};
-    for (const category of categories) {
-        refBookLike[category] = {};
+export function convertToCategorizedDictionary(parserResult: DictParserResult, categoryFilters: readonly ReferenceCategory[] = referenceCategoryNames): CategorizedDictionary {
+    const categories: CategorizedDictionary['categories'] = {};
+    for (const categoryName of categoryFilters) {
+        categories[categoryName] = {};
     }
 
-    for (const [identifier, refItem] of refBook.entries()) {
-        if (categories.includes(refItem.category)) {
-            const refBookCategory = refBookLike[refItem.category];
-            if (refBookCategory) {
-                // // Simply point (not copy) without deleting "category" property.
-                // refBookCategory[identifier] = refItem;
+    for (const [identifier, entry] of parserResult.refBook.entries()) {
+        if (categoryFilters.includes(entry.category)) {
+            const dictionaryCategory = categories[entry.category];
+            if (dictionaryCategory) {
                 // Copy a new object with "category" property removed. 
-                refBookCategory[identifier] = (({ category, ...rest }) => rest)(refItem);
+                dictionaryCategory[identifier] = (({ category, ...rest }) => rest)(entry);
             }
         }
     }
-    return refBookLike;
+    return {
+        identifier: parserResult.identifier,
+        scope: parserResult.scope,
+        name: parserResult.name,
+        description: parserResult.description,
+        categories: categories
+    } satisfies CategorizedDictionary;
 }
 
 /**
- * Convert a structured database made of a plain object to flattened map object.
- * @param refBookLike Object having categories as childrens and reference items as grandchildren.
- * @param categories Categories to be converted.
- * @returns Map object directly containing reference items.
+ * Convert a plain object that can be imported from file via `JSON.parse()` to a `Map` object the extension internally uses.
+ * @param dictionary Object typically parsed from a JSON file, where reference items are categorized under `categories` property.
+ * @param categoryFilters Categories to be converted. Only listed categories will be included in the output object. If not specified, all categories will be included.
+ * @returns Object containing a Map object and some other properties.
  */
-export function flattenRefBook(refBookLike: ReferenceBookLike, categories: readonly ReferenceCategory[] = referenceCategoryNames): ReferenceBook {
+export function convertFromCategorizedDictionary(dictionary: CategorizedDictionary, categoryFilters: readonly ReferenceCategory[] = referenceCategoryNames): DictParserResult {
     const refBook: ReferenceBook = new Map();
-    for (const [category, refSheetLike] of Object.entries(refBookLike)) {
-        if (categories.includes(category as keyof typeof refBookLike)) {
-            for (const [identifier, refItemLike] of Object.entries(refSheetLike)) {
+    for (const [categoryName, entries] of Object.entries(dictionary.categories)) {
+        if (categoryFilters.includes(categoryName as keyof typeof dictionary.categories)) {
+            for (const [identifier, entry] of Object.entries(entries)) {
                 // if (refBook.has(identifier)) {
                 //     console.log(`Identifiers are duplicated!: ${identifier}`);
                 // }
-                const refItem: ReferenceItem = Object.assign(refItemLike, { category: category as keyof typeof refBookLike });
+                const refItem: ReferenceItem = Object.assign(entry, { category: categoryName as keyof typeof dictionary.categories });
                 refBook.set(identifier, refItem);
             }
         }
     }
-    return refBook;
+    return {
+        identifier: dictionary.identifier,
+        scope: dictionary.scope,
+        name: dictionary.name,
+        description: dictionary.description,
+        refBook,
+    };
 }
