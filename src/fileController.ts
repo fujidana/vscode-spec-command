@@ -7,10 +7,14 @@ import { traversePartially, traverseWholly, traverseForFurtherDiagnostics } from
 import type * as tree from './tree';
 
 
+const ACTIVE_FILE_URI = 'spec-command:extension/file/active-document.md';
+const AST_URI = 'spec-command://file/ast.json';
+
+
 /**
  * Get a set of the URIs of supported files from workspaces.
  * 
- * @returns a promise of a set of URI strings.
+ * @returns Thenable that resolves to a set of URI strings.
  */
 async function findFilesInWorkspaces() {
     const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -83,7 +87,7 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
                 if (refBook === undefined) { continue; }
 
                 // Local variables are not exported.
-                if (uriString === lang.ACTIVE_FILE_URI) { continue; }
+                if (uriString === ACTIVE_FILE_URI) { continue; }
                 const parserResult: lang.DictParserResult = { identifier: 'untitled', scope: 'global', refBook };
                 const dictionary = lang.convertToCategorizedDictionary(parserResult, categoryFilters);
                 for (const [category, refSheet] of Object.entries(dictionary.categories)) {
@@ -101,7 +105,7 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         const inspectSyntaxTreeCommandHandler = () => {
             const editor = vscode.window.activeTextEditor;
             if (editor && editor.document.languageId === 'spec-command') {
-                const uri = vscode.Uri.parse(lang.AST_URI).with({
+                const uri = vscode.Uri.parse(AST_URI).with({
                     query: editor.document.uri.toString(),
                     fragment: editor.document.version.toString(),
                 });
@@ -291,7 +295,7 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
      * Refresh the database by scanning files open in editor and other files in workspace folders.
      */
     private async refreshCollections() {
-        // Clear caches.
+        // Clear data.
         this.updateSessionMap.clear();
         this.diagnosticCollection.clear();
 
@@ -402,10 +406,10 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
                     };
                 }
             );
-            this.updateSessionMap.set(lang.ACTIVE_FILE_URI, { promise, tokenSource: undefined });
+            this.updateSessionMap.set(ACTIVE_FILE_URI, { promise, tokenSource: undefined });
             return promise;
         } else {
-            this.updateSessionMap.delete(lang.ACTIVE_FILE_URI);
+            this.updateSessionMap.delete(ACTIVE_FILE_URI);
             return undefined;
         }
     }
@@ -426,6 +430,18 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
             }
         }
         return refBooks;
+    }
+
+    protected getCompletionItemLabelDescription(uriString: string): string | undefined {
+        if (uriString === ACTIVE_FILE_URI) {
+            return 'local';
+        } else {
+            return super.getCompletionItemLabelDescription(uriString);
+        }
+    }
+
+    protected getSignatureComment(categoryLabel: string, uriString: string): string {
+        return `user-defined ${categoryLabel}`;
     }
 
     /**
@@ -470,10 +486,12 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         // Seek the identifier.
         const locations: vscode.Location[] = [];
         for (const [uriString, session] of this.updateSessionMap.entries()) {
-            const uri = (uriString === lang.ACTIVE_FILE_URI) ? document.uri : vscode.Uri.parse(uriString);
+            const uri = (uriString === ACTIVE_FILE_URI) ? document.uri : vscode.Uri.parse(uriString);
 
             // Scan all types of symbols in the database of the respective files.
             const refItem = (await session.promise)?.refBook.get(selectorName);
+            if (token.isCancellationRequested) { return; }
+
             if (refItem && refItem.location) {
                 locations.push(new vscode.Location(uri, lang.convertRange(refItem.location)));
             }
@@ -510,7 +528,7 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         const symbols: vscode.SymbolInformation[] = [];
         for (const [uriString, session] of this.updateSessionMap.entries()) {
             // Skip storage for local variables.
-            if (uriString === lang.ACTIVE_FILE_URI) { continue; }
+            if (uriString === ACTIVE_FILE_URI) { continue; }
 
             const uri = vscode.Uri.parse(uriString);
             const refBook = (await session.promise)?.refBook;
@@ -566,7 +584,8 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
     public provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken): vscode.ProviderResult<string> {
         if (token.isCancellationRequested) { return; }
 
-        if (lang.AST_URI === uri.with({ query: '', fragment: '' }).toString()) {
+        // Responds to the `"spec-command.inspectSyntaxTree"` command and shows the syntax tree of the selected document in JSON format.
+        if (AST_URI === uri.with({ query: '', fragment: '' }).toString()) {
             const docUri = vscode.Uri.parse(uri.query);
             const editor = vscode.window.visibleTextEditors.find(editor => editor.document.uri.toString() === docUri.toString());
             if (editor) {

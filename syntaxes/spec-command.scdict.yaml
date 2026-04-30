@@ -1,6 +1,7 @@
 # Syntax Description #
 
 $schema: ../schema/scdict.schema.json
+kind: spec-command.dictionary
 identifier: builtins
 name: spec Built-in Symbols
 description: |-

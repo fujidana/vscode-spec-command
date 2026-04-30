@@ -1,6 +1,9 @@
 {
 	"command.spec-command.showBuiltInSymbols.title": "ビルトインのシンボルを表示",
 	"command.spec-command.showWorkspaceSymbols.title": "ワークスペースのシンボルを表示 (JSON)",
+	"command.spec-command.showDictionary.title": "ユーザー定義辞書をエディターで表示",
+	"command.spec-command.registerDictionary.title": "エディターの内容をユーザー定義辞書として登録",
+	"command.spec-command.deleteDictionary.title": "ユーザー定義辞書を削除",
 	"command.spec-command.inspectSyntaxTree.title": "構文ツリーを検査 (開発)",
 	"configuration.spec-command.showSymbolsInPreview.description": "[ビルトインのシンボルを表示](command:spec-command.showBuiltInSymbols) コマンドが呼び出された時に、マークダウンのソーステキストに加えてプレビューを表示します。",
 	"configuration.spec-command.specVersion.description": "対象とする __spec__ ソフトウェアのバージョンを指定します。これはコード補完に影響します。",

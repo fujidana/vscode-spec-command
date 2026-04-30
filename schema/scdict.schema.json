@@ -5,6 +5,7 @@
   "description": "Collection of symbols such as variables, constants, and functions, used by the VS Code spec-command extension for code completion and navigation",
   "type": "object",
   "required": [
+    "kind",
     "identifier",
     "scope",
     "categories"
@@ -13,9 +14,12 @@
     "$schema": {
       "type": "string"
     },
+    "kind": {
+      "const": "spec-command.dictionary"
+    },
     "identifier": {
       "type": "string",
-      "description": "Identifier of the dictionary. This is used for internal management and should be unique across all dictionaries. ",
+      "description": "Identifier of the dictionary. This is used for internal management and should be unique across all dictionaries.",
       "minLength": 1
     },
     "scope": {

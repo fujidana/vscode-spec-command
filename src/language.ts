@@ -4,13 +4,6 @@ import type * as tree from './tree';
 
 export const SELECTOR = { language: 'spec-command' };
 // export const SELECTOR = [{ scheme: 'file', language: 'spec-command' }, { scheme: 'untitled', language: 'spec-command' }];
-export const BUILTIN_URI = 'spec-command://built-in/built-in.md';
-export const EXTERNAL_URI = 'spec-command://built-in/external.md';
-export const MOTOR_URI = 'spec-command://built-in/mnemonic-motor.md';
-export const COUNTER_URI = 'spec-command://built-in/mnemonic-counter.md';
-export const SNIPPET_URI = 'spec-command://built-in/code-snippet.md';
-export const ACTIVE_FILE_URI = 'spec-command://file/active-document.md';
-export const AST_URI = 'spec-command://file/ast.json';
 
 export function convertPosition(position: Location): vscode.Position {
     return new vscode.Position(position.line - 1, position.column - 1);
@@ -37,10 +30,8 @@ export interface DictParserResult extends ParserResult {
     description?: string;
 }
 
-
 export type UpdateSession<T extends ParserResult = ParserResult> = { promise: Promise<T | undefined> };
 export type FileUpdateSession = { promise: Promise<FileParserResult | undefined>, tokenSource?: vscode.CancellationTokenSource | undefined, tokenSource1?: vscode.CancellationTokenSource | undefined };
-
 
 /**
  * Map object consisting of pairs of a unique identifier and a reference item.
@@ -71,7 +62,14 @@ const referenceCategoryNames = ['undefined', 'constant', 'variable', 'array', 'm
 
 export type ReferenceCategory = typeof referenceCategoryNames[number];
 
+/**
+ * A dictionary that holds entries in a categorized manner.
+ * The structure of this type is the same as the JSON schema the extension provides and thus
+ * the object of this type is serialized and deserialized to and from JSON file.
+ */
 export type CategorizedDictionary = {
+    readonly $schema?: string;
+    readonly kind: 'spec-command.dictionary';
     readonly identifier: string;
     readonly scope: 'extension' | 'global' | 'workspace';
     readonly name?: string;
@@ -155,12 +153,10 @@ export const referenceCategoryMetadata: { readonly [K in ReferenceCategory]: Ref
 
 export class CompletionItem extends vscode.CompletionItem {
     readonly uriString: string;
-    readonly category: ReferenceCategory;
 
-    constructor(label: string | vscode.CompletionItemLabel, uriString: string, category: ReferenceCategory) {
-        super(label, referenceCategoryMetadata[category].completionItemKind);
+    constructor(label: string | vscode.CompletionItemLabel, uriString: string, categoryName: ReferenceCategory) {
+        super(label, referenceCategoryMetadata[categoryName].completionItemKind);
         this.uriString = uriString;
-        this.category = category;
     };
 }
 
@@ -194,6 +190,7 @@ export function convertToCategorizedDictionary(parserResult: DictParserResult, c
         }
     }
     return {
+        kind: 'spec-command.dictionary',
         identifier: parserResult.identifier,
         scope: parserResult.scope,
         name: parserResult.name,
@@ -216,7 +213,7 @@ export function convertFromCategorizedDictionary(dictionary: CategorizedDictiona
                 // if (refBook.has(identifier)) {
                 //     console.log(`Identifiers are duplicated!: ${identifier}`);
                 // }
-                const refItem: ReferenceItem = Object.assign(entry, { category: categoryName as keyof typeof dictionary.categories });
+                const refItem: ReferenceItem = { ...entry, category: categoryName as keyof typeof dictionary.categories };
                 refBook.set(identifier, refItem);
             }
         }
