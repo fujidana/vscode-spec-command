@@ -63,8 +63,8 @@
 		],
 		"commands": [
 			{
-				"command": "spec-command.showBuiltInSymbols",
-				"title": "%command.spec-command.showBuiltInSymbols.title%",
+				"command": "spec-command.showDictionaryPreview",
+				"title": "%command.spec-command.showDictionaryPreview.title%",
 				"category": "spec command",
 				"icon": "$(references)"
 			},
@@ -75,8 +75,8 @@
 				"icon": "$(json)"
 			},
 			{
-				"command": "spec-command.showDictionary",
-				"title": "%command.spec-command.showDictionary.title%",
+				"command": "spec-command.showDictionarySource",
+				"title": "%command.spec-command.showDictionarySource.title%",
 				"category": "spec command",
 				"icon": "$(repo-pull)"
 			},
@@ -103,14 +103,14 @@
 		"menus": {
 			"commandPalette": [
 				{
-					"command": "spec-command.showBuiltInSymbols"
+					"command": "spec-command.showDictionaryPreview"
 				},
 				{
 					"command": "spec-command.showWorkspaceSymbolsJson",
 					"when": "workspaceFolderCount > 0"
 				},
 				{
-					"command": "spec-command.showDictionary"
+					"command": "spec-command.showDictionarySource"
 				},
 				{
 					"command": "spec-command.registerDictionary",
@@ -140,7 +140,8 @@
 				"spec-command.showSymbolsInPreview": {
 					"type": "boolean",
 					"default": true,
-					"markdownDescription": "%configuration.spec-command.showSymbolsInPreview.description%"
+					"markdownDescription": "%configuration.spec-command.showSymbolsInPreview.description%",
+					"markdownDeprecationMessage": "**Deprecated**: Please use `#spec-command.dictionaryPreview#` instead."
 				},
 				"spec-command.specVersion": {
 					"type": "string",
@@ -148,6 +149,16 @@
 					"markdownDescription": "%configuration.spec-command.specVersion.description%",
 					"pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
 					"patternErrorMessage": "%configuration.spec-command.specVersion.patternErrorMessage%"
+				},
+				"spec-command.dictionaryPreview": {
+					"type": "string",
+					"enum": [
+						"markdown",
+						"preview",
+						"markdown+preview"
+					],
+					"default": "preview",
+					"markdownDescription": "%configuration.spec-command.dictionaryPreview.description%"
 				},
 				"spec-command.suggest.suppressMessages": {
 					"type": "object",

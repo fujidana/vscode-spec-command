@@ -92,36 +92,74 @@ export class BuiltInController extends Controller<lang.UpdateSession<lang.DictPa
         };
 
         interface QuickPickItemForDict extends vscode.QuickPickItem {
-            scope: 'global' | 'workspace';
+            scope: lang.DictParserResult['scope'];
             template?: boolean;
         }
 
-        /** 
-         * Command handler for showing built-in symbols as a virtual document.
-         * This function just asks the applicaiton to open a URI and `provideTextDocumentContent`
-         * method actually generates the content.
-        */
-        const showBuiltInSymbolsCommandHandler = async () => {
-            const categories = ['constant', 'variable', 'macro', 'function', 'keyword'] as const;
-            const quickPickItems = [{ category: 'all', label: '$(references) all' }];
-            for (const category of categories) {
-                const metadata = lang.referenceCategoryMetadata[category];
-                quickPickItems.push({ category: category, label: `$(${metadata.iconIdentifier}) ${metadata.label}` });
+        /**
+         * Command handler for showing the content of dictionary as a virtual document in Markdown format.
+         * This function simply tells the application to open a URI for the selected dictionary.
+         * The content generation is delegated to the TextDocumentContentProvider (i.e. this controller).
+         */
+        const showDictionaryPreviewCommandHandler = async (..._args: any[]) => {
+            const quickPickItems: QuickPickItemForDict[] = [
+                { label: vscode.l10n.t('Extension'), kind: vscode.QuickPickItemKind.Separator, scope: 'extension' },
+                { label: 'builtins', scope: 'extension' },
+            ];
+            const globalStateKeys = context.globalState.keys();
+            if (globalStateKeys.length > 0) {
+                quickPickItems.push({ label: vscode.l10n.t('User'), kind: vscode.QuickPickItemKind.Separator, scope: 'global' });
+                globalStateKeys.forEach(key => quickPickItems.push({ label: key, scope: 'global' }));
             }
-            const quickPickItem = await vscode.window.showQuickPick(quickPickItems);
-            if (quickPickItem) {
-                const uri = vscode.Uri.parse(BUILTIN_DICT_URI).with({ query: quickPickItem.category });
-                const editor = await vscode.window.showTextDocument(uri, { preview: false });
-                const flag = vscode.workspace.getConfiguration('spec-command').get<boolean>('showSymbolsInPreview');
-                if (flag) {
-                    await vscode.commands.executeCommand('markdown.showPreview');
-                    // await vscode.window.showTextDocument(editor.document);
-                    // vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+            const workspaceStateKeys = context.workspaceState.keys();
+            if (workspaceStateKeys.length > 0) {
+                quickPickItems.push({ label: vscode.l10n.t('Workspace'), kind: vscode.QuickPickItemKind.Separator, scope: 'workspace' });
+                workspaceStateKeys.forEach(key => quickPickItems.push({ label: key, scope: 'workspace' }));
+            }
+
+            // Show quick pick to select a dictionary.
+            const selectedItem = await vscode.window.showQuickPick(quickPickItems, {
+                placeHolder: vscode.l10n.t('Select a dictionary to preview'),
+            });
+            if (!selectedItem) { return; } // Exit if the user cancels.
+
+            // Create a URI for the selected dictionary and ask the application to open it.
+            // For the extension to recognize the content as a markdown document, append ".md" suffix to the URI path.
+            let uri: vscode.Uri | undefined;
+            if (selectedItem.scope === 'extension') {
+                if (selectedItem.label === 'builtins') {
+                    uri = vscode.Uri.parse(BUILTIN_DICT_URI + '.md');
+                }
+            } else if (selectedItem.scope === 'global') {
+                uri = vscode.Uri.parse(GLOBAL_DICT_BASEURI + '/' + selectedItem.label + '.md');
+            } else if (selectedItem.scope === 'workspace') {
+                uri = vscode.Uri.parse(WORKSPACE_DICT_BASEURI + '/' + selectedItem.label + '.md');
+            }
+
+            // If the URI is created successfully, open it with the preview mode according to the user setting.
+            if (uri) {
+                uri = uri.with({ query: 'dictionaryPreview' });
+
+                type DictionaryPreviewOption = 'markdown' | 'preview' | 'markdown+preview';
+                const option = vscode.workspace.getConfiguration('spec-command').get<DictionaryPreviewOption>('dictionaryPreview', 'preview');
+
+                if (option === 'preview') {
+                    // Show preview directly without showing the source markdown document.
+                    // While not documented (AFAIK), the 'markdown.showPreview' command can accept a URI as an argument to specify which document to preview.
+                    await vscode.commands.executeCommand('markdown.showPreview', uri);
+                    return;
+                } else if (option === 'markdown' || option === 'markdown+preview') {
+                    // Show the source markdown document.
+                    // If the option is 'markdown+preview', also show the preview.
+                    await vscode.window.showTextDocument(uri, { preview: false });
+                    if (option === 'markdown+preview') {
+                        await vscode.commands.executeCommand('markdown.showPreview');
+                    }
                 }
             }
         };
 
-        const showDictionaryCommandHandler = async (..._args: any[]) => {
+        const showDictionarySourceCommandHandler = async (..._args: any[]) => {
             const quickPickItems: QuickPickItemForDict[] = [];
 
             quickPickItems.push({ label: vscode.l10n.t('User'), kind: vscode.QuickPickItemKind.Separator, scope: 'global' });
@@ -136,7 +174,7 @@ export class BuiltInController extends Controller<lang.UpdateSession<lang.DictPa
             const selectedItem = await vscode.window.showQuickPick(quickPickItems, {
                 placeHolder: vscode.l10n.t('Select a dictionary to view or edit'),
             });
-            if (!selectedItem) { return; } // User cancelled the quick pick.
+            if (!selectedItem) { return; } // Exit if the user cancels.
 
             // Open a new text document with the content of the selected dictionary in JSON format.
             const obj = selectedItem.template === true ?
@@ -269,9 +307,8 @@ export class BuiltInController extends Controller<lang.UpdateSession<lang.DictPa
             }
 
             // Else, show quick pick to select a dictionary to delete.
-            // Exit if the user cancels the quick pick.
             const selectedItem = await vscode.window.showQuickPick(quickPickItems, quickPickOptions);
-            if (!selectedItem) { return; }
+            if (!selectedItem) { return; } // Exit if the user cancels.
 
             const flag = await vscode.window.showWarningMessage(
                 `Are you sure you want to delete the dictionary "${selectedItem.label}"?`,
@@ -294,8 +331,8 @@ export class BuiltInController extends Controller<lang.UpdateSession<lang.DictPa
         // Register command and event handlers.
         context.subscriptions.push(
             // Register command handlers.
-            vscode.commands.registerCommand('spec-command.showBuiltInSymbols', showBuiltInSymbolsCommandHandler),
-            vscode.commands.registerCommand('spec-command.showDictionary', showDictionaryCommandHandler),
+            vscode.commands.registerCommand('spec-command.showDictionaryPreview', showDictionaryPreviewCommandHandler),
+            vscode.commands.registerCommand('spec-command.showDictionarySource', showDictionarySourceCommandHandler),
             vscode.commands.registerCommand('spec-command.registerDictionary', registerDictionaryCommandHandler),
             vscode.commands.registerCommand('spec-command.deleteDictionary', deleteDictionaryCommandHandler),
             // Register providers.
@@ -403,12 +440,9 @@ export class BuiltInController extends Controller<lang.UpdateSession<lang.DictPa
         this.updateSessionMap.set(SNIPPET_DICT_URI, { promise: Promise.resolve({ identifier: 'snippets', scope: 'extension', refBook }) });
     }
 
-    /**
-     * Required implementation of vscode.TextDocumentContentProvider.
-     */
+    // Required implementation of vscode.TextDocumentContentProvider.
     public async provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken): Promise<string | undefined> {
-        if (token.isCancellationRequested) { return; }
-
+        /** Helper function to format a reference item as Markdown. */
         const getFormattedStringForItem = (item: Omit<lang.ReferenceItem, 'category'>) => {
             let mdText = `\`${item.signature}\``;
             mdText += item.description ? ` \u2014 ${item.description}\n\n` : '\n\n';
@@ -426,37 +460,53 @@ export class BuiltInController extends Controller<lang.UpdateSession<lang.DictPa
             return mdText;
         };
 
-        if (BUILTIN_DICT_URI === uri.with({ query: '' }).toString()) {
-            const parserResult = await this.updateSessionMap.get(BUILTIN_DICT_URI)?.promise;
+        if (token.isCancellationRequested) { return undefined; }
 
-            // Quit if cancelled or symbol is not found in the file.
-            if (token.isCancellationRequested) { return; }
-            if (parserResult === undefined) { return; }
-
-            // Categorize reference items from a flattend map.
-            const categoryFilters = ['constant', 'variable', 'macro', 'function', 'keyword'] as const;
-            const dictionary = lang.convertToCategorizedDictionary(parserResult, categoryFilters);
-
-            let mdText = '# __spec__ Built-in Symbols\n\n';
-            mdText += 'The contents of this page are cited from the _Reference Manual_ section in [PDF version](https://www.certif.com/downloads/css_docs/spec_man.pdf) of the _User manual and Tutorials_, written by [Certified Scientific Software](https://www.certif.com/), except where otherwise noted.\n\n';
-
-            for (const [categoryName, entriesInCategory] of Object.entries(dictionary.categories)) {
-                // If 'query' is not 'all', skip maps other than the speficed query.
-                if (uri.query && uri.query !== 'all' && uri.query !== categoryName) {
-                    continue;
-                }
-
-                // Add heading for each category.
-                mdText += `## ${lang.referenceCategoryMetadata[categoryName as keyof typeof dictionary.categories].label}\n\n`;
-
-                // Add each item.
-                for (const [identifier, entry] of Object.entries(entriesInCategory)) {
-                    mdText += `### ${identifier}\n\n`;
-                    mdText += getFormattedStringForItem(entry);
-                }
-            }
-            return mdText;
+        // The URI must have the following format: 'spec-command://{extension|global|workspace}/{identifier}.md?dictionaryPreview'
+        if (uri.scheme !== 'spec-command' || uri.query !== 'dictionaryPreview' || !uri.path.endsWith('.md')) {
+            return undefined;
         }
+
+        // Create a URI string for the dictionary by removing the '.md' suffix and query part from the URI,
+        let uriString = uri.with({ query: '' }).toString(); // Remove the query part.
+        uriString = uriString.substring(0, uriString.length - 3); // Remove '.md' suffix.
+        if (uriString !== BUILTIN_DICT_URI && !uriString.startsWith(GLOBAL_DICT_BASEURI) && !uriString.startsWith(WORKSPACE_DICT_BASEURI)) {
+            return undefined;
+        }
+
+        // Check if the parser result for the URI is available.
+        const parserResult = await this.updateSessionMap.get(uriString)?.promise;
+        if (!parserResult) { return undefined; }
+
+        // Convert the parser result into a categorized dictionary and generate Markdown text for the preview.
+        const dictionary = lang.convertToCategorizedDictionary(parserResult);
+        // Add heading for the dictionary.
+        let mdText = `# ${dictionary.name ?? dictionary.identifier} (${dictionary.scope})\n\n`;
+        if (dictionary.description) {
+            mdText += `${dictionary.description}\n\n`;
+        }
+
+        // Add Table of Contents.
+        mdText += `## Table of Contents\n\n`;
+        for (const [categoryName, entriesInCategory] of Object.entries(dictionary.categories)) {
+            if (Object.keys(entriesInCategory).length === 0) { continue; }
+            const categoryLabel = lang.referenceCategoryMetadata[categoryName as keyof typeof dictionary.categories].label;
+            mdText += `- [${categoryLabel}](#${categoryLabel})\n`;
+        }
+
+        // Add each category and its items.
+        for (const [categoryName, entriesInCategory] of Object.entries(dictionary.categories)) {
+            // Add heading for each category.
+            if (Object.keys(entriesInCategory).length === 0) { continue; }
+            mdText += `## ${lang.referenceCategoryMetadata[categoryName as keyof typeof dictionary.categories].label}\n\n`;
+
+            // Add each item.
+            for (const [identifier, entry] of Object.entries(entriesInCategory)) {
+                mdText += `### ${identifier}\n\n`;
+                mdText += getFormattedStringForItem(entry);
+            }
+        }
+        return mdText;
     }
 }
 

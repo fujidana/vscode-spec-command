@@ -3,7 +3,7 @@
 $schema: ../schema/scdict.schema.json
 kind: spec-command.dictionary
 identifier: builtins
-name: spec Built-in Symbols
+name: __spec__ Built-in Symbols
 description: |-
   The contents are cited from the _Reference Manual_ section in [PDF version](https://www.certif.com/downloads/css_docs/spec_man.pdf) of the _User manual and Tutorials_, written by [Certified Scientific Software](https://www.certif.com/), except where otherwise noted.
 scope: extension
