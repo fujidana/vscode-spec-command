@@ -150,6 +150,20 @@
 					"default": "preview",
 					"markdownDescription": "%configuration.spec-command.dictionaryPreview.description%"
 				},
+				"spec-command.syncDictionaries": {
+					"type": "array",
+					"tags": [
+						"experimental"
+					],
+					"scope": "application",
+					"items": {
+						"type": "string"
+					},
+					"default": [
+						"globalDict"
+					],
+					"markdownDescription": "%configuration.spec-command.syncDictionaries.description%"
+				},
 				"spec-command.suggest.suppressMessages": {
 					"type": "object",
 					"markdownDescription": "%configuration.spec-command.suggest.suppressMessages.description%",

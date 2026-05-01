@@ -41,6 +41,8 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
 
         this.extensionSchemaUriString = vscode.Uri.joinPath(context.extensionUri, 'schema', 'scdict.schema.json').toString();
 
+        this.updateSyncDictionaries(context);
+
         // Load built-in symbol database from a JSON file bundled in the extension.
         this.updateSessionMap.set(BUILTIN_DICT_URI, {
             promise: loadDictionary(vscode.Uri.joinPath(context.extensionUri, 'syntaxes', 'spec-command.scdict.json'))
@@ -89,6 +91,9 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
             }
             if (event.affectsConfiguration('spec-command.suggest.codeSnippets')) {
                 this.updateSnippetRefBook();
+            }
+            if (event.affectsConfiguration('spec-command.syncDictionaries')) {
+                this.updateSyncDictionaries(context);
             }
         };
 
@@ -480,6 +485,16 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
             }
         }
         this.updateSessionMap.set(SNIPPET_DICT_URI, { promise: Promise.resolve({ identifier: 'snippets', scope: 'extension', refBook }) });
+    }
+
+    private updateSyncDictionaries(context: vscode.ExtensionContext) {
+        const config = vscode.workspace.getConfiguration('spec-command');
+        const syncDictionaries = config.get<string[]>('syncDictionaries', ['globalDict']);
+        if (syncDictionaries.length === 1 && syncDictionaries[0] === '*') {
+            context.globalState.setKeysForSync(context.globalState.keys());
+        } else {
+            context.globalState.setKeysForSync(syncDictionaries);
+        }
     }
 
     // Required implementation of vscode.TextDocumentContentProvider.
