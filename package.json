@@ -52,27 +52,40 @@
 			{
 				"language": "spec-command",
 				"scopeName": "source.spec-command",
-				"path": "./syntaxes/specCommand.tmLanguage.json"
+				"path": "./syntaxes/spec-command.tmLanguage.json"
 			}
 		],
 		"snippets": [
 			{
 				"language": "spec-command",
-				"path": "./syntaxes/specCommand.snippets.json"
+				"path": "./syntaxes/spec-command.snippets.json"
 			}
 		],
 		"commands": [
 			{
-				"command": "spec-command.showBuiltInSymbols",
-				"title": "%command.spec-command.showBuiltInSymbols.title%",
+				"command": "spec-command.showDictionaryPreview",
+				"title": "%command.spec-command.showDictionaryPreview.title%",
 				"category": "spec command",
 				"icon": "$(references)"
 			},
 			{
-				"command": "spec-command.showWorkspaceSymbolsJson",
-				"title": "%command.spec-command.showWorkspaceSymbols.title%",
+				"command": "spec-command.showDictionarySource",
+				"title": "%command.spec-command.showDictionarySource.title%",
 				"category": "spec command",
-				"icon": "$(json)"
+				"icon": "$(repo-pull)"
+			},
+			{
+				"command": "spec-command.registerDictionary",
+				"title": "%command.spec-command.registerDictionary.title%",
+				"enablement": "editorLangId == json",
+				"category": "spec command",
+				"icon": "$(repo-push)"
+			},
+			{
+				"command": "spec-command.deleteDictionary",
+				"title": "%command.spec-command.deleteDictionary.title%",
+				"category": "spec command",
+				"icon": "$(trash)"
 			},
 			{
 				"command": "spec-command.inspectSyntaxTree",
@@ -84,11 +97,17 @@
 		"menus": {
 			"commandPalette": [
 				{
-					"command": "spec-command.showBuiltInSymbols"
+					"command": "spec-command.showDictionaryPreview"
 				},
 				{
-					"command": "spec-command.showWorkspaceSymbolsJson",
-					"when": "workspaceFolderCount > 0"
+					"command": "spec-command.showDictionarySource"
+				},
+				{
+					"command": "spec-command.registerDictionary",
+					"when": "editorLangId == json"
+				},
+				{
+					"command": "spec-command.deleteDictionary"
 				},
 				{
 					"command": "spec-command.inspectSyntaxTree",
@@ -96,13 +115,23 @@
 				}
 			]
 		},
+		"jsonValidation": [
+			{
+				"fileMatch": [
+					"scdict.json",
+					"*.scdict.json"
+				],
+				"url": "./schema/scdict.schema.json"
+			}
+		],
 		"configuration": {
 			"title": "spec command",
 			"properties": {
 				"spec-command.showSymbolsInPreview": {
 					"type": "boolean",
 					"default": true,
-					"markdownDescription": "%configuration.spec-command.showSymbolsInPreview.description%"
+					"markdownDescription": "%configuration.spec-command.showSymbolsInPreview.description%",
+					"markdownDeprecationMessage": "**Deprecated**: Please use `#spec-command.dictionaryPreview#` instead."
 				},
 				"spec-command.specVersion": {
 					"type": "string",
@@ -110,6 +139,30 @@
 					"markdownDescription": "%configuration.spec-command.specVersion.description%",
 					"pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
 					"patternErrorMessage": "%configuration.spec-command.specVersion.patternErrorMessage%"
+				},
+				"spec-command.dictionaryPreview": {
+					"type": "string",
+					"enum": [
+						"markdown",
+						"preview",
+						"markdown+preview"
+					],
+					"default": "preview",
+					"markdownDescription": "%configuration.spec-command.dictionaryPreview.description%"
+				},
+				"spec-command.syncDictionaries": {
+					"type": "array",
+					"tags": [
+						"experimental"
+					],
+					"scope": "application",
+					"items": {
+						"type": "string"
+					},
+					"default": [
+						"globalDict"
+					],
+					"markdownDescription": "%configuration.spec-command.syncDictionaries.description%"
 				},
 				"spec-command.suggest.suppressMessages": {
 					"type": "object",
@@ -193,9 +246,7 @@
 					"default": "",
 					"scope": "window",
 					"markdownDescription": "%configuration.spec-command.suggest.symbolFile.description%",
-					"tags": [
-						"experimental"
-					]
+					"markdownDeprecationMessage": "**Deprecated**: Not effective now."
 				},
 				"spec-command.workspace.exclude": {
 					"type": "array",
@@ -274,9 +325,9 @@
 		"test-web": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/extensionTests.js",
 		"run-in-browser": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. .",
 		"js-yaml": "npm-run-all js-yaml:*",
-		"js-yaml:snippets": "js-yaml syntaxes/specCommand.snippets.yaml > syntaxes/specCommand.snippets.json",
-		"js-yaml:builtIns": "js-yaml syntaxes/specCommand.builtIns.yaml > syntaxes/specCommand.builtIns.json",
-		"js-yaml:tmLanguage": "js-yaml syntaxes/specCommand.tmLanguage.yaml > syntaxes/specCommand.tmLanguage.json",
+		"js-yaml:snippets": "js-yaml syntaxes/spec-command.snippets.yaml > syntaxes/spec-command.snippets.json",
+		"js-yaml:scdict": "js-yaml syntaxes/spec-command.scdict.yaml > syntaxes/spec-command.scdict.json",
+		"js-yaml:tmLanguage": "js-yaml syntaxes/spec-command.tmLanguage.yaml > syntaxes/spec-command.tmLanguage.json",
 		"l10n-export": "npx @vscode/l10n-dev export -o ./l10n ./src"
 	},
 	"dependencies": {

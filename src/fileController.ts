@@ -1,16 +1,18 @@
 import * as vscode from 'vscode';
 import * as lang from './language';
 import { Controller } from './controller';
-import { BuiltInController } from './builtInController';
 import { SyntaxError, parse } from './parser';
 import { traversePartially, traverseWholly, traverseForFurtherDiagnostics } from './traverser';
 import type * as tree from './tree';
 
 
+const AST_URI = 'spec-command://file/ast.json';
+
+
 /**
  * Get a set of the URIs of supported files from workspaces.
  * 
- * @returns a promise of a set of URI strings.
+ * @returns Thenable that resolves to a set of URI strings.
  */
 async function findFilesInWorkspaces() {
     const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -58,45 +60,17 @@ type FileUpdateQuery = { type: 'File', uri: vscode.Uri, diagnose: boolean };
 export class FileController extends Controller<lang.FileUpdateSession> implements vscode.DefinitionProvider, vscode.DocumentSymbolProvider, vscode.WorkspaceSymbolProvider, vscode.DocumentDropEditProvider, vscode.TextDocumentContentProvider {
 
     private readonly diagnosticCollection: vscode.DiagnosticCollection;
-    private readonly builtInController: BuiltInController;
+    public dictionaryUpdateSessionMap: Map<string, lang.UpdateSession> | undefined;
 
-    constructor(context: vscode.ExtensionContext, builtInController: BuiltInController) {
+    constructor(context: vscode.ExtensionContext) {
         super(context);
 
-        this.builtInController = builtInController;
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('spec-command');
-
-        const showWorkspaceSymbolsJsonCommandHandler = async () => {
-            await this.refreshCollections();
-
-            const categories = ['constant', 'variable', 'array', 'macro', 'function'] as const;
-            const obj: { [K in typeof categories[number]]: Required<lang.ReferenceBookLike>[K] } = { variable: {}, constant: {}, array: {}, macro: {}, function: {}, };;
-            // const obj: Record<typeof categories[number], Record<string, lang.ReferenceItem>> = { variable: {}, constant: {}, array: {}, macro: {}, function: {}, };
-
-            for (const [uriString, session] of this.updateSessionMap.entries()) {
-                const refBook = (await session.promise)?.refBook;
-                if (refBook === undefined) { continue; }
-
-                // local variables are not exported.
-                if (uriString === lang.ACTIVE_FILE_URI) { continue; }
-
-                const refBookLike = lang.categorizeRefBook(refBook, categories);
-                for (const [category, refSheet] of Object.entries(refBookLike)) {
-                    const category2 = category as keyof typeof refBookLike;
-                    if (category2 === 'constant' || category2 === 'variable' || category2 === 'array' || category2 === 'macro' || category2 === 'function') {
-                        obj[category2] = Object.assign(obj[category2], refSheet);
-                    }
-                }
-            }
-            const content = JSON.stringify(obj, (key, value) => key === 'location' || key === 'category' ? undefined : value, 2);
-            const document = await vscode.workspace.openTextDocument({ language: 'json', content: content });
-            vscode.window.showTextDocument(document, { preview: false });
-        };
 
         const inspectSyntaxTreeCommandHandler = () => {
             const editor = vscode.window.activeTextEditor;
             if (editor && editor.document.languageId === 'spec-command') {
-                const uri = vscode.Uri.parse(lang.AST_URI).with({
+                const uri = vscode.Uri.parse(AST_URI).with({
                     query: editor.document.uri.toString(),
                     fragment: editor.document.version.toString(),
                 });
@@ -141,10 +115,10 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
                 const filesInWorkspaces = await findFilesInWorkspaces();
                 if (filesInWorkspaces.has(uriString)) {
                     // If file also exists in a workspace folder, delete tree and symbols.
-                    const parsedData = await this.updateSessionMap.get(uriString)?.promise;
-                    if (parsedData) {
-                        parsedData.tree = undefined;
-                        parsedData.symbols = undefined;
+                    const parserResult = await this.updateSessionMap.get(uriString)?.promise;
+                    if (parserResult) {
+                        parserResult.tree = undefined;
+                        parserResult.symbols = undefined;
                     }
 
                     // Clear diagnostics if setting for workspace.diagnoseProblem is false. 
@@ -229,7 +203,6 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         // Register providers and event handlers.
         context.subscriptions.push(
             // Register command handlers.
-            vscode.commands.registerCommand('spec-command.showWorkspaceSymbolsJson', showWorkspaceSymbolsJsonCommandHandler),
             vscode.commands.registerCommand('spec-command.inspectSyntaxTree', inspectSyntaxTreeCommandHandler),
 
             // Register document-event listeners.
@@ -286,7 +259,7 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
      * Refresh the database by scanning files open in editor and other files in workspace folders.
      */
     private async refreshCollections() {
-        // Clear caches.
+        // Clear data.
         this.updateSessionMap.clear();
         this.diagnosticCollection.clear();
 
@@ -341,9 +314,9 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
 
         for (const [uriString, container] of updatedSessionMap) {
             const uri = vscode.Uri.parse(uriString);
-            const parsedData = await container.session.promise;
-            if (parsedData) {
-                const diagnostics = analyzeDocumentContent2(parsedData, container.diagnosticRules, referenceBooks, container.session.tokenSource?.token);
+            const parserResult = await container.session.promise;
+            if (parserResult) {
+                const diagnostics = analyzeDocumentContent2(parserResult, container.diagnosticRules, referenceBooks, container.session.tokenSource?.token);
                 this.diagnosticCollection.set(uri, diagnostics);
             } else {
                 this.diagnosticCollection.set(uri, []);
@@ -359,9 +332,8 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         const queries: (FileUpdateQuery | DocumentUpdateQuery)[] = [];
 
         for (const document of vscode.workspace.textDocuments) {
-            const uriString = document.uri.toString();
             if (vscode.languages.match(lang.SELECTOR, document) && document.uri.scheme !== 'git') {
-                const index = uriStringsNotInEditor.indexOf(uriString);
+                const index = uriStringsNotInEditor.indexOf(document.uri.toString());
                 if (index !== -1) {
                     if (includeFilesInEditor) {
                         queries.push({ type: 'Document', document });
@@ -392,9 +364,9 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         const session = this.updateSessionMap.get(document.uri.toString());
         if (session) {
             const promise = session.promise.then(
-                parsedData => {
-                    if (parsedData?.tree) {
-                        return { refBook: traversePartially(parsedData.tree, position) };
+                parserResult => {
+                    if (parserResult?.tree) {
+                        return { refBook: traversePartially(parserResult.tree, position) };
                     };
                 }
             );
@@ -413,7 +385,8 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
      */
     private async mergedReferenceBooks() {
         const refBooks: lang.ReferenceBook[] = [];
-        const promises = [...this.updateSessionMap.values(), ...this.builtInController.updateSessionMap.values()].map(session => session.promise);
+        // dictionaryUpdateSessionMap is set after the constructor is called, so it is safe to use the non-null assertion operator.
+        const promises = [...this.updateSessionMap.values(), ...this.dictionaryUpdateSessionMap!.values()].map(session => session.promise);
 
         const settledResults = await Promise.allSettled(promises);
         for (const settledResult of settledResults) {
@@ -424,9 +397,22 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         return refBooks;
     }
 
-    /**
-     * Required implementation of vscode.CompletionItemProvider, overriding the super class.
-     */
+    // Override the method in the base class to provide custom descriptions for completion items.
+    // For symbols defined in a file in the workspace, it returns the relative path.
+    protected getCompletionItemLabelDescription(uriString: string): string | undefined {
+        if (uriString === lang.ACTIVE_FILE_URI) {
+            return 'local';
+        } else {
+            return vscode.workspace.asRelativePath(vscode.Uri.parse(uriString));
+        }
+    }
+
+    // Override the method in the base class to provide short text on hover and resolved completion items.
+    protected getSignatureComment(categoryLabel: string, _uriString: string): string {
+        return `user-defined ${categoryLabel}`;
+    }
+
+    // Required implementation of vscode.CompletionItemProvider, overriding the super class.
     public override async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): Promise<vscode.CompletionList<lang.CompletionItem> | lang.CompletionItem[] | undefined> {
         if (token.isCancellationRequested) { return; }
 
@@ -436,9 +422,7 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         return super.provideCompletionItems(document, position, token, context);
     }
 
-    /**
-     * Required implementation of vscode.HoverProvider, overriding the super class.
-     */
+    // Required implementation of vscode.HoverProvider, overriding the super class.
     public override async provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): Promise<vscode.Hover | undefined> {
         if (token.isCancellationRequested) { return; }
 
@@ -448,9 +432,7 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         return super.provideHover(document, position, token);
     }
 
-    /**
-     * Required implementation of vscode.DefinitionProvider.
-     */
+    // Required implementation of vscode.DefinitionProvider.
     public async provideDefinition(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): Promise<vscode.Definition | vscode.DefinitionLink[] | undefined> {
         if (token.isCancellationRequested) { return; }
 
@@ -468,8 +450,10 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         for (const [uriString, session] of this.updateSessionMap.entries()) {
             const uri = (uriString === lang.ACTIVE_FILE_URI) ? document.uri : vscode.Uri.parse(uriString);
 
-            // scan all types of symbols in the database of the respective files.
+            // Scan all types of symbols in the database of the respective files.
             const refItem = (await session.promise)?.refBook.get(selectorName);
+            if (token.isCancellationRequested) { return; }
+
             if (refItem && refItem.location) {
                 locations.push(new vscode.Location(uri, lang.convertRange(refItem.location)));
             }
@@ -477,20 +461,15 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         return locations;
     }
 
-    /**
-     * Required implementation of `vscode.DocumentSymbolProvider`.
-     */
+    // Required implementation of `vscode.DocumentSymbolProvider`.
     public async provideDocumentSymbols(document: vscode.TextDocument, token: vscode.CancellationToken): Promise<vscode.SymbolInformation[] | vscode.DocumentSymbol[] | undefined> {
         if (token.isCancellationRequested) { return; }
 
         return (await this.updateSessionMap.get(document.uri.toString())?.promise)?.symbols;
     }
 
-    /**
-     * Required implementation of `vscode.WorkspaceSymbolProvider`.
-     * 
-     * This function looks for all symbol definitions that matched with `query` from the workspace.
-     */
+    // Required implementation of `vscode.WorkspaceSymbolProvider`.
+    // This function looks for all symbol definitions that matched with `query` from the workspace.
     public async provideWorkspaceSymbols(query: string, token: vscode.CancellationToken): Promise<vscode.SymbolInformation[] | undefined> {
         if (token.isCancellationRequested) { return; }
 
@@ -505,7 +484,7 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         // Collect symbols defined in workspaces.
         const symbols: vscode.SymbolInformation[] = [];
         for (const [uriString, session] of this.updateSessionMap.entries()) {
-            // Skip storage for local variables
+            // Skip storage for local variables.
             if (uriString === lang.ACTIVE_FILE_URI) { continue; }
 
             const uri = vscode.Uri.parse(uriString);
@@ -520,7 +499,7 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
                 if ((query.length === 0 || regExp.test(identifier)) && refItem.location) {
                     const name = (refItem.category === 'function') ? identifier + '()' : identifier;
                     const location = new vscode.Location(uri, lang.convertRange(refItem.location));
-                    const symbolKind = lang.referenceCategoryMetadata[refItem.category].symbolKind;
+                    const symbolKind = lang.getSymbolKindForCategory(refItem.category);
                     symbols.push(new vscode.SymbolInformation(name, symbolKind, '', location));
                 }
             }
@@ -528,12 +507,9 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         return symbols;
     }
 
-    /**
-     * Required implementation of `vscode.DocumentDropEditProvider`.
-     * 
-     * This function is called when a file is dropped into the editor.
-     * This function returns a path string surrrounded by `qdofile()` function.
-     */
+    // Required implementation of `vscode.DocumentDropEditProvider`.
+    // This function is called when a file is dropped into the editor.
+    // This function returns a path string surrrounded by `qdofile()` function.
     public provideDocumentDropEdits(document: vscode.TextDocument, _position: vscode.Position, dataTransfer: vscode.DataTransfer, token: vscode.CancellationToken): vscode.ProviderResult<vscode.DocumentDropEdit> {
         // The value for 'text/uri-list' key in `dataTransfer` is a string of file list separated by '\r\n'.
         const uriList = dataTransfer.get('text/uri-list');
@@ -556,13 +532,12 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         }
     }
 
-    /**
-     * required implementation of vscode.TextDocumentContentProvider
-     */
+    // Required implementation of vscode.TextDocumentContentProvider.
     public provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken): vscode.ProviderResult<string> {
         if (token.isCancellationRequested) { return; }
 
-        if (lang.AST_URI === uri.with({ query: '', fragment: '' }).toString()) {
+        // Responds to the `"spec-command.inspectSyntaxTree"` command and shows the syntax tree of the selected document in JSON format.
+        if (AST_URI === uri.with({ query: '', fragment: '' }).toString()) {
             const docUri = vscode.Uri.parse(uri.query);
             const editor = vscode.window.visibleTextEditors.find(editor => editor.document.uri.toString() === docUri.toString());
             if (editor) {
@@ -584,13 +559,13 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
     }
 }
 
-async function analyzeContentOfUri(uri: vscode.Uri, diagnosticRules: lang.DiagnosticRules | undefined, isInEditor: boolean, token: vscode.CancellationToken): Promise<lang.ParsedFileData | undefined> {
+async function analyzeContentOfUri(uri: vscode.Uri, diagnosticRules: lang.DiagnosticRules | undefined, isInEditor: boolean, token: vscode.CancellationToken): Promise<lang.FileParserResult | undefined> {
     const uint8Array = await vscode.workspace.fs.readFile(uri);
     const content = await vscode.workspace.decode(uint8Array, { uri });
     return analyzeDocumentContent(content, diagnosticRules, isInEditor, token);
 }
 
-function analyzeDocumentContent(content: string, diagnosticRules: lang.DiagnosticRules | undefined, isInEditor: boolean, token: vscode.CancellationToken): lang.ParsedFileData | undefined {
+function analyzeDocumentContent(content: string, diagnosticRules: lang.DiagnosticRules | undefined, isInEditor: boolean, token: vscode.CancellationToken): lang.FileParserResult | undefined {
     if (token.isCancellationRequested) { return undefined; }
 
     let tree: tree.Program;
@@ -627,14 +602,14 @@ function analyzeDocumentContent(content: string, diagnosticRules: lang.Diagnosti
     }
 }
 
-function analyzeDocumentContent2(parsedData: lang.ParsedFileData, diagnosticRules: lang.DiagnosticRules | undefined, rererenceBooks: readonly lang.ReferenceBook[], token: vscode.CancellationToken | undefined) {
+function analyzeDocumentContent2(parserResult: lang.FileParserResult, diagnosticRules: lang.DiagnosticRules | undefined, referenceBooks: readonly lang.ReferenceBook[], token: vscode.CancellationToken | undefined) {
     if (token && token.isCancellationRequested) { return undefined; }
 
-    if (parsedData.tree && diagnosticRules) {
-        const diagnostics = traverseForFurtherDiagnostics(parsedData.tree, rererenceBooks).filter(diagnostic => {
+    if (parserResult.tree && diagnosticRules) {
+        const diagnostics = traverseForFurtherDiagnostics(parserResult.tree, referenceBooks).filter(diagnostic => {
             return diagnostic.code && typeof diagnostic.code === 'string' && diagnostic.code in diagnosticRules && diagnosticRules[diagnostic.code as keyof typeof diagnosticRules] === true;
         });
-        parsedData.diagnostics = (parsedData.diagnostics ?? []).concat(diagnostics);
+        parserResult.diagnostics = (parserResult.diagnostics ?? []).concat(diagnostics);
     }
-    return parsedData.diagnostics;
+    return parserResult.diagnostics;
 }
