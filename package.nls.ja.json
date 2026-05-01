@@ -1,6 +1,5 @@
 {
 	"command.spec-command.showDictionaryPreview.title": "辞書のプレビューを開く",
-	"command.spec-command.showWorkspaceSymbols.title": "ワークスペースのシンボルを表示 (JSON)",
 	"command.spec-command.showDictionarySource.title": "ユーザー定義辞書をエディターで表示",
 	"command.spec-command.registerDictionary.title": "エディターの内容をユーザー定義辞書として登録",
 	"command.spec-command.deleteDictionary.title": "ユーザー定義辞書を削除",

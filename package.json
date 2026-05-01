@@ -69,12 +69,6 @@
 				"icon": "$(references)"
 			},
 			{
-				"command": "spec-command.showWorkspaceSymbolsJson",
-				"title": "%command.spec-command.showWorkspaceSymbols.title%",
-				"category": "spec command",
-				"icon": "$(json)"
-			},
-			{
 				"command": "spec-command.showDictionarySource",
 				"title": "%command.spec-command.showDictionarySource.title%",
 				"category": "spec command",
@@ -104,10 +98,6 @@
 			"commandPalette": [
 				{
 					"command": "spec-command.showDictionaryPreview"
-				},
-				{
-					"command": "spec-command.showWorkspaceSymbolsJson",
-					"when": "workspaceFolderCount > 0"
 				},
 				{
 					"command": "spec-command.showDictionarySource"

@@ -5,8 +5,12 @@ import type * as tree from './tree';
 export const SELECTOR = { language: 'spec-command' };
 // export const SELECTOR = [{ scheme: 'file', language: 'spec-command' }, { scheme: 'untitled', language: 'spec-command' }];
 
-export function convertPosition(position: Location): vscode.Position {
-    return new vscode.Position(position.line - 1, position.column - 1);
+export const ACTIVE_FILE_URI = 'spec-command:extension/file/active-document.md';
+
+export const SCDICT_SCHEMA_URI = 'https://raw.githubusercontent.com/fujidana/vscode-spec-command/refs/heads/master/schema/scdict.schema.json';
+
+export function convertPosition(location: Location): vscode.Position {
+    return new vscode.Position(location.line - 1, location.column - 1);
 }
 
 export function convertRange(range: LocationRange): vscode.Range {
@@ -14,7 +18,7 @@ export function convertRange(range: LocationRange): vscode.Range {
 }
 
 export interface ParserResult {
-    refBook: ReferenceBook
+    refBook: ReferenceBook;
 }
 
 export interface FileParserResult extends ParserResult {
@@ -26,6 +30,7 @@ export interface FileParserResult extends ParserResult {
 export interface DictParserResult extends ParserResult {
     identifier: string;
     scope: 'extension' | 'global' | 'workspace';
+    $schema?: string;
     name?: string;
     description?: string;
 }
@@ -79,13 +84,6 @@ export type CategorizedDictionary = {
     };
 };
 
-type ReferenceCategoryMetadata = {
-    readonly label: string
-    readonly iconIdentifier: string,
-    readonly completionItemKind: vscode.CompletionItemKind | undefined,
-    readonly symbolKind: vscode.SymbolKind,
-};
-
 export function getVersionRangeDescription(versionRange: VersionRange, label: string) {
     let tmpStr = versionRange.range === '>=0.0.0' ? `[${label} at some time]` : `[${label}: \`${versionRange.range}\`]`;
     if (versionRange.description) {
@@ -94,68 +92,106 @@ export function getVersionRangeDescription(versionRange: VersionRange, label: st
     return tmpStr;
 }
 
-export const referenceCategoryMetadata: { readonly [K in ReferenceCategory]: ReferenceCategoryMetadata } = {
-    constant: {
-        label: 'constant',
-        iconIdentifier: 'symbol-constant',
-        completionItemKind: vscode.CompletionItemKind.Constant,
-        symbolKind: vscode.SymbolKind.Constant
-    },
-    variable: {
-        label: 'variable',
-        iconIdentifier: 'symbol-variable',
-        completionItemKind: vscode.CompletionItemKind.Variable,
-        symbolKind: vscode.SymbolKind.Variable
-    },
-    array: {
-        label: 'data-array',
-        iconIdentifier: 'symbol-array',
-        completionItemKind: vscode.CompletionItemKind.Variable,
-        symbolKind: vscode.SymbolKind.Array
-    },
-    macro: {
-        label: 'macro',
-        iconIdentifier: 'symbol-module',
-        completionItemKind: vscode.CompletionItemKind.Module,
-        symbolKind: vscode.SymbolKind.Module
-    },
-    function: {
-        label: 'function',
-        iconIdentifier: 'symbol-function',
-        completionItemKind: vscode.CompletionItemKind.Function,
-        symbolKind: vscode.SymbolKind.Function
-    },
-    keyword: {
-        label: 'keyword',
-        iconIdentifier: 'symbol-keyword',
-        completionItemKind: vscode.CompletionItemKind.Keyword,
-        symbolKind: vscode.SymbolKind.Null // no corresponding value
-    },
-    snippet: {
-        label: 'snippet',
-        iconIdentifier: 'symbol-snippet',
-        completionItemKind: vscode.CompletionItemKind.Snippet,
-        symbolKind: vscode.SymbolKind.Null // no corresponding value
-    },
-    enum: {
-        label: 'member',
-        iconIdentifier: 'symbol-enum-member',
-        completionItemKind: vscode.CompletionItemKind.EnumMember,
-        symbolKind: vscode.SymbolKind.EnumMember
-    },
-    undefined: {
-        label: 'unknown symbol',
-        iconIdentifier: 'symbol-null',
-        completionItemKind: undefined,
-        symbolKind: vscode.SymbolKind.Null
+export function getLabelForCategory(categoryName: ReferenceCategory): string {
+    switch (categoryName) {
+        case 'constant':
+            return 'constant';
+        case 'variable':
+            return 'variable';
+        case 'array':
+            return 'data-array';
+        case 'macro':
+            return 'macro';
+        case 'function':
+            return 'function';
+        case 'keyword':
+            return 'keyword';
+        case 'snippet':
+            return 'snippet';
+        case 'enum':
+            return 'member';
+        case 'undefined':
+            return 'unknown symbol';
+        // default:
     }
-};
+}
+
+function getCompletionItemKindForCategory(categoryName: ReferenceCategory): vscode.CompletionItemKind | undefined {
+    switch (categoryName) {
+        case 'constant':
+            return vscode.CompletionItemKind.Constant;
+        case 'variable':
+            return vscode.CompletionItemKind.Variable;
+        case 'array':
+            return vscode.CompletionItemKind.Variable; // No specific kind for array.
+        case 'macro':
+            return vscode.CompletionItemKind.Module;
+        case 'function':
+            return vscode.CompletionItemKind.Function;
+        case 'keyword':
+            return vscode.CompletionItemKind.Keyword;
+        case 'snippet':
+            return vscode.CompletionItemKind.Snippet;
+        case 'enum':
+            return vscode.CompletionItemKind.EnumMember;
+        case 'undefined':
+            return undefined;
+        // default:
+    }
+}
+
+export function getSymbolKindForCategory(categoryName: ReferenceCategory): vscode.SymbolKind {
+    switch (categoryName) {
+        case 'constant':
+            return vscode.SymbolKind.Constant;
+        case 'variable':
+            return vscode.SymbolKind.Variable;
+        case 'array':
+            return vscode.SymbolKind.Array;
+        case 'macro':
+            return vscode.SymbolKind.Module;
+        case 'function':
+            return vscode.SymbolKind.Function;
+        case 'keyword':
+            return vscode.SymbolKind.Null; // No specific kind for keyword.
+        case 'snippet':
+            return vscode.SymbolKind.Null; // No specific kind for snippet.
+        case 'enum':
+            return vscode.SymbolKind.EnumMember;
+        // case 'undefined':
+        default:
+            return vscode.SymbolKind.Null;
+    }
+}
+
+// function getIconIdentifierForCategory(categoryName: ReferenceCategory): string {
+//     switch (categoryName) {
+//         case 'constant':
+//             return 'symbol-constant';
+//         case 'variable':
+//             return 'symbol-variable';
+//         case 'array':
+//             return 'symbol-array';
+//         case 'macro':
+//             return 'symbol-module';
+//         case 'function':
+//             return 'symbol-function';
+//         case 'keyword':
+//             return 'symbol-keyword';
+//         case 'snippet':
+//             return 'symbol-snippet';
+//         case 'enum':
+//             return 'symbol-enum-member';
+//         case 'undefined':
+//             return 'symbol-null';
+//     }
+// }
 
 export class CompletionItem extends vscode.CompletionItem {
     readonly uriString: string;
 
     constructor(label: string | vscode.CompletionItemLabel, uriString: string, categoryName: ReferenceCategory) {
-        super(label, referenceCategoryMetadata[categoryName].completionItemKind);
+        super(label, getCompletionItemKindForCategory(categoryName));
         this.uriString = uriString;
     };
 }
@@ -189,7 +225,9 @@ export function convertToCategorizedDictionary(parserResult: DictParserResult, c
             }
         }
     }
+
     return {
+        $schema: parserResult.$schema,
         kind: 'spec-command.dictionary',
         identifier: parserResult.identifier,
         scope: parserResult.scope,
@@ -221,6 +259,7 @@ export function convertFromCategorizedDictionary(dictionary: CategorizedDictiona
     return {
         identifier: dictionary.identifier,
         scope: dictionary.scope,
+        $schema: dictionary.$schema,
         name: dictionary.name,
         description: dictionary.description,
         refBook,

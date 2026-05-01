@@ -1,13 +1,11 @@
 import * as vscode from 'vscode';
 import * as lang from './language';
 import { Controller } from './controller';
-import { BuiltInController } from './builtInController';
 import { SyntaxError, parse } from './parser';
 import { traversePartially, traverseWholly, traverseForFurtherDiagnostics } from './traverser';
 import type * as tree from './tree';
 
 
-const ACTIVE_FILE_URI = 'spec-command:extension/file/active-document.md';
 const AST_URI = 'spec-command://file/ast.json';
 
 
@@ -62,45 +60,12 @@ type FileUpdateQuery = { type: 'File', uri: vscode.Uri, diagnose: boolean };
 export class FileController extends Controller<lang.FileUpdateSession> implements vscode.DefinitionProvider, vscode.DocumentSymbolProvider, vscode.WorkspaceSymbolProvider, vscode.DocumentDropEditProvider, vscode.TextDocumentContentProvider {
 
     private readonly diagnosticCollection: vscode.DiagnosticCollection;
-    private readonly builtInController: BuiltInController;
+    public dictionaryUpdateSessionMap: Map<string, lang.UpdateSession> | undefined;
 
-    constructor(context: vscode.ExtensionContext, builtInController: BuiltInController) {
+    constructor(context: vscode.ExtensionContext) {
         super(context);
 
-        this.builtInController = builtInController;
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('spec-command');
-
-        const showWorkspaceSymbolsJsonCommandHandler = async () => {
-            // When the extension is activated by the command, `updateSessionMap`
-            // is empty at the moment. Wait for a while, and then promise objects
-            //  are added into `updateSessionMap`.
-            if (this.updateSessionMap.size === 0) {
-                await new Promise((resolve) => setTimeout(resolve, 200));
-            }
-
-            const categoryFilters = ['constant', 'variable', 'array', 'macro', 'function'] as const;
-            const obj: { [K in typeof categoryFilters[number]]: Required<lang.CategorizedDictionary['categories']>[K] } = { variable: {}, constant: {}, array: {}, macro: {}, function: {}, };
-            // const obj: Record<typeof ReferenceItem[number], Record<string, lang.ReferenceItem>> = { variable: {}, constant: {}, array: {}, macro: {}, function: {}, };
-
-            for (const [uriString, session] of this.updateSessionMap.entries()) {
-                const refBook = (await session.promise)?.refBook;
-                if (refBook === undefined) { continue; }
-
-                // Local variables are not exported.
-                if (uriString === ACTIVE_FILE_URI) { continue; }
-                const parserResult: lang.DictParserResult = { identifier: 'untitled', scope: 'global', refBook };
-                const dictionary = lang.convertToCategorizedDictionary(parserResult, categoryFilters);
-                for (const [category, refSheet] of Object.entries(dictionary.categories)) {
-                    const category2 = category as keyof typeof dictionary['categories'];
-                    if (category2 === 'constant' || category2 === 'variable' || category2 === 'array' || category2 === 'macro' || category2 === 'function') {
-                        obj[category2] = Object.assign(obj[category2], refSheet);
-                    }
-                }
-            }
-            const content = JSON.stringify(obj, (key, value) => key === 'location' || key === 'category' ? undefined : value, 2);
-            const document = await vscode.workspace.openTextDocument({ language: 'json', content: content });
-            vscode.window.showTextDocument(document, { preview: false });
-        };
 
         const inspectSyntaxTreeCommandHandler = () => {
             const editor = vscode.window.activeTextEditor;
@@ -238,7 +203,6 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         // Register providers and event handlers.
         context.subscriptions.push(
             // Register command handlers.
-            vscode.commands.registerCommand('spec-command.showWorkspaceSymbolsJson', showWorkspaceSymbolsJsonCommandHandler),
             vscode.commands.registerCommand('spec-command.inspectSyntaxTree', inspectSyntaxTreeCommandHandler),
 
             // Register document-event listeners.
@@ -406,10 +370,10 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
                     };
                 }
             );
-            this.updateSessionMap.set(ACTIVE_FILE_URI, { promise, tokenSource: undefined });
+            this.updateSessionMap.set(lang.ACTIVE_FILE_URI, { promise, tokenSource: undefined });
             return promise;
         } else {
-            this.updateSessionMap.delete(ACTIVE_FILE_URI);
+            this.updateSessionMap.delete(lang.ACTIVE_FILE_URI);
             return undefined;
         }
     }
@@ -421,7 +385,8 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
      */
     private async mergedReferenceBooks() {
         const refBooks: lang.ReferenceBook[] = [];
-        const promises = [...this.updateSessionMap.values(), ...this.builtInController.updateSessionMap.values()].map(session => session.promise);
+        // dictionaryUpdateSessionMap is set after the constructor is called, so it is safe to use the non-null assertion operator.
+        const promises = [...this.updateSessionMap.values(), ...this.dictionaryUpdateSessionMap!.values()].map(session => session.promise);
 
         const settledResults = await Promise.allSettled(promises);
         for (const settledResult of settledResults) {
@@ -432,21 +397,22 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         return refBooks;
     }
 
+    // Override the method in the base class to provide custom descriptions for completion items.
+    // For symbols defined in a file in the workspace, it returns the relative path.
     protected getCompletionItemLabelDescription(uriString: string): string | undefined {
-        if (uriString === ACTIVE_FILE_URI) {
+        if (uriString === lang.ACTIVE_FILE_URI) {
             return 'local';
         } else {
-            return super.getCompletionItemLabelDescription(uriString);
+            return vscode.workspace.asRelativePath(vscode.Uri.parse(uriString));
         }
     }
 
-    protected getSignatureComment(categoryLabel: string, uriString: string): string {
+    // Override the method in the base class to provide short text on hover and resolved completion items.
+    protected getSignatureComment(categoryLabel: string, _uriString: string): string {
         return `user-defined ${categoryLabel}`;
     }
 
-    /**
-     * Required implementation of vscode.CompletionItemProvider, overriding the super class.
-     */
+    // Required implementation of vscode.CompletionItemProvider, overriding the super class.
     public override async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): Promise<vscode.CompletionList<lang.CompletionItem> | lang.CompletionItem[] | undefined> {
         if (token.isCancellationRequested) { return; }
 
@@ -456,9 +422,7 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         return super.provideCompletionItems(document, position, token, context);
     }
 
-    /**
-     * Required implementation of vscode.HoverProvider, overriding the super class.
-     */
+    // Required implementation of vscode.HoverProvider, overriding the super class.
     public override async provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): Promise<vscode.Hover | undefined> {
         if (token.isCancellationRequested) { return; }
 
@@ -468,9 +432,7 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         return super.provideHover(document, position, token);
     }
 
-    /**
-     * Required implementation of vscode.DefinitionProvider.
-     */
+    // Required implementation of vscode.DefinitionProvider.
     public async provideDefinition(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): Promise<vscode.Definition | vscode.DefinitionLink[] | undefined> {
         if (token.isCancellationRequested) { return; }
 
@@ -486,7 +448,7 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         // Seek the identifier.
         const locations: vscode.Location[] = [];
         for (const [uriString, session] of this.updateSessionMap.entries()) {
-            const uri = (uriString === ACTIVE_FILE_URI) ? document.uri : vscode.Uri.parse(uriString);
+            const uri = (uriString === lang.ACTIVE_FILE_URI) ? document.uri : vscode.Uri.parse(uriString);
 
             // Scan all types of symbols in the database of the respective files.
             const refItem = (await session.promise)?.refBook.get(selectorName);
@@ -499,20 +461,15 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         return locations;
     }
 
-    /**
-     * Required implementation of `vscode.DocumentSymbolProvider`.
-     */
+    // Required implementation of `vscode.DocumentSymbolProvider`.
     public async provideDocumentSymbols(document: vscode.TextDocument, token: vscode.CancellationToken): Promise<vscode.SymbolInformation[] | vscode.DocumentSymbol[] | undefined> {
         if (token.isCancellationRequested) { return; }
 
         return (await this.updateSessionMap.get(document.uri.toString())?.promise)?.symbols;
     }
 
-    /**
-     * Required implementation of `vscode.WorkspaceSymbolProvider`.
-     * 
-     * This function looks for all symbol definitions that matched with `query` from the workspace.
-     */
+    // Required implementation of `vscode.WorkspaceSymbolProvider`.
+    // This function looks for all symbol definitions that matched with `query` from the workspace.
     public async provideWorkspaceSymbols(query: string, token: vscode.CancellationToken): Promise<vscode.SymbolInformation[] | undefined> {
         if (token.isCancellationRequested) { return; }
 
@@ -528,7 +485,7 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         const symbols: vscode.SymbolInformation[] = [];
         for (const [uriString, session] of this.updateSessionMap.entries()) {
             // Skip storage for local variables.
-            if (uriString === ACTIVE_FILE_URI) { continue; }
+            if (uriString === lang.ACTIVE_FILE_URI) { continue; }
 
             const uri = vscode.Uri.parse(uriString);
             const refBook = (await session.promise)?.refBook;
@@ -542,7 +499,7 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
                 if ((query.length === 0 || regExp.test(identifier)) && refItem.location) {
                     const name = (refItem.category === 'function') ? identifier + '()' : identifier;
                     const location = new vscode.Location(uri, lang.convertRange(refItem.location));
-                    const symbolKind = lang.referenceCategoryMetadata[refItem.category].symbolKind;
+                    const symbolKind = lang.getSymbolKindForCategory(refItem.category);
                     symbols.push(new vscode.SymbolInformation(name, symbolKind, '', location));
                 }
             }
@@ -550,12 +507,9 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         return symbols;
     }
 
-    /**
-     * Required implementation of `vscode.DocumentDropEditProvider`.
-     * 
-     * This function is called when a file is dropped into the editor.
-     * This function returns a path string surrrounded by `qdofile()` function.
-     */
+    // Required implementation of `vscode.DocumentDropEditProvider`.
+    // This function is called when a file is dropped into the editor.
+    // This function returns a path string surrrounded by `qdofile()` function.
     public provideDocumentDropEdits(document: vscode.TextDocument, _position: vscode.Position, dataTransfer: vscode.DataTransfer, token: vscode.CancellationToken): vscode.ProviderResult<vscode.DocumentDropEdit> {
         // The value for 'text/uri-list' key in `dataTransfer` is a string of file list separated by '\r\n'.
         const uriList = dataTransfer.get('text/uri-list');
@@ -578,9 +532,7 @@ export class FileController extends Controller<lang.FileUpdateSession> implement
         }
     }
 
-    /**
-     * required implementation of vscode.TextDocumentContentProvider
-     */
+    // Required implementation of vscode.TextDocumentContentProvider.
     public provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken): vscode.ProviderResult<string> {
         if (token.isCancellationRequested) { return; }
 

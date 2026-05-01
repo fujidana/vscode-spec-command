@@ -31,9 +31,10 @@ const SNIPPET_TEMPLATES: Record<string, string> = {
 /**
  * A controller subclass that manages built-in symbols and motor mnemonics.
  */
-export class BuiltInController extends Controller<lang.UpdateSession<lang.DictParserResult>> implements vscode.TextDocumentContentProvider {
-    private readonly externalSchemaUriString: string = 'https://raw.githubusercontent.com/fujidana/vscode-spec-command/refs/heads/master/schema/scdict.schema.json';
+export class DictionaryController extends Controller<lang.UpdateSession<lang.DictParserResult>> implements vscode.TextDocumentContentProvider {
     private readonly extensionSchemaUriString: string;
+
+    public fileUpdateSessionMap: Map<string, lang.UpdateSession> | undefined;
 
     constructor(context: vscode.ExtensionContext) {
         super(context);
@@ -93,7 +94,7 @@ export class BuiltInController extends Controller<lang.UpdateSession<lang.DictPa
 
         interface QuickPickItemForDict extends vscode.QuickPickItem {
             scope: lang.DictParserResult['scope'];
-            template?: boolean;
+            template?: 'empty' | 'workspaceSymbols' | undefined;
         }
 
         /**
@@ -159,16 +160,25 @@ export class BuiltInController extends Controller<lang.UpdateSession<lang.DictPa
             }
         };
 
+        /**
+         * Command handler for showing the content of dictionary in JSON format as a new document.
+         */
         const showDictionarySourceCommandHandler = async (..._args: any[]) => {
             const quickPickItems: QuickPickItemForDict[] = [];
 
             quickPickItems.push({ label: vscode.l10n.t('User'), kind: vscode.QuickPickItemKind.Separator, scope: 'global' });
             context.globalState.keys().forEach(key => quickPickItems.push({ label: key, scope: 'global' }));
-            quickPickItems.push({ label: '[global-template]', description: vscode.l10n.t('Template for new dictionary'), scope: 'global', template: true });
+            quickPickItems.push({ label: '[global-empty]', description: vscode.l10n.t('new dictionary with empty content'), scope: 'global', template: 'empty' });
+            if (vscode.workspace.workspaceFolders) {
+                quickPickItems.push({ label: '[global-template]', description: vscode.l10n.t('new dictionary with current workspace symbols'), scope: 'global', template: 'workspaceSymbols' });
+            }
 
             quickPickItems.push({ label: vscode.l10n.t('Workspace'), kind: vscode.QuickPickItemKind.Separator, scope: 'workspace' });
             context.workspaceState.keys().forEach(key => quickPickItems.push({ label: key, scope: 'workspace' }));
-            quickPickItems.push({ label: '[workspace-template]', description: vscode.l10n.t('Template for new dictionary'), scope: 'workspace', template: true });
+            quickPickItems.push({ label: '[workspace-empty]', description: vscode.l10n.t('new dictionary with empty content'), scope: 'workspace', template: 'empty' });
+            if (vscode.workspace.workspaceFolders) {
+                quickPickItems.push({ label: '[workspace-template]', description: vscode.l10n.t('new dictionary with current workspace symbols'), scope: 'workspace', template: 'workspaceSymbols' });
+            }
 
             // Show quick pick to select a dictionary.
             const selectedItem = await vscode.window.showQuickPick(quickPickItems, {
@@ -176,23 +186,49 @@ export class BuiltInController extends Controller<lang.UpdateSession<lang.DictPa
             });
             if (!selectedItem) { return; } // Exit if the user cancels.
 
-            // Open a new text document with the content of the selected dictionary in JSON format.
-            const obj = selectedItem.template === true ?
-                {
+            // Fetch the dictionary from the global/workspace state or create a new dictionary.
+            let obj: lang.CategorizedDictionary | undefined;
+            if (selectedItem.template === undefined) {
+                // Fetch the dictionary from the global/workspace state.
+                obj = selectedItem.scope === 'global' ?
+                    context.globalState.get(selectedItem.label) :
+                    context.workspaceState.get(selectedItem.label);
+            } else {
+                // If the user selects a template with current workspace symbols, 
+                // gather symbols from all files in the workspace and put them in a reference book.
+                // Else, create an empty reference book.
+                const refBookEntries: [string, lang.ReferenceItem][] = [];
+
+                if (selectedItem.template === 'workspaceSymbols' && this.fileUpdateSessionMap) {
+                    for (const [uriString, session] of this.fileUpdateSessionMap.entries()) {
+                        // Local variables are not exported.
+                        if (uriString === lang.ACTIVE_FILE_URI) { continue; }
+
+                        // Skip files that are not parsed successfully.
+                        const refBook = (await session.promise)?.refBook;
+                        if (refBook === undefined) { continue; }
+
+                        refBookEntries.push(...refBook.entries());
+                    }
+                }
+                const categoryFilters = ['constant', 'variable', 'array', 'macro', 'function'] as const;
+                obj = lang.convertToCategorizedDictionary({
                     $schema: this.extensionSchemaUriString, // this.externalSchemaUriString,
-                    kind: 'spec-command.dictionary',
                     identifier: selectedItem.scope === 'global' ? 'globalDict' : 'workspaceDict',
                     scope: selectedItem.scope,
-                    categories: {}
-                } satisfies lang.CategorizedDictionary :
-                (selectedItem.scope === 'global' ?
-                    context.globalState.get(selectedItem.label) :
-                    context.workspaceState.get(selectedItem.label)
-                );
+                    refBook: new Map(refBookEntries),
+                }, categoryFilters);
+            }
 
-            const document = await vscode.workspace.openTextDocument({ language: 'json', content: JSON.stringify(obj, null, 2) });
-            await vscode.window.showTextDocument(document);
-            return;
+            // Open a new text document with the content of the selected dictionary in JSON format.
+            if (!obj) {
+                vscode.window.showErrorMessage(vscode.l10n.t('Failed to load the dictionary content.'));
+            } else {
+                const content = JSON.stringify(obj, ((key, value) => key === 'location' ? undefined : value), 2);
+                const document = await vscode.workspace.openTextDocument({ language: 'json', content: content });
+                await vscode.window.showTextDocument(document);
+                return;
+            }
         };
 
         const registerDictionaryCommandHandler = async (..._args: any[]) => {
@@ -236,13 +272,9 @@ export class BuiltInController extends Controller<lang.UpdateSession<lang.DictPa
                     return;
                 }
             } catch (error) {
-                if (error instanceof Error) {
-                    vscode.window.showErrorMessage(vscode.l10n.t('Failed to parse JSON. {0}', error.message));
-                    return;
-                } else {
-                    vscode.window.showErrorMessage(vscode.l10n.t('Failed to parse JSON. {0}', String(error)));
-                    return;
-                }
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                vscode.window.showErrorMessage(vscode.l10n.t('Failed to parse JSON. {0}', errorMessage));
+                return;
             }
 
             let storageLabel: string;
@@ -270,16 +302,23 @@ export class BuiltInController extends Controller<lang.UpdateSession<lang.DictPa
                     "OK");
 
             if (flag === 'OK') {
+                try {
+                    const dictParserResult = lang.convertFromCategorizedDictionary(obj);
+                    this.updateSessionMap.set(uriString, { promise: Promise.resolve(dictParserResult) });
+                    if (isNew) {
+                        vscode.window.showInformationMessage(vscode.l10n.t('Dictionary "{0}" has been created in {1} storage.', obj.identifier, storageLabel));
+                    } else {
+                        vscode.window.showInformationMessage(vscode.l10n.t('Dictionary "{0}" in {1} storage has been updated.', obj.identifier, storageLabel));
+                    }
+                } catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    vscode.window.showErrorMessage(vscode.l10n.t('Failed to convert dictionary. {0}', errorMessage));
+                    return;
+                }
                 memento.update(obj.identifier, obj);
                 // if (obj.scope === 'global') {
                 //     context.globalState.setKeysForSync(context.globalState.keys().filter(key => key.endsWith('Sync')));
                 // }
-                this.updateSessionMap.set(uriString, { promise: Promise.resolve(lang.convertFromCategorizedDictionary(obj)) });
-                if (isNew) {
-                    vscode.window.showInformationMessage(vscode.l10n.t('Dictionary "{0}" has been created in {1} storage.', obj.identifier, storageLabel));
-                } else {
-                    vscode.window.showInformationMessage(vscode.l10n.t('Dictionary "{0}" in {1} storage has been updated.', obj.identifier, storageLabel));
-                }
             }
         };
 
@@ -343,8 +382,8 @@ export class BuiltInController extends Controller<lang.UpdateSession<lang.DictPa
     }
 
     /**
-     * Override the method in the base class to provide custom descriptions for built-in symbol completion items.
-     * Instead of returning the relative path of the symbol definition file, it returns explainatory text.
+     * Override the method in the base class to provide custom descriptions for completion items.
+     * For symbols defined not in a file in the workspace, it returns short explainatory text.
      */
     protected getCompletionItemLabelDescription(uriString: string): string | undefined {
         if (uriString === BUILTIN_DICT_URI) {
@@ -360,10 +399,13 @@ export class BuiltInController extends Controller<lang.UpdateSession<lang.DictPa
         } else if (uriString === SNIPPET_DICT_URI) {
             return 'snippet';
         } else {
-            return super.getCompletionItemLabelDescription(uriString);
+            return undefined;
         }
     }
 
+    /**
+     * Override the method in the base class to provide short text on hover and resolved completion items.
+     */
     protected getSignatureComment(categoryLabel: string, uriString: string): string {
         if (uriString === BUILTIN_DICT_URI) {
             return `built-in ${categoryLabel}`;
@@ -378,7 +420,7 @@ export class BuiltInController extends Controller<lang.UpdateSession<lang.DictPa
         } else if (uriString === SNIPPET_DICT_URI) {
             return `counter/motor ${categoryLabel}`;
         } else {
-            return super.getSignatureComment(categoryLabel, uriString);
+            return categoryLabel;
         }
     }
 
@@ -490,15 +532,15 @@ export class BuiltInController extends Controller<lang.UpdateSession<lang.DictPa
         mdText += `## Table of Contents\n\n`;
         for (const [categoryName, entriesInCategory] of Object.entries(dictionary.categories)) {
             if (Object.keys(entriesInCategory).length === 0) { continue; }
-            const categoryLabel = lang.referenceCategoryMetadata[categoryName as keyof typeof dictionary.categories].label;
-            mdText += `- [${categoryLabel}](#${categoryLabel})\n`;
+            const categoryLabel = lang.getLabelForCategory(categoryName as keyof typeof dictionary.categories);
+            mdText += `- [${categoryLabel}](#${categoryLabel.toLowerCase().replace(/\s+/g, '-')} )\n`;
         }
 
         // Add each category and its items.
         for (const [categoryName, entriesInCategory] of Object.entries(dictionary.categories)) {
             // Add heading for each category.
             if (Object.keys(entriesInCategory).length === 0) { continue; }
-            mdText += `## ${lang.referenceCategoryMetadata[categoryName as keyof typeof dictionary.categories].label}\n\n`;
+            mdText += `## ${lang.getLabelForCategory(categoryName as keyof typeof dictionary.categories)}\n\n`;
 
             // Add each item.
             for (const [identifier, entry] of Object.entries(entriesInCategory)) {
@@ -517,12 +559,7 @@ async function loadDictionary(fileUri: vscode.Uri): Promise<lang.DictParserResul
         const dictionary: lang.CategorizedDictionary = JSON.parse(decodedString);
         return lang.convertFromCategorizedDictionary(dictionary);
     } catch (error) {
-        let errorMessage: string;
-        if (error instanceof Error) {
-            errorMessage = error.message;
-        } else {
-            errorMessage = String(error);
-        }
+        const errorMessage = error instanceof Error ? error.message : String(error);
         const message = vscode.l10n.t('Failed to load dictionary for built-in symbols. {0}', errorMessage);
 
         // Do not return a thenable object chained to `showErrorMessage()` so 

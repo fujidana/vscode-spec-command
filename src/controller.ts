@@ -90,7 +90,7 @@ function parseSignatureInEditing(line: string, position: number) {
 /**
  * Abstract class for a main controller.
  */
-export class Controller<T extends lang.UpdateSession> implements vscode.CompletionItemProvider<lang.CompletionItem>, vscode.HoverProvider, vscode.SignatureHelpProvider {
+export abstract class Controller<T extends lang.UpdateSession> implements vscode.CompletionItemProvider<lang.CompletionItem>, vscode.HoverProvider, vscode.SignatureHelpProvider {
 
     // In JavaScript, equality comparison (`==` and `===`) of two different objects
     // is always `false`, regardless of the equality of their values.
@@ -118,9 +118,7 @@ export class Controller<T extends lang.UpdateSession> implements vscode.Completi
         );
     }
 
-    /**
-     * Required implementation of vscode.CompletionItemProvider.
-     */
+    // Required implementation of vscode.CompletionItemProvider.    
     public async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): Promise<vscode.CompletionList<lang.CompletionItem> | lang.CompletionItem[] | undefined> {
         if (token.isCancellationRequested) { return; }
 
@@ -138,7 +136,6 @@ export class Controller<T extends lang.UpdateSession> implements vscode.Completi
         for (const [uriString, session] of this.updateSessionMap) {
             const refBook = (await session.promise)?.refBook;
 
-            // Quit if cancelled and skip if symbol is not found in a file.
             if (token.isCancellationRequested) { return; }
             if (refBook === undefined) { continue; }
 
@@ -172,9 +169,7 @@ export class Controller<T extends lang.UpdateSession> implements vscode.Completi
         return completionItems;
     }
 
-    /**
-     * Optional implementation of vscode.CompletionItemProvider.
-     */
+    // Optional implementation of vscode.CompletionItemProvider.
     public async resolveCompletionItem(completionItem: lang.CompletionItem, token: vscode.CancellationToken): Promise<lang.CompletionItem | undefined> {
         if (token.isCancellationRequested) { return; }
 
@@ -191,7 +186,7 @@ export class Controller<T extends lang.UpdateSession> implements vscode.Completi
         if (token.isCancellationRequested) { return; }
         if (refItem === undefined) { return; }
 
-        // Set the description of the completion item
+        // Set the description of the completion item.
         // If the main description exists, append it.
         const documentation = new vscode.MarkdownString(truncateString(truncationlevel, refItem));
 
@@ -265,9 +260,7 @@ export class Controller<T extends lang.UpdateSession> implements vscode.Completi
         return contents.length > 0 ? new vscode.Hover(contents) : undefined;
     }
 
-    /**
-     * Required implementation of vscode.SignatureHelpProvider.
-     */
+    // Required implementation of vscode.SignatureHelpProvider.
     public async provideSignatureHelp(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.SignatureHelpContext): Promise<vscode.SignatureHelp | undefined> {
         if (token.isCancellationRequested) { return; }
 
@@ -317,32 +310,23 @@ export class Controller<T extends lang.UpdateSession> implements vscode.Completi
     }
 
     /**
-     * Get the description to be shown at the right side of a completion item.
-     * The default implementation returns the relative path of the file where the symbol is defined,
-     * but it can be overridden to provide custom descriptions.
+     * Get description to be shown at the right side of a completion item.
+     * Typicall return value is the relative path of the file where the symbol is defined.
      */
-    protected getCompletionItemLabelDescription(uriString: string): string | undefined {
-        return vscode.workspace.asRelativePath(vscode.Uri.parse(uriString));
-    }
+    protected abstract getCompletionItemLabelDescription(uriString: string): string | undefined;
 
     /**
-     * Get the additional text to be shown on the hover and resolved completion item.
-     * The default implementation returns the symbol signature and the file where the symbol is defined, 
-     * but it can be overridden to provide custom descriptions.
+     * Get text to be shown aside the signature on the hover and resolved completion item.
+     * Typical return value is short text about the type (category) of the symbol and some other information.
      */
-    protected getSignatureComment(categoryLabel: string, _uriString: string): string {
-        return categoryLabel;
-        // return `${categoryLabel} defined in ${vscode.workspace.asRelativePath(vscode.Uri.parse(uriString))}`;
-    }
+    protected abstract getSignatureComment(categoryLabel: string, uriString: string): string;
 
     /**
      * Get the description about to be shown on the hover and in the resolved completion item.
      * The default implementation returns the symbol signature and the file where the symbol is defined.
      */
     private getSignatureDescription(item: lang.ReferenceItem, itemUriString: string): string {
-        let itemUriLabel: string | undefined;
-
-        const symbolLabel = this.getSignatureComment(lang.referenceCategoryMetadata[item.category].label, itemUriString);
+        const symbolLabel = this.getSignatureComment(lang.getLabelForCategory(item.category), itemUriString);
 
         let mainText = `${item.signature} # ${symbolLabel}`;
         if (item.overloads && item.overloads.length > 1) {

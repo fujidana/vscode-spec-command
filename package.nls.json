@@ -1,6 +1,5 @@
 {
 	"command.spec-command.showDictionaryPreview.title": "Open Dictionary Preview",
-	"command.spec-command.showWorkspaceSymbols.title": "Show Workspace Symbols (JSON)",
 	"command.spec-command.showDictionarySource.title": "Show User-Defined Dictionary in Editor",
 	"command.spec-command.registerDictionary.title": "Register Editor Content as User-Defined Dictionary",
 	"command.spec-command.deleteDictionary.title": "Delete User-Defined Dictionary",
