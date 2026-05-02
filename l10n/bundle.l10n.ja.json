@@ -63,7 +63,7 @@
   "Syntax error in parsing: {0}": "解析中の構文エラー: {0}",
   "Error in parsing: {0}": "解析中のエラー: {0}",
   "Unknown error in parsing: {0}": "解析中の不明なエラー: {0}",
-  "Extension": "機能拡張",
+  "Extension": "拡張機能",
   "User": "ユーザー",
   "Workspace": "ワークスペース",
   "Select a dictionary to preview": "プレビューする辞書を選択",

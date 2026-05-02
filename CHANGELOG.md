@@ -4,14 +4,33 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+## [2.1.0] -- 2025-05-02
+
 ### Added
 
 - Restruct the code for multilingual support (i.e, internationalization) and add Japanese localization. Issue [#4](https://github.com/fujidana/vscode-spec-command/issues/4).
+- Enable to store user-defined dictionaries in the _Global State_ and _Workspace State_. Issue [#46](https://github.com/fujidana/vscode-spec-command/issues/46).
+  - To use a user-defined dictionary in the previous version (v2.0.0), a user needed to put a JSON file in one's PC and set the path in the `spec-command.suggest.symbolFile` setting. This feature is replaced by the new feature and the setting is deprecated.
+  - The following commands are added to manage user-defined dictionaries:
+    - `spec-command.showDictionaryPreview` command: Show the content of a user-defined dictionary in a markdown text and its preview. This command can also show the preview of built-in dictionary.
+    - `spec-command.showDictionarySource` command: Show the JSON-formatted user-defined dictionary in the active editor. This command can also show a template for a new dictionary based on the workspace symbols.
+    - `spec-command.registerDictionary` command: Register the JSON-formatted content of the active editor as a user-defined dictionary.
+    - `spec-command.deleteDictionary` command: Delete a user-defined dictionary.
+  - Remove the following commands related to user-defined dictionaries, since the new commands and settings cover the same features and more:
+    - `spec-command.showBuiltInSymbols` command
+    - `spec-command.showWorkspaceSymbolsJson` command
+  - Add `spec-command.dictionaryPreview` setting and deprecate `spec-command.showSymbolsInPreview` setting. The former setting has more options to control the content of the preview.
+
+  - Add `spec-command.syncDictionaries` setting (experimental). User-defined dictionaries specified in this setting will be synchronized (but currently may not work).
 
 ### Changed
 
 - Bump `semver` dependency to 7.7.4.
-- Raise the minimum VS Code version to 1.102.0.
+- Raise the minimum VS Code version to 1.110.0.
+
+### Fixed
+
+- Minor fixes in syntax parsing.
 
 ## [2.0.0] -- 2025-07-17
 
@@ -468,7 +487,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
   - syntax highlighting
   - code snippets
 
-[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/fujidana/vscode-spec-command/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.9...v2.0.0
 [1.8.9]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.8...v1.8.9
 [1.8.8]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.7...v1.8.8

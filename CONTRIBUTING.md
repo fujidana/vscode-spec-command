@@ -1,20 +1,15 @@
 Contributing Guide
 ====
 
-The extension author welcomes contributions from anyone who is interested in improving the extension.
+The extension author welcomes contributions from anyone who is interested in improving the extension. Contributions can be in the form of bug reports, feature requests, code changes, or documentation updates.
 
-Contributions can be in the form of bug reports, feature requests, code changes, or documentation updates.
-Open an issue for bug reports and feature requests.
-In case you can contribute code or documentation and the modificaiton is not trivial, also open an issue to discuss the change before sending a pull request.
-
-Follow the steps below to send a pull request.
+In case you want to contribute code or documentation, follow the steps below to send a pull request. Unless your fix is trivial, please open an issue to discuss the change before sending a pull request.
 
 1. Fork the repository. Click the "Fork" button on the top right of the repository page on GitHub.
-2. Clone the forked repository. If you are not familiar with VS Code extension authoring, see the next section.
-3. Create a new branch.
-4. Edit code.
-5. Commit the changes and then push the branch to your forked repository.
-6. Create a pull request to merge into main (`master`) branch of `fujidana/vscode-spec-command`.
+2. Create a new branch.
+3. Edit code.
+4. Commit the changes and then push the branch to your forked repository.
+5. Create a pull request to merge into main branch of `fujidana/vscode-spec-command`.
 
 Setup for extension authoring
 ----
@@ -25,7 +20,7 @@ Here is a step-by-step guide to set up the development environment for the exten
 
 1. Install VS Code (`code`), Git (`git`), and Node.js (`node`, `npm`).
 2. Install `pnpm` by the following command: `npm install --global pnpm`.
-3. Clone the original or forked repository: `git clone https://github.com/fujidana/vscode-spec-command.git`. Replace `fujidana` with your account name if you want to clone the repository you forked.
+3. Clone the original or forked repository: `git clone https://github.com/your_username/vscode-spec-command.git`. Replace `your_username` with `fujidana` if you want to clone the original repository.
 4. Open the cloned folder with VS Code: `cd vscode-spec-command; code .` (or via GUI). In the following, we assume you are in the `vscode-spec-command` folder. The easiest way to do so is to use the terminal in VS Code (Ctrl+Shift+`).
 5. Install Node.js packages the extension depends on: `pnpm install`
 6. Execute the following command `pnpm run js-yaml` to convert YAML files (.yaml) manually.
@@ -44,4 +39,4 @@ One can pull the latest changes from the remote repository by the following proc
 1. Open the cloned `vscode-spec-command` folder with VS Code.
 2. To pull the latest changes in the remote repository, run `git pull` in the terminal or select "Git: Pull" in the Command Palette (Cmd+Shift+P).
 3. Resolve conflicts if any.
-4. Install any new dependencies or updates by running `pnpm install` in the terminal.
+4. Install new dependencies and updated dependencies by running `pnpm install` in the terminal.

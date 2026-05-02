@@ -1,5 +1,7 @@
 # __spec__ Command File Extension for Visual Studio Code
 
+!NOTE: The mechanism to use user-defined dictionary was totally revamped since v2.0.0. See [User-Defined Dictionaries](#user-defined-dictionaries) section below and [CHANGELOG.md](CHANGELOG.md) for the new mechanism.
+
 The extension is designed to assist editing __spec__ command files with Visual Studio Code.
 __spec__ command files referred to here are also called __spec__ macro files and __spec__ script files; they are typically loaded by `qdo` or `qdofile()` after a user writes macros and functions in them.
 
@@ -7,6 +9,8 @@ While `qdo` or `qdofile()` does not care about the filename extension, most comm
 Therefore, this VS Code extension treats `.mac` as the file extension of __spec__ command files (language identifier: `spec-command`).
 However, VS Code provides ways for a user to change the association.
 Read [Language Support in Visual Studio Code](https://code.visualstudio.com/docs/languages/overview) (official document of VS Code) for further details.
+
+![screenshot of the hover](resources/screenshot.png "hover demo")
 
 ## What's __spec__?
 
@@ -38,16 +42,12 @@ Sorry for inconvenence.
   * __Symbol navigation in a document__ - available at _Go to Symbol in Editor_ (Ctrl+Shift+O) menubar item and the navigation bar at the top the editor pane (aka breadcrumbs)
   * __Symbol navigation in workspaces__ - available at _Go to Symbol in Workspace_ (Ctrl+T) menubar item
   * __Show definitions of a symbol__ - jump to where the symbol is defined, available at _Go to Definition_ (F12) and _Peek Definition_ (Alt+F12) in right-click menu
-* __Commands__ - the following commands can be invoked from the command pallate (Ctrl+Shit+P):
-  * "Show Built-in Symbols"
-  * "Show Workspace Symbols (JSON)": exported file can be used for importing the symbols in another workspace, with [spec-command.suggest.symbolFile](vscode://settings/spec-command.suggest.symbolFile) setting.
+* __Commands__ - Several commands explained [below](#user-defined-dictionaries) can be invoked from the command pallate (Ctrl+Shit+P):
 
 This extension treats user-defined symbols declared at the top level (i.e., not in a code block, curly brackets) as global and those in code blocks as local.
 Global symbols are visible beyond a file where the symbol is defined; local symbols are visible only when the cursor is in the same block.
 
 Tip: A comment line that starts with `# MARK:`, `# FIXME:` or `# TODO:` is treated as a breadcrumb. Optionally, `--` devides the text with the main and subsidiary parts.
-
-![screenshot of the hover](resources/screenshot.png "hover demo")
 
 The extension was developed with reference to the recent official PDF document about __spec__ release 6 (version 3 of the spec documentation, printed 16 July 2017).
 The help text of built-in symbols are cited from this document, except where otherwise noted.
@@ -103,6 +103,20 @@ Explanations of the respective settings are available in the _Settings_ editor. 
 The extension refers to the following built-in setting:
 
 * [files.associations](vscode://settings/files.associations), [files.exclude](vscode://settings/files.exclude): file patterns to filter target files for symbol search in workspaces
+
+## User-Defined Dictionaries
+
+The extension can use user-defined dictionaries for code completion.
+The dictionaries are stored in the _Global State_ and _Workspace State_ of VS Code, which means that they are available across all workspaces and only in the current workspace, respectively.
+
+Use the following commands to manage user-defined dictionaries:
+
+* "Open Dictionary Preview" (`spec-command.showDictionaryPreview`)
+* "Show User-Defined Dictionary in Editor" (`spec-command.showDictionarySource`)
+* "Register Editor Content as User-Defined Dictionary" (`spec-command.registerDictionary`)
+* "Delete User-Defined Dictionary" (`spec-command.deleteDictionary`)
+
+"Show User-Defined Dictionary in Editor" command can be used to create a new user-defined dictionary from command files in the workspace. First use this command to create a new dictionary. After editing the content, use "Register Editor Content as User-Defined Dictionary" command to send it to the global/workspace state.
 
 ## Known Issues
 
