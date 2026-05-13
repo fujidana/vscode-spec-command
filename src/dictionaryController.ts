@@ -5,9 +5,8 @@ import { Controller } from "./controller";
 const BUILTIN_DICT_URI = 'spec-command://extension/builtins';
 const GLOBAL_DICT_BASEURI = 'spec-command://global/global';
 const WORKSPACE_DICT_BASEURI = 'spec-command://workspace/workspace';
-const MOTOR_DICT_URI = 'spec-command://extension/mnemonic-motor.md';
-const COUNTER_DICT_URI = 'spec-command://extension/mnemonic-counter.md';
-const SNIPPET_DICT_URI = 'spec-command://extension/code-snippet.md';
+const SETTING_DICT_URI = 'spec-command://extension/setting';
+const SNIPPET_DICT_URI = 'spec-command://extension/code-snippet';
 
 const SNIPPET_TEMPLATES: Record<string, string> = {
     mv: 'mv ${1%MOT} ${2:pos} # absolute-position motor move',
@@ -73,19 +72,15 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
             }
         }
 
+        // [spec-command specific code]
         // Initialize reference database for motors, counters and snippets.
-        this.updateMnemonicRefBook('motors');
-        this.updateMnemonicRefBook('counters');
+        this.updateMnemonicRefBook();
         this.updateSnippetRefBook();
 
         /** Event listener for configuration changes. */
         const configurationDidChangeListener = (event: vscode.ConfigurationChangeEvent) => {
-            if (event.affectsConfiguration('spec-command.suggest.motors')) {
-                this.updateMnemonicRefBook('motors');
-                this.updateSnippetRefBook();
-            }
-            if (event.affectsConfiguration('spec-command.suggest.counters')) {
-                this.updateMnemonicRefBook('counters');
+            if (event.affectsConfiguration('spec-command.suggest.motors') || event.affectsConfiguration('spec-command.suggest.counters')) {
+                this.updateMnemonicRefBook();
                 this.updateSnippetRefBook();
             }
             if (event.affectsConfiguration('spec-command.suggest.codeSnippets')) {
@@ -235,6 +230,9 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
             }
         };
 
+        /**
+         * Command handler for registering a dictionary from the text content of the active editor.
+         */
         const registerDictionaryCommandHandler = async (..._args: any[]) => {
             // Check if text content of active editor is a valid JSON.
             const editor = vscode.window.activeTextEditor;
@@ -292,13 +290,14 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
                 storageLabel = vscode.l10n.t('User');
                 uriString = GLOBAL_DICT_BASEURI + '/' + obj.identifier;
                 memento = context.globalState;
-            } else {
-                // if (obj.scope === 'workspace') {
+            } else { // if (obj.scope === 'workspace') {
                 storageLabel = vscode.l10n.t('Workspace');
                 uriString = WORKSPACE_DICT_BASEURI + '/' + obj.identifier;
                 memento = context.workspaceState;
             }
 
+            // Show confirmation if a dictionary with the same identifier already exists in the target storage,
+            // Else proceed to register the dictionary without confirmation.
             const isNew = !(memento.keys().includes(obj.identifier));
             const flag = isNew ?
                 vscode.l10n.t('OK') :
@@ -306,28 +305,32 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
                     vscode.l10n.t('Are you sure you want to update the dictionary "{0}" in {1} storage with the current editor content?', obj.identifier, storageLabel),
                     { modal: true, detail: vscode.l10n.t('This action cannot be undone.') },
                     vscode.l10n.t('OK'));
-
             if (flag === vscode.l10n.t('OK')) {
                 try {
                     const dictParserResult = lang.convertFromCategorizedDictionary(obj);
                     this.updateSessionMap.set(uriString, { promise: Promise.resolve(dictParserResult) });
-                    if (isNew) {
-                        vscode.window.showInformationMessage(vscode.l10n.t('Dictionary "{0}" has been created in {1} storage.', obj.identifier, storageLabel));
-                    } else {
-                        vscode.window.showInformationMessage(vscode.l10n.t('Dictionary "{0}" in {1} storage has been updated.', obj.identifier, storageLabel));
-                    }
                 } catch (error) {
                     const errorMessage = error instanceof Error ? error.message : String(error);
                     vscode.window.showErrorMessage(vscode.l10n.t('Failed to convert dictionary. {0}', errorMessage));
                     return;
                 }
+                if (isNew) {
+                    vscode.window.showInformationMessage(vscode.l10n.t('Dictionary "{0}" has been created in {1} storage.', obj.identifier, storageLabel));
+                } else {
+                    vscode.window.showInformationMessage(vscode.l10n.t('Dictionary "{0}" in {1} storage has been updated.', obj.identifier, storageLabel));
+                }
                 memento.update(obj.identifier, obj);
                 // if (obj.scope === 'global') {
                 //     context.globalState.setKeysForSync(context.globalState.keys().filter(key => key.endsWith('Sync')));
                 // }
+                // [spec-command specific code]
+                this.updateMnemonicRefBook();
             }
         };
 
+        /**
+         * Command handler for deleting a dictionary from the global/workspace state.
+         */
         const deleteDictionaryCommandHandler = async (_args: any[]) => {
             const quickPickItems: QuickPickItemForDict[] = [];
             const globalStateKeys = context.globalState.keys();
@@ -355,21 +358,26 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
             const selectedItem = await vscode.window.showQuickPick(quickPickItems, quickPickOptions);
             if (!selectedItem) { return; } // Exit if the user cancels.
 
+            // Show additional confirmation and continue if the user confirms the deletion.
             const flag = await vscode.window.showWarningMessage(
                 vscode.l10n.t('Are you sure you want to delete the dictionary "{0}"?', selectedItem.label),
                 { modal: true, detail: vscode.l10n.t('This action cannot be undone.') },
                 vscode.l10n.t('OK')
             );
             if (flag === vscode.l10n.t('OK')) {
+                let uriString: string;
+                let memento: vscode.Memento;
                 if (selectedItem.scope === 'global') {
-                    context.globalState.update(selectedItem.label, undefined);
-                    const uriString = GLOBAL_DICT_BASEURI + '/' + selectedItem.label;
-                    this.updateSessionMap.delete(uriString);
-                } else if (selectedItem.scope === 'workspace') {
-                    context.workspaceState.update(selectedItem.label, undefined);
-                    const uriString = WORKSPACE_DICT_BASEURI + '/' + selectedItem.label;
-                    this.updateSessionMap.delete(uriString);
+                    uriString = GLOBAL_DICT_BASEURI + '/' + selectedItem.label;
+                    memento = context.globalState;
+                } else { // if (selectedItem.scope === 'workspace') {
+                    uriString = WORKSPACE_DICT_BASEURI + '/' + selectedItem.label;
+                    memento = context.workspaceState;
                 }
+                memento.update(selectedItem.label, undefined);
+                this.updateSessionMap.delete(uriString);
+                // [spec-command specific code]
+                this.updateMnemonicRefBook();
             }
         };
 
@@ -387,67 +395,65 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
         );
     }
 
-    /**
-     * Override the method in the base class to provide custom descriptions for completion items.
-     * For symbols defined not in a file in the workspace, it returns short explainatory text.
-     */
-    protected getCompletionItemLabelDescription(uriString: string): string | undefined {
+    // Override the method in the base class to provide custom descriptions for completion items.
+    // For entries in a built-in or user-defined dictionary, it returns a descriptive label.
+    protected override getCompletionItemLabelDescription(uriString: string): string | undefined {
         if (uriString === BUILTIN_DICT_URI) {
-            return 'built-in';
+            return '[built-in]';
         } else if (uriString.startsWith(GLOBAL_DICT_BASEURI)) {
-            return 'global/' + uriString.substring(GLOBAL_DICT_BASEURI.length + 1);
+            return `[global/${uriString.substring(GLOBAL_DICT_BASEURI.length + 1)}]`;
         } else if (uriString.startsWith(WORKSPACE_DICT_BASEURI)) {
-            return 'workspace/' + uriString.substring(WORKSPACE_DICT_BASEURI.length + 1);
-        } else if (uriString === MOTOR_DICT_URI) {
-            return 'motor';
-        } else if (uriString === COUNTER_DICT_URI) {
-            return 'counter';
+            return `[workspace/${uriString.substring(WORKSPACE_DICT_BASEURI.length + 1)}]`;
+        } else if (uriString === SETTING_DICT_URI) {
+            return '[setting]';
         } else if (uriString === SNIPPET_DICT_URI) {
-            return 'snippet';
+            return '[snippet]';
         } else {
             return undefined;
         }
     }
 
-    /**
-     * Override the method in the base class to provide short text on hover and resolved completion items.
-     */
-    protected getSignatureComment(categoryLabel: string, uriString: string): string {
+    // Override the method in the base class to provide short text on hover and resolved completion items.
+    protected override getSignatureComment(categoryLabel: string, uriString: string): string {
         if (uriString === BUILTIN_DICT_URI) {
             return `built-in ${categoryLabel}`;
         } else if (uriString.startsWith(GLOBAL_DICT_BASEURI)) {
             return `${categoryLabel} in global/${uriString.substring(GLOBAL_DICT_BASEURI.length + 1)}`;
         } else if (uriString.startsWith(WORKSPACE_DICT_BASEURI)) {
             return `${categoryLabel} in workspace/${uriString.substring(WORKSPACE_DICT_BASEURI.length + 1)}`;
-        } else if (uriString === MOTOR_DICT_URI) {
-            return `motor mnemonic ${categoryLabel}`;
-        } else if (uriString === COUNTER_DICT_URI) {
-            return `counter mnemonic ${categoryLabel}`;
+        } else if (uriString === SETTING_DICT_URI) {
+            return `${categoryLabel} in setting`;
         } else if (uriString === SNIPPET_DICT_URI) {
-            return `counter/motor ${categoryLabel}`;
+            return `${categoryLabel} for counter/motor`;
         } else {
             return categoryLabel;
         }
     }
 
     /**
-     * Update the reference database for motor or counter mnemonic.
+     * Update the reference database for motor and counter mnemonics.
      * Invoked when initialization completed or configuration modified. 
      */
-    private updateMnemonicRefBook(kind: 'motors' | 'counters') {
-        const uriString = kind === 'motors' ? MOTOR_DICT_URI : COUNTER_DICT_URI;
-        const refBook: lang.ReferenceBook = new Map();
+    private updateMnemonicRefBook() {
+        const settings: { category: 'motor' | 'counter'; configKey: string; configDefault: Record<string, string> }[] = [
+            { category: 'motor', configKey: 'motors', configDefault: {} },
+            { category: 'counter', configKey: 'counters', configDefault: { sec: 'count time in second' } },
+        ];
 
-        const record = vscode.workspace.getConfiguration('spec-command.suggest').get<Record<string, string>>(kind);
-        if (record) {
-            const regExp = /^[a-zA-Z_][a-zA-Z0-9_]{0,6}$/;
+        const refBook: lang.ReferenceBook = new Map();
+        const config = vscode.workspace.getConfiguration('spec-command.suggest');
+        const regExp = /^[a-zA-Z_][a-zA-Z0-9_]{0,6}$/;
+
+        for (const { category, configKey, configDefault } of settings) {
+            const record = config.get<Record<string, string>>(configKey, configDefault);
             for (const [signature, description] of Object.entries(record)) {
                 if (regExp.test(signature)) {
-                    refBook.set(signature, { signature, description, category: 'enum' });
+                    refBook.set(signature, { signature, description, category });
                 }
             }
         }
-        this.updateSessionMap.set(uriString, { promise: Promise.resolve({ identifier: kind, scope: 'extension', refBook }) });
+
+        this.updateSessionMap.set(SETTING_DICT_URI, { promise: Promise.resolve({ identifier: 'setting', scope: 'extension', refBook }) });
     }
 
     /**
@@ -455,18 +461,36 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
      * Invoked when initialization completed or configuration modified. 
      */
     private async updateSnippetRefBook() {
-        const refBook: lang.ReferenceBook = new Map();
+        // Collect motor and counter mnemonics from setting and built-in/user-defined dictionaries.
+        const counterMnemonics: string[] = [];
+        const motorMnemonics: string[] = [];
+        const parserResults = await Promise.all(
+            [...this.updateSessionMap.entries()].filter(
+                ([uriString, _session]) => uriString === SETTING_DICT_URI || uriString.startsWith(GLOBAL_DICT_BASEURI) || uriString.startsWith(WORKSPACE_DICT_BASEURI)
+            ).map(
+                ([_uriString, session]) => session.promise
+            )
+        );
+        for (const parserResult of parserResults) {
+            if (!parserResult) { continue; }
 
+            for (const [key, item] of parserResult.refBook) {
+                if (item.category === 'counter') {
+                    counterMnemonics.push(key);
+                } else if (item.category === 'motor') {
+                    motorMnemonics.push(key);
+                }
+            }
+        }
+
+        const refBook: lang.ReferenceBook = new Map();
         const userTemplates = vscode.workspace.getConfiguration('spec-command.suggest').get<Record<string, string>>('codeSnippets', {});
         const templates = Object.assign({}, SNIPPET_TEMPLATES, userTemplates);
-
-        const motorRefBook = (await this.updateSessionMap.get(MOTOR_DICT_URI)?.promise)?.refBook;
-        const counterRefBook = (await this.updateSessionMap.get(COUNTER_DICT_URI)?.promise)?.refBook;
-        const motorChoiceString = (motorRefBook && motorRefBook.size > 0) ?
-            '|' + [...motorRefBook.keys()].join(',') + '|' :
+        const motorChoiceString = (motorMnemonics.length > 0) ?
+            '|' + motorMnemonics.join(',') + '|' :
             ':motor$1';
-        const counterChoiceString = (counterRefBook && counterRefBook.size > 0) ?
-            '|' + [...counterRefBook.keys()].join(',') + '|' :
+        const counterChoiceString = (counterMnemonics.length > 0) ?
+            '|' + counterMnemonics.join(',') + '|' :
             ':counter$1';
 
         // 'mv ${1%MOT} ${2:pos} # motor move' -> Array ["mv ${1%MOT} ${2:pos} # motor move", "mv ${1%MOT} ${2:pos}", "motor move"]
@@ -538,6 +562,7 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
 
         // Convert the parser result into a categorized dictionary and generate Markdown text for the preview.
         const dictionary = lang.convertToCategorizedDictionary(parserResult);
+
         // Add heading for the dictionary.
         let mdText = `# ${dictionary.name ?? dictionary.identifier} (${dictionary.scope})\n\n`;
         if (dictionary.description) {

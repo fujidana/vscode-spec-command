@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import type { LocationRange, Location } from './parser';
+import type { Location, LocationRange } from './parser';
 import type * as tree from './tree';
 
 export const SELECTOR = { language: 'spec-command' };
@@ -7,7 +7,7 @@ export const SELECTOR = { language: 'spec-command' };
 
 export const ACTIVE_FILE_URI = 'spec-command:extension/file/active-document.md';
 
-export const SCDICT_SCHEMA_URI = 'https://raw.githubusercontent.com/fujidana/vscode-spec-command/refs/heads/master/schema/scdict.schema.json';
+export const DICT_SCHEMA_URI = 'https://raw.githubusercontent.com/fujidana/vscode-spec-command/refs/heads/master/schema/scdict.schema.json';
 
 export function convertPosition(location: Location): vscode.Position {
     return new vscode.Position(location.line - 1, location.column - 1);
@@ -63,14 +63,14 @@ export type VersionRange = {
     readonly description?: string;
 };
 
-const referenceCategoryNames = ['undefined', 'constant', 'variable', 'array', 'macro', 'function', 'keyword', 'snippet', 'enum'] as const;
+const referenceCategoryNames = ['constant', 'variable', 'array', 'macro', 'function', 'keyword', 'motor', 'counter', 'snippet'] as const;
 
 export type ReferenceCategory = typeof referenceCategoryNames[number];
 
 /**
  * A dictionary that holds entries in a categorized manner.
- * The structure of this type is the same as the JSON schema the extension provides and thus
- * the object of this type is serialized and deserialized to and from JSON file.
+ * The structure of this type is the same as the one validated by the JSON schema.
+ * The object of this type is serialized and deserialized to and from JSON file.
  */
 export type CategorizedDictionary = {
     readonly $schema?: string;
@@ -108,10 +108,10 @@ export function getLabelForCategory(categoryName: ReferenceCategory): string {
             return 'keyword';
         case 'snippet':
             return 'snippet';
-        case 'enum':
-            return 'member';
-        case 'undefined':
-            return 'unknown symbol';
+        case 'motor':
+            return 'motor';
+        case 'counter':
+            return 'counter';
         // default:
     }
 }
@@ -132,10 +132,10 @@ function getCompletionItemKindForCategory(categoryName: ReferenceCategory): vsco
             return vscode.CompletionItemKind.Keyword;
         case 'snippet':
             return vscode.CompletionItemKind.Snippet;
-        case 'enum':
-            return vscode.CompletionItemKind.EnumMember;
-        case 'undefined':
-            return undefined;
+        case 'motor':
+            return vscode.CompletionItemKind.EnumMember; // 'motor' and 'counter' use the same kind.
+        case 'counter':
+            return vscode.CompletionItemKind.EnumMember; // 'motor' and 'counter' use the same kind.
         // default:
     }
 }
@@ -156,11 +156,12 @@ export function getSymbolKindForCategory(categoryName: ReferenceCategory): vscod
             return vscode.SymbolKind.Null; // No specific kind for keyword.
         case 'snippet':
             return vscode.SymbolKind.Null; // No specific kind for snippet.
-        case 'enum':
-            return vscode.SymbolKind.EnumMember;
-        // case 'undefined':
-        default:
-            return vscode.SymbolKind.Null;
+        case 'motor':
+            return vscode.SymbolKind.EnumMember; // 'motor' and 'counter' use the same kind
+        case 'counter':
+            return vscode.SymbolKind.EnumMember; // 'motor' and 'counter' use the same kind
+        // default:
+        //     return vscode.SymbolKind.Null;
     }
 }
 
@@ -180,9 +181,11 @@ export function getSymbolKindForCategory(categoryName: ReferenceCategory): vscod
 //             return 'symbol-keyword';
 //         case 'snippet':
 //             return 'symbol-snippet';
-//         case 'enum':
+//         case 'motor':
 //             return 'symbol-enum-member';
-//         case 'undefined':
+//         case 'counter':
+//             return 'symbol-enum-member';
+//         default:
 //             return 'symbol-null';
 //     }
 // }
@@ -207,17 +210,17 @@ export type DiagnosticRules = typeof defaultDiagnosticRules;
 /**
  * Convert a `Map` object the extension internally uses to a plain object that can be exported after `JSON.stringify()`.
  * @param parserResult Object containing a Map object and some other properties.
- * @param categoryFilters Categories to be converted. Only listed categories will be included in the output object. If not specified, all categories will be included.
- * @returns Stringifiable object that has the `categories` proprties. To access an entry of the dictionary (a leaf of the object tree), do like the following: `obj.categories.function.sock_par`.
+ * @param categoryFilter Categories to be converted. Only listed categories will be included in the output object. If not specified, all categories will be included.
+ * @returns Stringifiable object that has `categories` proprty. To access an entry of the dictionary (a leaf of the object tree), do like the following: `obj.categories.function.sock_par`.
  */
-export function convertToCategorizedDictionary(parserResult: DictParserResult, categoryFilters: readonly ReferenceCategory[] = referenceCategoryNames): CategorizedDictionary {
+export function convertToCategorizedDictionary(parserResult: DictParserResult, categoryFilter: readonly ReferenceCategory[] = referenceCategoryNames): CategorizedDictionary {
     const categories: CategorizedDictionary['categories'] = {};
-    for (const categoryName of categoryFilters) {
+    for (const categoryName of categoryFilter) {
         categories[categoryName] = {};
     }
 
     for (const [identifier, entry] of parserResult.refBook.entries()) {
-        if (categoryFilters.includes(entry.category)) {
+        if (categoryFilter.includes(entry.category)) {
             const dictionaryCategory = categories[entry.category];
             if (dictionaryCategory) {
                 // Copy a new object with "category" property removed. 
@@ -240,13 +243,13 @@ export function convertToCategorizedDictionary(parserResult: DictParserResult, c
 /**
  * Convert a plain object that can be imported from file via `JSON.parse()` to a `Map` object the extension internally uses.
  * @param dictionary Object typically parsed from a JSON file, where reference items are categorized under `categories` property.
- * @param categoryFilters Categories to be converted. Only listed categories will be included in the output object. If not specified, all categories will be included.
+ * @param categoryFilter Categories to be converted. Only listed categories will be included in the output object. If not specified, all categories will be included.
  * @returns Object containing a Map object and some other properties.
  */
-export function convertFromCategorizedDictionary(dictionary: CategorizedDictionary, categoryFilters: readonly ReferenceCategory[] = referenceCategoryNames): DictParserResult {
+export function convertFromCategorizedDictionary(dictionary: CategorizedDictionary, categoryFilter: readonly ReferenceCategory[] = referenceCategoryNames): DictParserResult {
     const refBook: ReferenceBook = new Map();
     for (const [categoryName, entries] of Object.entries(dictionary.categories)) {
-        if (categoryFilters.includes(categoryName as keyof typeof dictionary.categories)) {
+        if (categoryFilter.includes(categoryName as keyof typeof dictionary.categories)) {
             for (const [identifier, entry] of Object.entries(entries)) {
                 // if (refBook.has(identifier)) {
                 //     console.log(`Identifiers are duplicated!: ${identifier}`);
