@@ -64,7 +64,10 @@
         "snippet": {
           "$ref": "#/$defs/entriesInCategory"
         },
-        "enum": {
+        "motor": {
+          "$ref": "#/$defs/entriesInCategory"
+        },
+        "counter": {
           "$ref": "#/$defs/entriesInCategory"
         },
         "undefined": {
