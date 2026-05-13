@@ -48,24 +48,23 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
             promise: loadDictionary(vscode.Uri.joinPath(context.extensionUri, 'syntaxes', 'spec-command.scdict.json'))
         });
 
-        // Load user-defined symbol database from the global (user) state.
-        for (const key of context.globalState.keys()) {
-            const obj = context.globalState.get(key);
-            if (obj && typeof obj === 'object' && 'kind' in obj && obj.kind === 'spec-command.dictionary' && 'identifier' in obj && typeof obj.identifier === 'string') {
-                const uriString = GLOBAL_DICT_BASEURI + '/' + obj.identifier;
-                const promise = new Promise<lang.DictParserResult>(
-                    resolve => { resolve(lang.convertFromCategorizedDictionary(obj as lang.CategorizedDictionary)); }
-                );
-                this.updateSessionMap.set(uriString, { promise });
-            }
-        }
+        // Load user-defined symbol database from the global (user) and workspace state.
+        const stateParams = [
+            { baseUriString: GLOBAL_DICT_BASEURI, memento: context.globalState },
+            { baseUriString: WORKSPACE_DICT_BASEURI, memento: context.workspaceState }
+        ];
 
-        // Load user-defined symbol database from the workspace state.
-        if (vscode.workspace.isTrusted) {
-            for (const key of context.workspaceState.keys()) {
-                const obj = context.workspaceState.get(key);
+        for (const { baseUriString, memento } of stateParams) {
+            // Skip loading user-defined symbol database from the workspace state 
+            // if the workspace is not trusted, to avoid potential security risks.
+            if (baseUriString === WORKSPACE_DICT_BASEURI && !vscode.workspace.isTrusted) {
+                continue;
+            }
+
+            for (const key of memento.keys()) {
+                const obj = memento.get(key);
                 if (obj && typeof obj === 'object' && 'kind' in obj && obj.kind === 'spec-command.dictionary' && 'identifier' in obj && typeof obj.identifier === 'string') {
-                    const uriString = WORKSPACE_DICT_BASEURI + '/' + obj.identifier;
+                    const uriString = baseUriString + '/' + obj.identifier;
                     const promise = new Promise<lang.DictParserResult>(
                         resolve => { resolve(lang.convertFromCategorizedDictionary(obj as lang.CategorizedDictionary)); }
                     );
@@ -200,8 +199,8 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
                     context.workspaceState.get(selectedItem.label);
             } else {
                 // If the user selects a template with current workspace symbols, 
-                // gather symbols from all files in the workspace and put them in a reference book.
-                // Else, create an empty reference book.
+                // gather symbols from all files in the workspace and put them in a dictionary.
+                // Else, create an empty dictionary.
                 const refBookEntries: [string, lang.ReferenceItem][] = [];
 
                 if (selectedItem.template === 'workspaceSymbols' && this.fileUpdateSessionMap) {
@@ -254,31 +253,35 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
             // Parse JSON and do minimal validation for required properties.
             try {
                 obj = JSON.parse(editor.document.getText());
-                if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
-                    vscode.window.showErrorMessage(vscode.l10n.t('Document content must be a JSON object (not array or null).'));
-                    return;
-                } else if ((/\/(.+\.)?scdict\.json$/.test(editor.document.uri.path)) === false && (!('$schema' in obj) || typeof obj.$schema !== 'string')) {
-                    // The JSON file must be validated by the JSON schema.
-                    // If the filename of the JSON file ends with 'scdict.json', the JSON schema validation is automatically applied by VS Code.
-                    // Otherwise, we require the user to explicitly include the $schema property in the JSON content.
-                    vscode.window.showErrorMessage(vscode.l10n.t('JSON object is not validated by the JSON schema.'));
-                    return;
-                } else if (!('kind' in obj) || obj.kind !== 'spec-command.dictionary') {
-                    vscode.window.showErrorMessage(vscode.l10n.t('JSON object must have "{0}" properties.', 'kind'));
-                    return;
-                } else if (!('identifier' in obj) || typeof obj.identifier !== 'string') {
-                    vscode.window.showErrorMessage(vscode.l10n.t('JSON object must have "{0}" properties.', 'identifier'));
-                    return;
-                } else if (!('scope' in obj) || typeof obj.scope !== 'string') {
-                    vscode.window.showErrorMessage(vscode.l10n.t('JSON object must have "{0}" properties.', 'scope'));
-                    return;
-                } else if (!('categories' in obj) || obj.categories !== null && typeof obj.categories !== 'object' || Array.isArray(obj.categories)) {
-                    vscode.window.showErrorMessage(vscode.l10n.t('JSON object must have "{0}" properties.', 'categories'));
-                    return;
-                }
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
                 vscode.window.showErrorMessage(vscode.l10n.t('Failed to parse JSON. {0}', errorMessage));
+                return;
+            }
+
+            if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+                vscode.window.showErrorMessage(vscode.l10n.t('Document content must be a JSON object (not array or null).'));
+                return;
+            } else if ((/\/(.+\.)?scdict\.json$/.test(editor.document.uri.path)) === false && (!('$schema' in obj) || typeof obj.$schema !== 'string')) {
+                // The JSON file must be validated by the JSON schema.
+                // If the filename of the JSON file ends with 'scdict.json', the JSON schema validation is automatically applied by VS Code.
+                // Otherwise, the extension requires the user to explicitly include the $schema property in the JSON content.
+                vscode.window.showErrorMessage(vscode.l10n.t('JSON object is not validated by the JSON schema.'));
+                return;
+            } else if (!('kind' in obj) || obj.kind !== 'spec-command.dictionary') {
+                vscode.window.showErrorMessage(vscode.l10n.t('JSON object must have the "{0}" value for the "{1}" key.', 'spec-command.dictionary', 'kind'));
+                return;
+            } else if (!('identifier' in obj) || typeof obj.identifier !== 'string') {
+                vscode.window.showErrorMessage(vscode.l10n.t('JSON object must have a value of {0} type for the "{1}" key.', 'string', 'identifier'));
+                return;
+            } else if (!('scope' in obj) || typeof obj.scope !== 'string') {
+                vscode.window.showErrorMessage(vscode.l10n.t('JSON object must have a value of {0} type for the "{1}" key.', 'string', 'scope'));
+                return;
+            } else if (obj.scope !== 'global' && obj.scope !== 'workspace') {
+                vscode.window.showErrorMessage(vscode.l10n.t('Only "global" and "workspace" are the allowed values for the "scope" key.'));
+                return;
+            } else if (!('categories' in obj) || obj.categories !== null && typeof obj.categories !== 'object' || Array.isArray(obj.categories)) {
+                vscode.window.showErrorMessage(vscode.l10n.t('JSON object must have a value of {0} type for the "{1}" key.', 'object', 'categories'));
                 return;
             }
 
@@ -289,24 +292,22 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
                 storageLabel = vscode.l10n.t('User');
                 uriString = GLOBAL_DICT_BASEURI + '/' + obj.identifier;
                 memento = context.globalState;
-            } else if (obj.scope === 'workspace') {
+            } else {
+                // if (obj.scope === 'workspace') {
                 storageLabel = vscode.l10n.t('Workspace');
                 uriString = WORKSPACE_DICT_BASEURI + '/' + obj.identifier;
                 memento = context.workspaceState;
-            } else {
-                vscode.window.showErrorMessage(vscode.l10n.t('Invalid scope type. "scope" property must be "global" or "workspace".'));
-                return;
             }
 
             const isNew = !(memento.keys().includes(obj.identifier));
             const flag = isNew ?
-                'OK' :
+                vscode.l10n.t('OK') :
                 await vscode.window.showWarningMessage<string>(
-                    vscode.l10n.t('Are you sure you want to update the dictionary "{0}" in {1} storage to the current editor content?', obj.identifier, storageLabel),
+                    vscode.l10n.t('Are you sure you want to update the dictionary "{0}" in {1} storage with the current editor content?', obj.identifier, storageLabel),
                     { modal: true, detail: vscode.l10n.t('This action cannot be undone.') },
-                    "OK");
+                    vscode.l10n.t('OK'));
 
-            if (flag === 'OK') {
+            if (flag === vscode.l10n.t('OK')) {
                 try {
                     const dictParserResult = lang.convertFromCategorizedDictionary(obj);
                     this.updateSessionMap.set(uriString, { promise: Promise.resolve(dictParserResult) });
@@ -355,11 +356,11 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
             if (!selectedItem) { return; } // Exit if the user cancels.
 
             const flag = await vscode.window.showWarningMessage(
-                `Are you sure you want to delete the dictionary "${selectedItem.label}"?`,
-                { modal: true, detail: 'This action cannot be undone.' },
-                "OK"
+                vscode.l10n.t('Are you sure you want to delete the dictionary "{0}"?', selectedItem.label),
+                { modal: true, detail: vscode.l10n.t('This action cannot be undone.') },
+                vscode.l10n.t('OK')
             );
-            if (flag === "OK") {
+            if (flag === vscode.l10n.t('OK')) {
                 if (selectedItem.scope === 'global') {
                     context.globalState.update(selectedItem.label, undefined);
                     const uriString = GLOBAL_DICT_BASEURI + '/' + selectedItem.label;
