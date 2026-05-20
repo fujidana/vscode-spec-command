@@ -3,7 +3,7 @@
 	"name": "spec-command",
 	"displayName": "spec command",
 	"description": "spec command support for VS Code",
-	"version": "2.1.1-alpha.0",
+	"version": "2.1.1",
 	"engines": {
 		"vscode": "^1.120.0"
 	},
@@ -88,6 +88,12 @@
 				"icon": "$(trash)"
 			},
 			{
+				"command": "spec-command.reloadDictionaries",
+				"title": "%command.spec-command.reloadDictionaries.title%",
+				"category": "spec command",
+				"icon": "$(refresh)"
+			},
+			{
 				"command": "spec-command.inspectSyntaxTree",
 				"title": "%command.spec-command.inspectSyntaxTree.title%",
 				"category": "spec command",
@@ -108,6 +114,9 @@
 				},
 				{
 					"command": "spec-command.deleteDictionary"
+				},
+				{
+					"command": "spec-command.reloadDictionaries"
 				},
 				{
 					"command": "spec-command.inspectSyntaxTree",
@@ -152,20 +161,19 @@
 				},
 				"spec-command.syncDictionaries": {
 					"type": "array",
+					"scope": "machine",
 					"tags": [
 						"experimental"
 					],
-					"scope": "application",
 					"items": {
 						"type": "string"
 					},
-					"default": [
-						"globalDict"
-					],
+					"default": [],
 					"markdownDescription": "%configuration.spec-command.syncDictionaries.description%"
 				},
 				"spec-command.suggest.suppressMessages": {
 					"type": "object",
+					"scope": "window",
 					"markdownDescription": "%configuration.spec-command.suggest.suppressMessages.description%",
 					"default": {
 						"completionItem.label.detail": false,
@@ -265,10 +273,10 @@
 				},
 				"spec-command.problems.rules": {
 					"type": "object",
+					"scope": "resource",
 					"tags": [
 						"experimental"
 					],
-					"scope": "resource",
 					"description": "%configuration.spec-command.problems.rules.description%",
 					"properties": {
 						"no-local-outside-block": {

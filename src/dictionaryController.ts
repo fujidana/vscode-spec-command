@@ -40,37 +40,13 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
 
         this.extensionSchemaUriString = vscode.Uri.joinPath(context.extensionUri, 'schema', 'scdict.schema.json').toString();
 
-        this.updateSyncDictionaries(context);
-
         // Load built-in symbol database from a JSON file bundled in the extension.
         this.updateSessionMap.set(BUILTIN_DICT_URI, {
             promise: loadDictionary(vscode.Uri.joinPath(context.extensionUri, 'syntaxes', 'spec-command.scdict.json'))
         });
 
         // Load user-defined symbol database from the global (user) and workspace state.
-        const stateParams = [
-            { baseUriString: GLOBAL_DICT_BASEURI, memento: context.globalState },
-            { baseUriString: WORKSPACE_DICT_BASEURI, memento: context.workspaceState }
-        ];
-
-        for (const { baseUriString, memento } of stateParams) {
-            // Skip loading user-defined symbol database from the workspace state 
-            // if the workspace is not trusted, to avoid potential security risks.
-            if (baseUriString === WORKSPACE_DICT_BASEURI && !vscode.workspace.isTrusted) {
-                continue;
-            }
-
-            for (const key of memento.keys()) {
-                const obj = memento.get(key);
-                if (obj && typeof obj === 'object' && 'kind' in obj && obj.kind === 'spec-command.dictionary' && 'identifier' in obj && typeof obj.identifier === 'string') {
-                    const uriString = baseUriString + '/' + obj.identifier;
-                    const promise = new Promise<lang.DictParserResult>(
-                        resolve => { resolve(lang.convertFromCategorizedDictionary(obj as lang.CategorizedDictionary)); }
-                    );
-                    this.updateSessionMap.set(uriString, { promise });
-                }
-            }
-        }
+        this.loadUserDefinedDictionaries(context, false);
 
         // [spec-command specific code]
         // Initialize reference database for motors, counters and snippets.
@@ -87,7 +63,8 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
                 this.updateSnippetRefBook();
             }
             if (event.affectsConfiguration('spec-command.syncDictionaries')) {
-                this.updateSyncDictionaries(context);
+                this.loadUserDefinedDictionaries(context, true);
+                this.updateSnippetRefBook();
             }
         };
 
@@ -381,6 +358,14 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
             }
         };
 
+        /**
+         * Command handler for reloading dictionaries from the global/workspace state.
+         */
+        const reloadDictionariesCommandHandler = async (_args: any[]) => {
+            this.loadUserDefinedDictionaries(context, true);
+            this.updateSnippetRefBook();
+        };
+
         // Register command and event handlers.
         context.subscriptions.push(
             // Register command handlers.
@@ -388,6 +373,7 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
             vscode.commands.registerCommand('spec-command.showDictionarySource', showDictionarySourceCommandHandler),
             vscode.commands.registerCommand('spec-command.registerDictionary', registerDictionaryCommandHandler),
             vscode.commands.registerCommand('spec-command.deleteDictionary', deleteDictionaryCommandHandler),
+            vscode.commands.registerCommand('spec-command.reloadDictionaries', reloadDictionariesCommandHandler),
             // Register providers.
             vscode.workspace.registerTextDocumentContentProvider('spec-command', this),
             // Register event handlers.
@@ -461,7 +447,7 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
      * Invoked when initialization completed or configuration modified. 
      */
     private async updateSnippetRefBook() {
-        // Collect motor and counter mnemonics from setting and built-in/user-defined dictionaries.
+        // Collect motor and counter mnemonics from setting and user-defined dictionaries.
         const counterMnemonics: string[] = [];
         const motorMnemonics: string[] = [];
         const parserResults = await Promise.all(
@@ -512,13 +498,51 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
         this.updateSessionMap.set(SNIPPET_DICT_URI, { promise: Promise.resolve({ identifier: 'snippets', scope: 'extension', refBook }) });
     }
 
-    private updateSyncDictionaries(context: vscode.ExtensionContext) {
+    /**
+     * Loads user-defined dictionaries from the global and workspace state.
+     * @param context The extension context.
+     * @param clearExisting Whether to clear existing dictionaries before loading.
+     */
+    private loadUserDefinedDictionaries(context: vscode.ExtensionContext, clearExisting: boolean) {
         const config = vscode.workspace.getConfiguration('spec-command');
-        const syncDictionaries = config.get<string[]>('syncDictionaries', ['globalDict']);
-        if (syncDictionaries.length === 1 && syncDictionaries[0] === '*') {
+        const syncDictionaries = config.get<string[]>('syncDictionaries', []);
+        if (syncDictionaries.length === 0) {
+            // Do nothing.
+        } else if (syncDictionaries.length === 1 && syncDictionaries[0] === '*') {
             context.globalState.setKeysForSync(context.globalState.keys());
         } else {
             context.globalState.setKeysForSync(syncDictionaries);
+        }
+
+        const stateParams = [
+            { baseUriString: GLOBAL_DICT_BASEURI, memento: context.globalState },
+            { baseUriString: WORKSPACE_DICT_BASEURI, memento: context.workspaceState }
+        ];
+
+        if (clearExisting) {
+            for (const { baseUriString } of stateParams) {
+                const urisToRemove = [...this.updateSessionMap.keys()].filter(uriString => uriString.startsWith(baseUriString + '/'));
+                urisToRemove.forEach(uriString => this.updateSessionMap.delete(uriString));
+            }
+        }
+
+        for (const { baseUriString, memento } of stateParams) {
+            // Skip loading user-defined symbol database from the workspace state 
+            // if the workspace is not trusted, to avoid potential security risks.
+            if (baseUriString === WORKSPACE_DICT_BASEURI && !vscode.workspace.isTrusted) {
+                continue;
+            }
+
+            for (const key of memento.keys()) {
+                const obj = memento.get(key);
+                if (obj && typeof obj === 'object' && 'kind' in obj && obj.kind === 'spec-command.dictionary' && 'identifier' in obj && typeof obj.identifier === 'string') {
+                    const uriString = baseUriString + '/' + obj.identifier;
+                    const promise = new Promise<lang.DictParserResult>(
+                        resolve => { resolve(lang.convertFromCategorizedDictionary(obj as lang.CategorizedDictionary)); }
+                    );
+                    this.updateSessionMap.set(uriString, { promise });
+                }
+            }
         }
     }
 
