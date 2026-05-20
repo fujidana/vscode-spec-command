@@ -1,4 +1,4 @@
-# __spec__ Command File Extension for Visual Studio Code
+# __spec__ Command Extension for Visual Studio Code
 
 !NOTE: The mechanism to use user-defined dictionary was totally revamped since v2.0.0. See [User-Defined Dictionaries](#user-defined-dictionaries) section below and [CHANGELOG.md](CHANGELOG.md) for the new mechanism.
 
@@ -22,13 +22,6 @@ _cited from [CSS - Certified Scientific Software](https://www.certif.com) homepa
 Note that the extension is not the official one developed by Certified Scientific Software.
 Use [GitHub issues](https://github.com/fujidana/vscode-spec-command/issues) for bug reports and feature requests about the extension.
 
-## Notice for previous version users
-
-Some of configuration properties were renamed at v1.6.0 and the older name were removed at v2.0.0.
-If you have customized the extension behavior, migrate your setting values via the Settings editor or direct access to JSON files.
-See [CHANGELOG.md](CHANGELOG.md) for details.
-Sorry for inconvenence.
-
 ## Features
 
 * __Diagnostics__ - syntax check
@@ -42,7 +35,7 @@ Sorry for inconvenence.
   * __Symbol navigation in a document__ - available at _Go to Symbol in Editor_ (Ctrl+Shift+O) menubar item and the navigation bar at the top the editor pane (aka breadcrumbs)
   * __Symbol navigation in workspaces__ - available at _Go to Symbol in Workspace_ (Ctrl+T) menubar item
   * __Show definitions of a symbol__ - jump to where the symbol is defined, available at _Go to Definition_ (F12) and _Peek Definition_ (Alt+F12) in right-click menu
-* __Commands__ - Several commands explained [below](#user-defined-dictionaries) can be invoked from the command pallate (Ctrl+Shit+P):
+* __Commands__ - Several commands explained [below](#user-defined-dictionaries) can be invoked from the command pallate (Ctrl+Shit+P).
 
 This extension treats user-defined symbols declared at the top level (i.e., not in a code block, curly brackets) as global and those in code blocks as local.
 Global symbols are visible beyond a file where the symbol is defined; local symbols are visible only when the cursor is in the same block.
@@ -106,8 +99,11 @@ The extension refers to the following built-in setting:
 
 ## User-Defined Dictionaries
 
-The extension can use user-defined dictionaries for code completion.
-The dictionaries are stored in the _Global State_ and _Workspace State_ of VS Code, which means that they are available across all workspaces and only in the current workspace, respectively.
+Users can provide user-defined dictionaries to add custom symbols for code completion and hinting.
+Motors and counters can be added here, in addition to the settings.
+
+The extension stores dictionaries in either the _Global State_ or _Workspace State_.
+When a dictionary is stored in the former state, defined symbols are available across all workspaces; when in the latter state, only in the workspace.
 
 Use the following commands to manage user-defined dictionaries:
 
@@ -116,7 +112,17 @@ Use the following commands to manage user-defined dictionaries:
 * "Register Editor Content as User-Defined Dictionary" (`spec-command.registerDictionary`)
 * "Delete User-Defined Dictionary" (`spec-command.deleteDictionary`)
 
-"Show User-Defined Dictionary in Editor" command can be used to create a new user-defined dictionary from command files in the workspace. First use this command to create a new dictionary. After editing the content, use "Register Editor Content as User-Defined Dictionary" command to send it to the global/workspace state.
+"Show User-Defined Dictionary in Editor" command can also be used to create a new user-defined dictionary from command files in the workspace.
+As a starting point to create a dictionary, it is recommended to use this command.
+After editing the content, use "Register Editor Content as User-Defined Dictionary" command to send it to the global/workspace state.
+
+The dictionary content is expected to be a JSON object conforming to the schema the extension provides.
+If you want to save a copy of the dictionary, it is recommended to set a file name ending with `.scdict.json`, then VS Code will automatically validate it against the schema.
+Otherwise, to let VS Code validate the content, the JSON object should have `$schema` property whose value is either the local path to the schema file bundled in the installed extension or the online URI shown below:
+
+https://raw.githubusercontent.com/fujidana/vscode-spec-command/refs/heads/master/schema/scdict.schema.json
+
+To let VS Code use the online schema, add `https://raw.githubusercontent.com/fujidana/` to the [json.schemaDownload.trustedDomains](vscode://settings/json.schemaDownload.trustedDomains) setting.
 
 ## Known Issues
 
@@ -128,6 +134,13 @@ Also read [GitHub issues](https://github.com/fujidana/vscode-spec-cmmand/issues)
 ## Release Notes
 
 See [CHANGELOG.md](CHANGELOG.md).
+
+## Acknowledgements
+
+The extension relies on various npm packages.
+Thanks to the authors of these packages.
+
+The licenses of the software embedded into the extension's code after minification by `esbuild` are shown in [ThirdPartyNotices.txt](ThirdPartyNotices.txt).
 
 ## Contributing
 

@@ -2,10 +2,10 @@
 	"publisher": "fujidana",
 	"name": "spec-command",
 	"displayName": "spec command",
-	"description": "spec command file support for VS Code",
-	"version": "2.1.0",
+	"description": "spec command support for VS Code",
+	"version": "2.1.1-alpha.0",
 	"engines": {
-		"vscode": "^1.110.0"
+		"vscode": "^1.120.0"
 	},
 	"categories": [
 		"Programming Languages",
@@ -334,7 +334,7 @@
 	},
 	"dependencies": {
 		"estraverse": "^5.3.0",
-		"semver": "^7.7.4"
+		"semver": "^7.8.0"
 	},
 	"devDependencies": {
 		"@esbuild-plugins/node-globals-polyfill": "^0.2.3",
@@ -342,18 +342,18 @@
 		"@types/mocha": "^10.0.10",
 		"@types/node": "22.x",
 		"@types/semver": "^7.7.1",
-		"@types/vscode": "^1.110.0",
+		"@types/vscode": "^1.120.0",
 		"@vscode/test-cli": "^0.0.12",
 		"@vscode/test-electron": "^2.5.2",
 		"@vscode/test-web": "^0.0.80",
 		"assert": "^2.1.0",
 		"esbuild": "^0.28.0",
-		"eslint": "^10.3.0",
+		"eslint": "^10.4.0",
 		"glob": "^13.0.6",
 		"js-yaml": "^4.1.1",
 		"mocha": "^11.7.5",
 		"peggy": "^5.1.0",
 		"typescript": "^6.0.3",
-		"typescript-eslint": "^8.59.1"
+		"typescript-eslint": "^8.59.4"
 	}
 }
