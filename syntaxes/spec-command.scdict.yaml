@@ -1680,35 +1680,137 @@ categories:
 
     prop_send:
       signature: prop_send(property, value)
+      description: |-
+        Sends an event to all clients registered for `property`.
+        There is nothing to prevent a user-level call of `prop_send()` from generating events for built-in properties, although that may lead to an unexpected client response.
+
+        cited from [CSS spec help pages: server](https://www.certif.com/spec_help/server.html).
     prop_get:
       signature: prop_get(host, property)
+      description: |-
+        Reads and returns the current value of `property` from the remote `host`.
+        Single-valued, associative-array and data-array types can be returned.
+
+        cited from [CSS spec help pages: server](https://www.certif.com/spec_help/server.html).
     prop_put:
       signature: prop_put(host, property, value)
+      description: |-
+        Sets `property` to `value` on the remote `host`.
+        Single-valued, associative-array and data-array types can be sent.
+
+        cited from [CSS spec help pages: server](https://www.certif.com/spec_help/server.html).
     prop_watch:
       signature: prop_watch(host, property)
+      description: |-
+        Registers `property` on the remote `host`.
+        When the `property` value changes, the remote `host` will send an event to the client.
+        Consider:
+
+        ```
+        prop_watch("remotehost:6789", "var/TEMP")
+        ```
+
+        If a variable named `TEMP` exists on the local client, then the value of the local client's instance will track changes to the value of the same variable on the remote host.
+
+        The variable must exist on the server before the client requests it be watched.
+        If the variable goes out of existence on the server, but is subsequently recreated as the same type of global variable, the watched status will be reinstated (as of **spec** release 5.05.05-1).
+        If the variable doesn't exist on the client or goes out of existence, the client will continue to receive events, and if the variable is recreated on the client, its value will track the values sent with the events (as of **spec** release 5.05.05-1).
+
+        Regular global variables, associative arrays and associative array elements can be watched.
+        Data arrays cannot be watched.
+        The built-in motor and scaler arrays `A[]` and `S[]` can be watched, but events will only be generated when the elements are explicitly assigned values on the server, not when the values change by way of built-in code, such as from `calcA`, `getangles` or `getcounts`.
+
+        cited from [CSS spec help pages: server](https://www.certif.com/spec_help/server.html).
     remote_stat:
       signature: remote_stat(host[, "?"])
       overloads:
       - signature: remote_stat(host)
+        description: |-
+          Returns nonzero if the connection to `host` is up, otherwise returns zero.
+
+          cited from [CSS spec help pages: server](https://www.certif.com/spec_help/server.html).
       - signature: remote_stat(host, "?")
+        description: |-
+          Returns the string `"up"` if the connection to `host` is up.
+          Returns the string `"lost"` if the connection had been up, but has been lost.
+          Returns the string `"trying"` if in the process of creating a connection.
+          Returns the string `"no connection"` if unable to contact the host.
+          Returns the string `"not connected"` if the client has not attempted to create a connection to the host.
+          (These options available with **spec** release 5.06.03-7.)
+
+          cited from [CSS spec help pages: server](https://www.certif.com/spec_help/server.html).
     remote_par:
       signature: remote_par(host, cmd[, value])
       overloads:
       - signature: remote_par(host, "connect")
+        description: |-
+          Initiates a connection to `host`.
+          Connections are initiated automatically when **spec** server hardware is configured or when a server is accessed with the commands below.
+          One might want to explicitly create the connection, though, in order to set a timeout for `remote_eval()` prior to accessing the `host` or to check the availability of a connection with `remote_stat()`, above.
+
+          cited from [CSS spec help pages: server](https://www.certif.com/spec_help/server.html).
       - signature: remote_par(host, "close")
+        description: |-
+          Closes the connection to the **spec** server `host`, but only if no server hardware is configured on the client.
+
+          cited from [CSS spec help pages: server](https://www.certif.com/spec_help/server.html).
       - signature: remote_par(host, "abort")
+        description: |-
+          Sends an `SV_ABORT` message to the server `host`, which has the effect on the server as if a `^C` had been typed at its keyboard.
+
+          cited from [CSS spec help pages: server](https://www.certif.com/spec_help/server.html).
       - signature: remote_par(host, "timeout"[, value])
+        description: |-
+          Returns or sets the timeout interval for a `remote_eval()` call to complete.
+          The units are seconds, and the default value is four seconds.
+
+          cited from [CSS spec help pages: server](https://www.certif.com/spec_help/server.html).
     remote_cmd:
       signature: remote_cmd(host, cmd)
+      description: |-
+        Puts the **spec** command `cmd` on the execution queue of the remote `host`.
+        This function does not wait for the command to execute on the server.
+        The return is immediate. Use `remote_eval()` or `remote_async()` with `remote_poll()` for synchronous execution of commands on the remote server.
+
+        cited from [CSS spec help pages: server](https://www.certif.com/spec_help/server.html).
     remote_eval:
       signature: remote_eval(host, cmd)
+      description: |-
+        Puts the spec command `cmd` on the execution queue of the remote `host` and returns the result.
+        The function will not return until the command has been executed on the server.
+        Single-valued (number or string), associative-array and data-array return values are allowed.
+        If a `^C` keyboard interrupt is received before the host returns a result and before the connection timeout interval, an `SV_ABORT` message will be sent to the server, which will have the same effect on the server as a `^C` from the server's keyboard (as of **spec** release 5.08.04-3).
+        In addition, any pending commands in the server queue from the client will be removed.
+
+        cited from [CSS spec help pages: server](https://www.certif.com/spec_help/server.html).
     remote_async:
-      signature: id = remote_async(host, cmd)
+      signature: remote_async(host, cmd)
+      description: |-
+        Puts the **spec** command `cmd` on the execution queue of the remote `host` and returns a unique `id`.
+        The return value of the command can be retrieved using the `remote_poll()` function, below.
+        A `^C` keyboard interrupt will clear the local queue of all pending events, but will not stop the commands from being executed on the remote host.
+        The `wait()` command can be used to wait for all asynchronous remote events.
+        Bit 0x8 in the (optional) argument to `wait()` corresponds to remote events.
+
+        cited from [CSS spec help pages: server](https://www.certif.com/spec_help/server.html).
     remote_poll:
       signature: remote_poll(id[, "status"])
       overloads:
       - signature: remote_poll(id, "status")
+        description: |-
+          Returns 1 (or 0) to indicate whether result number `id` from `remote_async()` is available (or not).
+          Returns -1 if `id` is no longer in queue or if the connection to the server has disappeared.
+
+          cited from [CSS spec help pages: server](https://www.certif.com/spec_help/server.html).
       - signature: remote_poll(id)
+        description: |-
+          Returns the result of the command associated with the `id` value of a particular call to `remote_async()`.
+          Single-valued result types (number or string), along with associative-array and data-array results are allowed.
+          Note, if called before the result is available, the `id` will be removed from the queue, and the return value will be zero.
+          Always check first if the result is available using either the `"status"` option above or the `wait()` function for remote events before fetching the result.
+          Returns -1 if `id` is not in the queue or if the connection to the server has disappeared.
+
+          cited from [CSS spec help pages: server](https://www.certif.com/spec_help/server.html).
     encode:
       signature: encode(format, obj[, ...])
       description: |-
