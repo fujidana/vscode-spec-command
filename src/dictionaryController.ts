@@ -74,6 +74,12 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
             }
         };
 
+        /** Event listener for workspace trust changes. */
+        const workspaceTrustDidGrantListener = (_e: void) => {
+            this.loadUserDefinedDictionaries(true, 'workspace');
+            this.updateSnippetRefBook();
+        };
+
         interface QuickPickItemForDict extends vscode.QuickPickItem {
             scope: lang.DictParserResult['scope'];
             template?: 'empty' | 'workspaceSymbols' | undefined;
@@ -303,7 +309,7 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
                 this.loadUserDefinedDictionaries(true, obj.scope);
 
                 // [spec-command specific code]
-                this.updateMnemonicRefBook();
+                this.updateSnippetRefBook();
             }
         };
 
@@ -358,7 +364,7 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
                 this.updateSessionMap.delete(uriString);
 
                 // [spec-command specific code]
-                this.updateMnemonicRefBook();
+                this.updateSnippetRefBook();
             }
         };
 
@@ -382,6 +388,7 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
             vscode.workspace.registerTextDocumentContentProvider('spec-command', this),
             // Register event handlers.
             vscode.workspace.onDidChangeConfiguration(configurationDidChangeListener),
+            vscode.workspace.onDidGrantWorkspaceTrust(workspaceTrustDidGrantListener),
         );
 
         // Ask the user to re-register old dictionaries, whose keys are not 'dictionaries'.
