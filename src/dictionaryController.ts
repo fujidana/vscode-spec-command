@@ -543,9 +543,9 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
                 urisToRemove.forEach(uriString => this.updateSessionMap.delete(uriString));
             }
 
-            let dictionariesInclude: String[];
+            let dictionariesInclude: string[];
             if (scope === 'global') {
-                dictionariesInclude = vscode.workspace.getConfiguration('spec-command.suggest').get<String[]>('dictionariesInclude', []);
+                dictionariesInclude = vscode.workspace.getConfiguration('spec-command.suggest').get<string[]>('dictionariesInclude', []);
 
             } else { //if (scope === 'workspace') {
                 dictionariesInclude = [];
