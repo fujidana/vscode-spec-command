@@ -32,6 +32,7 @@ const SNIPPET_TEMPLATES: Record<string, string> = {
  */
 export class DictionaryController extends Controller<lang.UpdateSession<lang.DictParserResult>> implements vscode.TextDocumentContentProvider {
     private readonly extensionSchemaUriString: string;
+    private readonly dataStorageParams: { memento: vscode.Memento; scope: 'global' | 'workspace'; label: string }[];
 
     public fileUpdateSessionMap: Map<string, lang.UpdateSession> | undefined;
 
@@ -40,13 +41,18 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
 
         this.extensionSchemaUriString = vscode.Uri.joinPath(context.extensionUri, 'schema', 'scdict.schema.json').toString();
 
+        this.dataStorageParams = [
+            { memento: context.globalState, scope: 'global', label: vscode.l10n.t('User') },
+            { memento: context.workspaceState, scope: 'workspace', label: vscode.l10n.t('Workspace') },
+        ];
+
         // Load built-in symbol database from a JSON file bundled in the extension.
         this.updateSessionMap.set(BUILTIN_DICT_URI, {
             promise: loadDictionary(vscode.Uri.joinPath(context.extensionUri, 'syntaxes', 'spec-command.scdict.json'))
         });
 
         // Load user-defined symbol database from the global (user) and workspace state.
-        this.loadUserDefinedDictionaries(context, false);
+        this.loadUserDefinedDictionaries(false);
 
         // [spec-command specific code]
         // Initialize reference database for motors, counters and snippets.
@@ -62,8 +68,8 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
             if (event.affectsConfiguration('spec-command.suggest.codeSnippets')) {
                 this.updateSnippetRefBook();
             }
-            if (event.affectsConfiguration('spec-command.syncDictionaries')) {
-                this.loadUserDefinedDictionaries(context, true);
+            if (event.affectsConfiguration('spec-command.suggest.dictionariesInclude')) {
+                this.loadUserDefinedDictionaries(true, 'global');
                 this.updateSnippetRefBook();
             }
         };
@@ -81,17 +87,15 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
         const showDictionaryPreviewCommandHandler = async (..._args: any[]) => {
             const quickPickItems: QuickPickItemForDict[] = [
                 { label: vscode.l10n.t('Extension'), kind: vscode.QuickPickItemKind.Separator, scope: 'extension' },
-                { label: 'builtins', scope: 'extension' },
+                { label: '[builtins]', scope: 'extension' },
             ];
-            const globalStateKeys = context.globalState.keys();
-            if (globalStateKeys.length > 0) {
-                quickPickItems.push({ label: vscode.l10n.t('User'), kind: vscode.QuickPickItemKind.Separator, scope: 'global' });
-                globalStateKeys.forEach(key => quickPickItems.push({ label: key, scope: 'global' }));
-            }
-            const workspaceStateKeys = context.workspaceState.keys();
-            if (workspaceStateKeys.length > 0) {
-                quickPickItems.push({ label: vscode.l10n.t('Workspace'), kind: vscode.QuickPickItemKind.Separator, scope: 'workspace' });
-                workspaceStateKeys.forEach(key => quickPickItems.push({ label: key, scope: 'workspace' }));
+
+            for (const { memento, scope, label } of this.dataStorageParams) {
+                const dictionaries = memento.get<lang.CategorizedDictionary[]>('dictionaries');
+                if (dictionaries && dictionaries.length > 0) {
+                    quickPickItems.push({ label, kind: vscode.QuickPickItemKind.Separator, scope });
+                    dictionaries.forEach(dict => quickPickItems.push({ label: dict.identifier, description: dict.name, scope }));
+                }
             }
 
             // Show quick pick to select a dictionary.
@@ -104,7 +108,7 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
             // For the extension to recognize the content as a markdown document, append ".md" suffix to the URI path.
             let uri: vscode.Uri | undefined;
             if (selectedItem.scope === 'extension') {
-                if (selectedItem.label === 'builtins') {
+                if (selectedItem.label === '[builtins]') {
                     uri = vscode.Uri.parse(BUILTIN_DICT_URI + '.md');
                 }
             } else if (selectedItem.scope === 'global') {
@@ -142,18 +146,14 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
         const showDictionarySourceCommandHandler = async (..._args: any[]) => {
             const quickPickItems: QuickPickItemForDict[] = [];
 
-            quickPickItems.push({ label: vscode.l10n.t('User'), kind: vscode.QuickPickItemKind.Separator, scope: 'global' });
-            context.globalState.keys().forEach(key => quickPickItems.push({ label: key, scope: 'global' }));
-            quickPickItems.push({ label: '[global-empty]', description: vscode.l10n.t('new dictionary with empty content'), scope: 'global', template: 'empty' });
-            if (vscode.workspace.workspaceFolders) {
-                quickPickItems.push({ label: '[global-template]', description: vscode.l10n.t('new dictionary with current workspace symbols'), scope: 'global', template: 'workspaceSymbols' });
-            }
-
-            quickPickItems.push({ label: vscode.l10n.t('Workspace'), kind: vscode.QuickPickItemKind.Separator, scope: 'workspace' });
-            context.workspaceState.keys().forEach(key => quickPickItems.push({ label: key, scope: 'workspace' }));
-            quickPickItems.push({ label: '[workspace-empty]', description: vscode.l10n.t('new dictionary with empty content'), scope: 'workspace', template: 'empty' });
-            if (vscode.workspace.workspaceFolders) {
-                quickPickItems.push({ label: '[workspace-template]', description: vscode.l10n.t('new dictionary with current workspace symbols'), scope: 'workspace', template: 'workspaceSymbols' });
+            for (const { memento, scope, label } of this.dataStorageParams) {
+                const dictionaries = memento.get<lang.CategorizedDictionary[]>('dictionaries', []);
+                quickPickItems.push({ label, kind: vscode.QuickPickItemKind.Separator, scope });
+                dictionaries.forEach(dict => quickPickItems.push({ label: dict.identifier, description: dict.name, scope }));
+                quickPickItems.push({ label: `[${scope}-empty]`, description: vscode.l10n.t('new dictionary with empty content'), scope, template: 'empty' });
+                if (vscode.workspace.workspaceFolders) {
+                    quickPickItems.push({ label: `[${scope}-template]`, description: vscode.l10n.t('new dictionary with current workspace symbols'), scope, template: 'workspaceSymbols' });
+                }
             }
 
             // Show quick pick to select a dictionary.
@@ -163,14 +163,14 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
             if (!selectedItem) { return; } // Exit if the user cancels.
 
             // Fetch the dictionary from the global/workspace state or create a new dictionary.
-            let obj: lang.CategorizedDictionary | undefined;
+            let dict: lang.CategorizedDictionary | undefined;
             if (selectedItem.template === undefined) {
                 // Fetch the dictionary from the global/workspace state.
-                obj = selectedItem.scope === 'global' ?
-                    context.globalState.get(selectedItem.label) :
-                    context.workspaceState.get(selectedItem.label);
+                const memento = selectedItem.scope === 'global' ? context.globalState : context.workspaceState;
+                const dictionaries = memento.get<lang.CategorizedDictionary[]>('dictionaries', []);
+                dict = dictionaries.find(dict => dict.identifier === selectedItem.label);
             } else {
-                // If the user selects a template with current workspace symbols, 
+                // If the user selects a template with current workspace symbols,
                 // gather symbols from all files in the workspace and put them in a dictionary.
                 // Else, create an empty dictionary.
                 const refBookEntries: [string, lang.ReferenceItem][] = [];
@@ -188,7 +188,7 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
                     }
                 }
                 const categoryFilters = ['constant', 'variable', 'array', 'macro', 'function'] as const;
-                obj = lang.convertToCategorizedDictionary({
+                dict = lang.convertToCategorizedDictionary({
                     $schema: this.extensionSchemaUriString, // this.externalSchemaUriString,
                     identifier: selectedItem.scope === 'global' ? 'globalDict' : 'workspaceDict',
                     scope: selectedItem.scope,
@@ -197,10 +197,10 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
             }
 
             // Open a new text document with the content of the selected dictionary in JSON format.
-            if (!obj) {
+            if (!dict) {
                 vscode.window.showErrorMessage(vscode.l10n.t('Failed to load the dictionary content.'));
             } else {
-                const content = JSON.stringify(obj, ((key, value) => key === 'location' ? undefined : value), 2);
+                const content = JSON.stringify(dict, ((key, value) => key === 'location' ? undefined : value), 2);
                 const document = await vscode.workspace.openTextDocument({ language: 'json', content: content });
                 await vscode.window.showTextDocument(document);
                 return;
@@ -272,11 +272,12 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
                 uriString = WORKSPACE_DICT_BASEURI + '/' + obj.identifier;
                 memento = context.workspaceState;
             }
+            const dictionaries = memento.get<lang.CategorizedDictionary[]>('dictionaries', []);
 
             // Show confirmation if a dictionary with the same identifier already exists in the target storage,
             // Else proceed to register the dictionary without confirmation.
-            const isNew = !(memento.keys().includes(obj.identifier));
-            const flag = isNew ?
+            const index = dictionaries.findIndex(dict => dict.identifier === obj.identifier);
+            const flag = index === -1 ?
                 vscode.l10n.t('OK') :
                 await vscode.window.showWarningMessage<string>(
                     vscode.l10n.t('Are you sure you want to update the dictionary "{0}" in {1} storage with the current editor content?', obj.identifier, storageLabel),
@@ -291,15 +292,16 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
                     vscode.window.showErrorMessage(vscode.l10n.t('Failed to convert dictionary. {0}', errorMessage));
                     return;
                 }
-                if (isNew) {
+                if (index === -1) {
                     vscode.window.showInformationMessage(vscode.l10n.t('Dictionary "{0}" has been created in {1} storage.', obj.identifier, storageLabel));
+                    dictionaries.push(obj);
                 } else {
                     vscode.window.showInformationMessage(vscode.l10n.t('Dictionary "{0}" in {1} storage has been updated.', obj.identifier, storageLabel));
+                    dictionaries[index] = obj;
                 }
-                memento.update(obj.identifier, obj);
-                // if (obj.scope === 'global') {
-                //     context.globalState.setKeysForSync(context.globalState.keys().filter(key => key.endsWith('Sync')));
-                // }
+                memento.update('dictionaries', dictionaries);
+                this.loadUserDefinedDictionaries(true, obj.scope);
+
                 // [spec-command specific code]
                 this.updateMnemonicRefBook();
             }
@@ -310,15 +312,13 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
          */
         const deleteDictionaryCommandHandler = async (_args: any[]) => {
             const quickPickItems: QuickPickItemForDict[] = [];
-            const globalStateKeys = context.globalState.keys();
-            if (globalStateKeys.length > 0) {
-                quickPickItems.push({ label: vscode.l10n.t('User'), kind: vscode.QuickPickItemKind.Separator, scope: 'global' });
-                globalStateKeys.forEach(key => quickPickItems.push({ label: key, scope: 'global' }));
-            }
-            const workspaceStateKeys = context.workspaceState.keys();
-            if (workspaceStateKeys.length > 0) {
-                quickPickItems.push({ label: vscode.l10n.t('Workspace'), kind: vscode.QuickPickItemKind.Separator, scope: 'workspace' });
-                workspaceStateKeys.forEach(key => quickPickItems.push({ label: key, scope: 'workspace' }));
+
+            for (const { memento, scope, label } of this.dataStorageParams) {
+                const dictionaries = memento.get<lang.CategorizedDictionary[]>('dictionaries');
+                if (dictionaries && dictionaries.length > 0) {
+                    quickPickItems.push({ label, scope, kind: vscode.QuickPickItemKind.Separator });
+                    dictionaries.forEach(dict => quickPickItems.push({ label: dict.identifier, description: dict.name, scope }));
+                }
             }
 
             const quickPickOptions: vscode.QuickPickOptions = {
@@ -351,8 +351,12 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
                     uriString = WORKSPACE_DICT_BASEURI + '/' + selectedItem.label;
                     memento = context.workspaceState;
                 }
-                memento.update(selectedItem.label, undefined);
+                const dictionaries = memento.get<lang.CategorizedDictionary[]>('dictionaries', []);
+                // dictionaries.splice(dictionaries.findIndex(dict => dict.identifier === selectedItem.label), 1);
+                const newDictionaries = dictionaries.filter(dict => dict.identifier !== selectedItem.label);
+                memento.update('dictionaries', newDictionaries);
                 this.updateSessionMap.delete(uriString);
+
                 // [spec-command specific code]
                 this.updateMnemonicRefBook();
             }
@@ -362,7 +366,7 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
          * Command handler for reloading dictionaries from the global/workspace state.
          */
         const reloadDictionariesCommandHandler = async (_args: any[]) => {
-            this.loadUserDefinedDictionaries(context, true);
+            this.loadUserDefinedDictionaries(true);
             this.updateSnippetRefBook();
         };
 
@@ -379,6 +383,29 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
             // Register event handlers.
             vscode.workspace.onDidChangeConfiguration(configurationDidChangeListener),
         );
+
+        // Ask the user to re-register old dictionaries, whose keys are not 'dictionaries'.
+        for (const { memento, label } of this.dataStorageParams) {
+            const oldKeys = memento.keys().filter(key => key !== 'dictionaries');
+            if (oldKeys.length > 0) {
+                vscode.window.showInformationMessage(vscode.l10n.t('Old {0} dictionaries were found: {1}. Register them using the [Register Editor Content as User-Defined Dictionary]({2}) command, if needed.', label, oldKeys.join(', '), 'command:spec-command.registerDictionary'));
+                for (const oldKey of oldKeys) {
+                    const dict = memento.get<lang.CategorizedDictionary>(oldKey);
+                    if (dict) {
+                        const content = JSON.stringify(dict, ((key, value) => key === 'location' ? undefined : value), 2);
+                        vscode.workspace.openTextDocument({ language: 'json', content: content }).then(
+                            document => {
+                                vscode.window.showTextDocument(document);
+                            }
+                        );
+                    }
+                    memento.update(oldKey, undefined);
+                }
+            }
+        }
+
+        // Set the keys for synchronization in the global state.
+        context.globalState.setKeysForSync(['dictionaries']);
     }
 
     // Override the method in the base class to provide custom descriptions for completion items.
@@ -500,47 +527,45 @@ export class DictionaryController extends Controller<lang.UpdateSession<lang.Dic
 
     /**
      * Loads user-defined dictionaries from the global and workspace state.
-     * @param context The extension context.
      * @param clearExisting Whether to clear existing dictionaries before loading.
+     * @param storeKind Optional parameter to specify which storage to load from ('global' or 'workspace'). If undefined, loads from both.
      */
-    private loadUserDefinedDictionaries(context: vscode.ExtensionContext, clearExisting: boolean) {
-        const config = vscode.workspace.getConfiguration('spec-command');
-        const syncDictionaries = config.get<string[]>('syncDictionaries', []);
-        if (syncDictionaries.length === 0) {
-            // Do nothing.
-        } else if (syncDictionaries.length === 1 && syncDictionaries[0] === '*') {
-            context.globalState.setKeysForSync(context.globalState.keys());
-        } else {
-            context.globalState.setKeysForSync(syncDictionaries);
+    private loadUserDefinedDictionaries(clearExisting: boolean, storeKind: 'global' | 'workspace' | undefined = undefined) {
+        let dataStorageParams = this.dataStorageParams;
+        if (storeKind) {
+            dataStorageParams = dataStorageParams.filter(param => param.scope === storeKind);
         }
 
-        const stateParams = [
-            { baseUriString: GLOBAL_DICT_BASEURI, memento: context.globalState },
-            { baseUriString: WORKSPACE_DICT_BASEURI, memento: context.workspaceState }
-        ];
-
-        if (clearExisting) {
-            for (const { baseUriString } of stateParams) {
+        for (const { scope, memento } of dataStorageParams) {
+            const baseUriString = scope === 'global' ? GLOBAL_DICT_BASEURI : WORKSPACE_DICT_BASEURI;
+            if (clearExisting) {
                 const urisToRemove = [...this.updateSessionMap.keys()].filter(uriString => uriString.startsWith(baseUriString + '/'));
                 urisToRemove.forEach(uriString => this.updateSessionMap.delete(uriString));
             }
-        }
 
-        for (const { baseUriString, memento } of stateParams) {
-            // Skip loading user-defined symbol database from the workspace state 
-            // if the workspace is not trusted, to avoid potential security risks.
-            if (baseUriString === WORKSPACE_DICT_BASEURI && !vscode.workspace.isTrusted) {
-                continue;
+            let dictionariesInclude: String[];
+            if (scope === 'global') {
+                dictionariesInclude = vscode.workspace.getConfiguration('spec-command.suggest').get<String[]>('dictionariesInclude', []);
+
+            } else { //if (scope === 'workspace') {
+                dictionariesInclude = [];
+
+                // Skip loading user-defined symbol database from the workspace state if the workspace is not trusted, to avoid potential security risks.
+                if (!vscode.workspace.isTrusted) {
+                    continue;
+                }
             }
 
-            for (const key of memento.keys()) {
-                const obj = memento.get(key);
-                if (obj && typeof obj === 'object' && 'kind' in obj && obj.kind === 'spec-command.dictionary' && 'identifier' in obj && typeof obj.identifier === 'string') {
-                    const uriString = baseUriString + '/' + obj.identifier;
-                    const promise = new Promise<lang.DictParserResult>(
-                        resolve => { resolve(lang.convertFromCategorizedDictionary(obj as lang.CategorizedDictionary)); }
-                    );
-                    this.updateSessionMap.set(uriString, { promise });
+            const dictionaries = memento.get<unknown[]>('dictionaries', []);
+            for (const dict of dictionaries) {
+                if (dict && typeof dict === 'object' && 'kind' in dict && dict.kind === 'spec-command.dictionary' && 'identifier' in dict && typeof dict.identifier === 'string') {
+                    if (dictionariesInclude.length === 0 || dictionariesInclude.includes(dict.identifier)) {
+                        const uriString = baseUriString + '/' + dict.identifier;
+                        const promise = new Promise<lang.DictParserResult>(
+                            resolve => { resolve(lang.convertFromCategorizedDictionary(dict as lang.CategorizedDictionary)); }
+                        );
+                        this.updateSessionMap.set(uriString, { promise });
+                    }
                 }
             }
         }
