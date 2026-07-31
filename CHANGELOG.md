@@ -4,6 +4,16 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ## [Unreleased]
 
+## [2.2.0] -- 2025-07-31
+
+### Changed
+
+- Bump `semver` dependency to 7.8.5.
+- Raise the minimum VS Code version to 1.125.0.
+- Change the internal implementation of the _User-Defined Dictionaries Setting Sync_ feature. Issue [#51](https://github.com/fujidana/vscode-spec-command/issues/51).
+  - Remove `spec-command.syncDictionaries` setting.
+  - Add `spec-command.suggest.dictionariesInclude` setting.
+
 ## [2.1.1] -- 2025-05-20
 
 ### Changed
@@ -494,7 +504,8 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
   - syntax highlighting
   - code snippets
 
-[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v2.1.1...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/fujidana/vscode-spec-command/compare/v2.1.1...v2.2.0
 [2.1.1]: https://github.com/fujidana/vscode-spec-command/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/fujidana/vscode-spec-command/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/fujidana/vscode-spec-command/compare/v1.8.9...v2.0.0
