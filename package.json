@@ -169,7 +169,20 @@
 						"type": "string"
 					},
 					"default": [],
-					"markdownDescription": "%configuration.spec-command.syncDictionaries.description%"
+					"markdownDescription": "%configuration.spec-command.syncDictionaries.description%",
+					"markdownDeprecationMessage": "**Deprecated**: This setting is not effective now."
+				},
+				"spec-command.suggest.dictionariesInclude": {
+					"type": "array",
+					"scope": "window",
+					"tags": [
+						"experimental"
+					],
+					"items": {
+						"type": "string"
+					},
+					"default": [],
+					"markdownDescription": "%configuration.spec-command.suggest.dictionariesInclude.description%"
 				},
 				"spec-command.suggest.suppressMessages": {
 					"type": "object",
@@ -254,7 +267,7 @@
 					"default": "",
 					"scope": "window",
 					"markdownDescription": "%configuration.spec-command.suggest.symbolFile.description%",
-					"markdownDeprecationMessage": "**Deprecated**: Not effective now."
+					"markdownDeprecationMessage": "**Deprecated**: This setting is not effective now."
 				},
 				"spec-command.workspace.exclude": {
 					"type": "array",
@@ -299,7 +312,7 @@
 					"default": "",
 					"scope": "resource",
 					"markdownDescription": "%configuration.spec-command.terminal.filePathPrefix.description%",
-					"markdownDeprecationMessage": "**Deprecated**: Not effective now."
+					"markdownDeprecationMessage": "**Deprecated**: This setting is not effective now."
 				}
 			}
 		}
