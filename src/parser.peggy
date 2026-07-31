@@ -27,21 +27,12 @@ import { DiagnosticSeverity, l10n } from 'vscode';
 
 /**
  * JSDoc annotation for type checking.
- * @typedef { import('./parser').LocationRange } LocationRange
- * @typedef { import('./parser').Location } Location
- * @typedef { import('./parser').GrammarSource } GrammarSource
-
- * @typedef { import('./tree').Statement } Statement
- * @typedef { import('./tree').Expression } Expression
- * @typedef { import('./tree').Literal } Literal
- * @typedef { import('./tree').Identifier } Identifier
- * @typedef { import('./tree').MacroParameter } MacroParameter
- * @typedef { import('./tree').EmptyStatement } EmptyStatement
- * @typedef { import('./tree').SequenceExpression } SequenceExpression
- * @typedef { import('./tree').BinaryOperator } BinaryOperator
- * @typedef { import('./tree').BinaryExpression } BinaryExpression
- * @typedef { import('./tree').LogicalOperator } LogicalOperator
- * @typedef { import('./tree').LogicalExpression } LogicalExpression
+ * @import { Location, LocationRange, GrammarSource } from './parser';
+ * @import {
+ *   Statement, EmptyStatement,
+ *   Expression, SequenceExpression, Literal, Identifier, MacroParameter,
+ *   BinaryOperator, BinaryExpression, LogicalOperator, LogicalExpression
+ * } from './tree';
  */
 
 const RESERVED_KEYWORD_REGEXP = new RegExp(
@@ -1076,7 +1067,7 @@ IdValidated =
     )+ 
   ) {
     let name = '';
-    /** * @type {Array<MacroParameter>} */
+    /** @type {Array<MacroParameter>} */
     const params = [];
     items.forEach(item => {
       name += item[0];
