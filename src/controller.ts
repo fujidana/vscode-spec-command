@@ -43,7 +43,6 @@ function truncateString(level: TruncationLevel, item: { description?: string, de
             truncatedString = truncatedString ? truncatedString + '\n\n' + tmpStr : tmpStr;
         }
     }
-
     return truncatedString;
 }
 
@@ -126,7 +125,7 @@ export abstract class Controller<T extends lang.UpdateSession> implements vscode
         if (range === undefined) { return; }
 
         const selectorName = document.getText(range);
-        if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(selectorName)) { return; }
+        if (!/^([a-zA-Z_][a-zA-Z0-9_]*|\$(\d+|\*|@|#|\$)?)$/.test(selectorName)) { return; }
 
         const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages', suppressMessagesConfig);
         const suppressDetail = config['completionItem.label.detail'] ?? false;
@@ -149,7 +148,7 @@ export abstract class Controller<T extends lang.UpdateSession> implements vscode
                     continue;
                 }
 
-                // Create completion item.
+                // Create a completion item.
                 const detail = (!suppressDetail && refItem.signature.startsWith(identifier)) ? refItem.signature.substring(identifier.length) : undefined;
                 const label: vscode.CompletionItemLabel = { label: identifier, detail, description };
                 const completionItem = new lang.CompletionItem(label, uriString, refItem.category);
@@ -216,14 +215,14 @@ export abstract class Controller<T extends lang.UpdateSession> implements vscode
     public async provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): Promise<vscode.Hover | undefined> {
         if (token.isCancellationRequested) { return; }
 
-        const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages', suppressMessagesConfig);
-        const truncationLevel = config['hover.contents'] === true ? TruncationLevel.paragraph : TruncationLevel.full;
-
         const range = document.getWordRangeAtPosition(position);
         if (range === undefined) { return; }
 
         const selectorName = document.getText(range);
-        if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(selectorName)) { return; }
+        if (!/^([a-zA-Z_][a-zA-Z0-9_]*|\$(\d+|\*|@|#|\$))$/.test(selectorName)) { return; }
+
+        const config = vscode.workspace.getConfiguration('spec-command.suggest').get<SuppressMessagesConfig>('suppressMessages', suppressMessagesConfig);
+        const truncationLevel = config['hover.contents'] === true ? TruncationLevel.paragraph : TruncationLevel.full;
 
         // Start to seek if the selection is a proper identifier.
         const contents: vscode.MarkdownString[] = [];
@@ -311,7 +310,7 @@ export abstract class Controller<T extends lang.UpdateSession> implements vscode
 
     /**
      * Get description to be shown at the right side of a completion item.
-     * Typicall return value is the relative path of the file where the symbol is defined.
+     * Typical return value is the relative path of the file where the symbol is defined.
      */
     protected abstract getCompletionItemLabelDescription(uriString: string): string | undefined;
 

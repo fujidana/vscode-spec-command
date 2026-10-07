@@ -331,6 +331,28 @@ categories:
         cited from [CSS spec help pages: macros](https://www.certif.com/spec_help/macros.html).
       available:
         range: '>=6.12.1'
+    '$0':
+      signature: $0
+      description: |-
+        is replaced with the macro name when it appears within ordinary macros (not macro functions).
+    '$*':
+      signature: $*
+      description: |-
+        is replaced with all the arguments when it appears within ordinary macros (not macro functions).
+    '$@':
+      signature: $@
+      description: |-
+        is replaced with arguments delimited by `\a` when it appears within ordinary macros (not macro functions).
+      available:
+        range: '>=6.3.4'
+    '$#':
+      signature: $#
+      description: |-
+        is replaced with the number of arguments when it appears within ordinary macros (not macro functions).
+    '$$':
+      signature: $$
+      description: |-
+        is a literal $ when it appears within ordinary macros (not macro functions).
 
 # Built-In Functions and Commands
 

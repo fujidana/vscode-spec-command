@@ -89,7 +89,7 @@
     "entriesInCategory": {
       "type": "object",
       "propertyNames": {
-        "pattern": "^[_a-zA-Z][_a-zA-Z0-9]*$"
+        "pattern": "^([a-zA-Z_][a-zA-Z0-9_]*|\\$(\\d+|\\*|@|#|\\$))$"
       },
       "patternProperties": {
         "": {
