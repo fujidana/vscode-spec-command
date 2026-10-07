@@ -1,8 +1,12 @@
 # Change Log
 
-All notable changes to the __vscode-spec-command__ extension will be documented in this file.
+All notable changes to the `fujidana.spec-command` VS Code extension will be documented in this file.
 
 ## [Unreleased]
+
+### Added
+
+- Support macro parameters such as `$@` in Hover and Code Completion features. Issue [#59](https://github.com/fujidana/vscode-spec-command/issues/59).
 
 ## [2.2.0] -- 2025-07-31
 
@@ -131,7 +135,7 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 ### Fixed
 
-- hyphenation errors in API reference
+- hyphenation errors in IntelliSense database for built-in symbols.
 
 ## [1.8.4] -- 2023-04-17
 
@@ -332,7 +336,7 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 ### Added
 
 - a setting for user-defined code snippets that may include a placeholder for a motor or counter mnemonic (configuration parameter: _vscode-spec.editor.codeSnippets_)
-- built-in functions documented only in [CSS - spec help pages](https://certif.com/spec_help/index.html) (not in spec_manA4.pdf) into IntelliSense database: hdf5, taco (esrf), tango, epics, etc. into IntelliSense database.
+- built-in functions documented only in [CSS - spec help pages](https://certif.com/spec_help/index.html) (not in spec_manA4.pdf) into IntelliSense database: hdf5, taco (esrf), tango, epics, etc.
 
 ### Changed
 
@@ -352,13 +356,13 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 ### Fixed
 
 - syntax checker so that `rdef` for functions (e.g., `rdef myfunc(i, j) "..."`) becomes valid
-- hyphenation errors in API reference
+- hyphenation errors in IntelliSense database for built-in symbols
 
 ## [1.1.3] - 2020-09-16
 
 ### Fixed
 
-- hyphenation errors in API reference
+- hyphenation errors in IntelliSense database for built-in symbols
 
 ## [1.1.2] - 2020-07-08
 
@@ -419,7 +423,7 @@ All notable changes to the __vscode-spec-command__ extension will be documented 
 
 - Improve syntax parser, including:
   - support of variant quatations of a string literal (`"`, `'`, `\"`, `\'`) (syntax parser only; code highligting engine assumes `"` as a delimiter for string literals and `'` as a delimiter for macros and functions)
-  - support of escape sequenses of TTY command such as `\[md]`
+  - support of escape sequences of TTY command such as `\[md]`
 
 ## [0.7.0] - 2019-10-15
 
