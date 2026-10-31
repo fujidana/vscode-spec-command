@@ -22,3 +22,4 @@ pnpm-workspace.yaml
 **/bundle.l10n.json
 syntaxes/*.yaml
 **/pegconfig.json
+.github/
