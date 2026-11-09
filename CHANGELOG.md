@@ -1,5 +1,7 @@
 # Change Log
 
+<!-- markdownlint-disable line-length no-duplicate-heading -->
+
 All notable changes to the `fujidana.spec-command` VS Code extension will be documented in this file.
 
 ## [Unreleased]

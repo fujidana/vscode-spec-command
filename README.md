@@ -1,6 +1,8 @@
 # __spec__ Command Extension for Visual Studio Code
 
-!NOTE: The mechanism to use user-defined dictionary was totally revamped since v2.0.0. See [User-Defined Dictionaries](#user-defined-dictionaries) section below and [CHANGELOG.md](CHANGELOG.md) for the new mechanism.
+<!-- markdownlint-disable line-length fenced-code-language -->
+
+!NOTE: The mechanism to use user-defined dictionaries was totally revamped since v2.0.0. See [User-Defined Dictionaries](#user-defined-dictionaries) section below and [CHANGELOG.md](CHANGELOG.md) for the new mechanism.
 
 The extension is designed to assist editing __spec__ command files with Visual Studio Code.
 __spec__ command files referred to here are also called __spec__ macro files and __spec__ script files; they are typically loaded by `qdo` or `qdofile()` after a user writes macros and functions in them.
@@ -120,7 +122,7 @@ The dictionary content is expected to be a JSON object conforming to the schema 
 If you want to save a copy of the dictionary, it is recommended to set a file name ending with `.scdict.json`, then VS Code will automatically validate it against the schema.
 Otherwise, to let VS Code validate the content, the JSON object should have `$schema` property whose value is either the local path to the schema file bundled in the installed extension or the online URI shown below:
 
-https://raw.githubusercontent.com/fujidana/vscode-spec-command/refs/heads/master/schema/scdict.schema.json
+[https://raw.githubusercontent.com/fujidana/vscode-spec-command/refs/heads/master/schema/scdict.schema.json](https://raw.githubusercontent.com/fujidana/vscode-spec-command/refs/heads/master/schema/scdict.schema.json)
 
 To let VS Code use the online schema, add `https://raw.githubusercontent.com/fujidana/` to the [json.schemaDownload.trustedDomains](vscode://settings/json.schemaDownload.trustedDomains) setting.
 
