@@ -6,16 +6,23 @@ All notable changes to the `fujidana.spec-command` VS Code extension will be doc
 
 ## [Unreleased]
 
+## [2.2.1] -- 2025-11-09
+
 ### Added
 
 - Support macro parameters such as `$@` in Hover and Code Completion features. Issue [#59](https://github.com/fujidana/vscode-spec-command/issues/59).
+
+### Changed
+
+- Raise the minimum VS Code version to 1.140.0.
+- Bump `semver` dependency to 7.8.6.
 
 ## [2.2.0] -- 2025-07-31
 
 ### Changed
 
-- Bump `semver` dependency to 7.8.5.
 - Raise the minimum VS Code version to 1.125.0.
+- Bump `semver` dependency to 7.8.5.
 - Change the internal implementation of the _User-Defined Dictionaries Setting Sync_ feature. Issue [#51](https://github.com/fujidana/vscode-spec-command/issues/51).
   - Remove `spec-command.syncDictionaries` setting.
   - Add `spec-command.suggest.dictionariesInclude` setting.
@@ -24,8 +31,8 @@ All notable changes to the `fujidana.spec-command` VS Code extension will be doc
 
 ### Changed
 
-- Bump `semver` dependency to 7.8.0.
 - Raise the minimum VS Code version to 1.120.0.
+- Bump `semver` dependency to 7.8.0.
 - Change the behavior of the _User-Defined Dictionaries Setting Sync_ feature (still experimental).
 
 ## [2.1.0] -- 2025-05-02
@@ -47,8 +54,8 @@ All notable changes to the `fujidana.spec-command` VS Code extension will be doc
 
 ### Changed
 
-- Bump `semver` dependency to 7.7.4.
 - Raise the minimum VS Code version to 1.110.0.
+- Bump `semver` dependency to 7.7.4.
 - Add `spec-command.syncDictionaries` setting (experimental). User-defined dictionaries specified in this setting will be synchronized (but currently may not work).
 
 ### Fixed
@@ -77,8 +84,8 @@ All notable changes to the `fujidana.spec-command` VS Code extension will be doc
     - "Open Reference Manual" -> "Show Built-in Symbols"
   - Remove `spec-command.execSelectionInTerminal` and `spec-command.execFileInTerminal` commands.
   - Deprecate [spec-command.terminal.filePathPrefix](vscode://settings/spec-command.terminal.filePathPrefix) setting.
-- Migrate the bundler from `webpack` to `esbuild`.
 - Raise the minimum VS Code version to 1.100.0.
+- Migrate the bundler from `webpack` to `esbuild`.
 
 ## [1.8.9] -- 2025-05-23
 
@@ -88,8 +95,8 @@ All notable changes to the `fujidana.spec-command` VS Code extension will be doc
 
 ### Changed
 
-- Eliminate the devDependency on `ts-pegjs` and bump the version of `peggy` from 3 to 5.
 - Raise the minimum VS Code version to 1.100.0.
+- Eliminate the devDependency on `ts-pegjs` and bump the version of `peggy` from 3 to 5.
   - Replace `TextDecoder().decode()` with `vscode.workspace.decode()` (new API in v1.100), which may improve support of minor text encodings. Issue [#6](https://github.com/fujidana/vscode-spec-command/issues/6).
 
 ## [1.8.8] -- 2025-02-17
@@ -143,8 +150,8 @@ All notable changes to the `fujidana.spec-command` VS Code extension will be doc
 
 ### Changed
 
-- Update peggy (ver. 2 -> 3) and ts-pegjs (ver. 3 -> 4).
 - Raise the minimum VS Code version to 1.76.0.
+- Update peggy (ver. 2 -> 3) and ts-pegjs (ver. 3 -> 4).
 
 ### Fixed
 
@@ -185,8 +192,8 @@ All notable changes to the `fujidana.spec-command` VS Code extension will be doc
 
 ### Changed
 
-- Migrate the package manager from `npm` to `pnpm`.
 - Raise the minimum VS Code version to 1.70.0.
+- Migrate the package manager from `npm` to `pnpm`.
 
 ## [1.7.4] -- 2022-06-29
 
@@ -510,7 +517,8 @@ All notable changes to the `fujidana.spec-command` VS Code extension will be doc
   - syntax highlighting
   - code snippets
 
-[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/fujidana/vscode-spec-command/compare/v2.2.1...HEAD
+[2.2.1]: https://github.com/fujidana/vscode-spec-command/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/fujidana/vscode-spec-command/compare/v2.1.1...v2.2.0
 [2.1.1]: https://github.com/fujidana/vscode-spec-command/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/fujidana/vscode-spec-command/compare/v2.0.0...v2.1.0

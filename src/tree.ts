@@ -265,7 +265,7 @@ export interface BaseVariableDeclarator extends BaseNode {
     id: Identifier | IndirectPattern;
     assocarray?: boolean;
     init?: Expression | null | undefined;
-    extern?: { spec?: string | undefined, pid?: number | undefined, raw: string, } | undefined;  // for external data array declaration.
+    extern?: { spec?: string | undefined, pid?: number | undefined, raw: string } | undefined;  // for external data array declaration.
     sizes? : Expression[] | undefined; // for internal data array declaration.
 }
 
@@ -288,7 +288,7 @@ export interface InternalDataArrayDeclarator extends BaseVariableDeclarator {
 export interface ExternalDataArrayDeclarator extends BaseVariableDeclarator {
     assocarray: never;
     init: never;
-    extern: { spec?: string | undefined, pid?: number | undefined, raw: string, };
+    extern: { spec?: string | undefined, pid?: number | undefined, raw: string };
     size: never;
 }
 
