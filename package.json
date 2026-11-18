@@ -367,12 +367,12 @@
 		"@vscode/test-web": "^0.0.81",
 		"assert": "^2.1.0",
 		"esbuild": "^0.28.2",
-		"eslint": "^10.14.0",
+		"eslint": "^10.15.0",
 		"glob": "^13.0.7",
 		"js-yaml": "^5.5.0",
 		"mocha": "^11.8.0",
 		"peggy": "^5.1.1",
 		"typescript": "^6.0.3",
-		"typescript-eslint": "^8.72.1"
+		"typescript-eslint": "^8.73.0"
 	}
 }
